@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import ReactGA from "react-ga4";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -16,7 +17,11 @@ const Contact = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    ReactGA.event({
+      category: "Contact",
+      action: "Submit",
+      label: "Contact Form"
+    });
     const { name, email, message } = formData;
 
     if (!name?.trim() || !email?.trim() || !message?.trim()) {

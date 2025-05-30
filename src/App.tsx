@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,38 +20,69 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ConsultationForm from "./pages/ConsultationForm";
 import ProductDetailsPage from "./pages/ProductDetailsPage";
+import { useLocation } from "react-router-dom";
+import {   initGA,
+  logPageView,
+  trackPageStart,
+  trackPageEnd, } from "./utils/analytics";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/careers" element={<CareersPage />} />
-          <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
-          <Route path="/TermsAndConditions" element={<TermsAndConditions />} />
-          <Route path="/ProductDetailsPage" element={<ProductDetailsPage />} />
-          <Route path="/consultation-form" element={<ConsultationForm />} />
-          <Route path="/BlogPage" element={<BlogPage />} />
-          <Route path="/ApplicationForm" element={<ApplicationForm />} />
-          <Route path="/gig/web-development" element={<WebDevelopment />} />
-          <Route path="/gig/mobile-development" element={<MobileDevelopment />} />
-          <Route path="/gig/digital-marketing" element={<DigitalMarketing />} />
-          <Route path="/gig/ui-ux-design" element={<UIUXDesign />} />
-          <Route path="/gig/cloud-solutions" element={<CloudSolutions />} />
-          <Route path="/gig/devops-services" element={<DevOpsServices />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+ 
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+        <RoutesComponent />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+const RoutesComponent = () => {
+
+  const location = useLocation();
+
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  useEffect(() => {
+    logPageView(location.pathname);
+    trackPageStart();
+
+    return () => {
+      trackPageEnd(location.pathname);
+    };
+  }, [location.pathname]);
+  // use location here safely
+  return (
+    <Routes>
+    <Route path="/" element={<Index />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/contact" element={<Contact />} />
+    <Route path="/careers" element={<CareersPage />} />
+    <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
+    <Route path="/TermsAndConditions" element={<TermsAndConditions />} />
+    <Route path="/ProductDetailsPage" element={<ProductDetailsPage />} />
+    <Route path="/consultation-form" element={<ConsultationForm />} />
+    <Route path="/BlogPage" element={<BlogPage />} />
+    <Route path="/ApplicationForm" element={<ApplicationForm />} />
+    <Route path="/gig/web-development" element={<WebDevelopment />} />
+    <Route path="/gig/mobile-development" element={<MobileDevelopment />} />
+    <Route path="/gig/digital-marketing" element={<DigitalMarketing />} />
+    <Route path="/gig/ui-ux-design" element={<UIUXDesign />} />
+    <Route path="/gig/cloud-solutions" element={<CloudSolutions />} />
+    <Route path="/gig/devops-services" element={<DevOpsServices />} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+  );
+};
+
 
 export default App;
