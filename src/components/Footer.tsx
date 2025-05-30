@@ -38,6 +38,9 @@ const Footer = () => {
               <a href="https://www.facebook.com/share/19FARSMgHA/?mibextid=wwXIfr"   target="_blank" className="text-gray-300 hover:text-blue-400 transition-colors">
                 <Facebook className="h-5 w-5" />
               </a>
+              <a href="https://x.com/i/flow/login?redirect_after_login=%2Fscssoftware24"   target="_blank" className="text-gray-300 hover:text-blue-400 transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
            
               <a
   href="https://www.linkedin.com/company/105694530"

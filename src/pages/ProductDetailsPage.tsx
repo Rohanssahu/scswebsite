@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+
 const ProductDetailsPage = () => {
   const images = [
     'https://www.scssoftwares.com/images/roomji1.png',
@@ -35,49 +36,56 @@ const ProductDetailsPage = () => {
   }, [images.length]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      <div className="relative overflow-hidden w-full h-72 md:h-[500px]">
-  <div
-    className="flex transition-transform duration-700 ease-in-out h-full"
-    style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-  >
-    {images.map((img, i) => (
-      <img
-        key={i}
-        src={img}
-        alt={`${product.title} ${i + 1}`}
-        className="w-full flex-shrink-0 object-cover h-full"
-      />
-    ))}
+  {/* Product Info */}
+  <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+  <h1 className="text-2xl sm:text-3xl font-semibold text-blue-600 mb-4">
+    {product.title}
+  </h1>
+  <h2 className="text-lg sm:text-xl font-medium mb-5 text-gray-800">
+    {product.subtitle}
+  </h2>
+  <p className="text-gray-600 mb-6 text-sm sm:text-base leading-relaxed">
+    {product.description}
+  </p>
+
+  <div className="mb-6">
+    <h3 className="text-lg sm:text-xl font-semibold mb-1">Location</h3>
+    <p className="text-gray-600 text-sm sm:text-base">{product.location}</p>
   </div>
 
-      {/* Product Info below banner */}
-      <div className="max-w-4xl mx-auto px-4 mt-10">
-        <h1 className="text-5xl font-bold text-blue-600 mb-4">{product.title}</h1>
-        <h2 className="text-3xl font-semibold mb-6">{product.subtitle}</h2>
-        <p className="text-gray-700 mb-8 text-lg">{product.description}</p>
+  <div className="mb-8">
+    <h3 className="text-lg sm:text-xl font-semibold mb-2">Features</h3>
+    <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm sm:text-base">
+      {product.features.map((feature, idx) => (
+        <li key={idx}>{feature}</li>
+      ))}
+    </ul>
+  </div>
 
-        <div className="mb-8">
-          <h3 className="text-2xl font-semibold mb-3">Location</h3>
-          <p className="text-gray-600 text-lg">{product.location}</p>
-        </div>
-
-        <div className="mb-10">
-          <h3 className="text-2xl font-semibold mb-4">Features</h3>
-          <ul className="list-disc list-inside text-gray-700 space-y-2 text-lg">
-            {product.features.map((feature, idx) => (
-              <li key={idx}>{feature}</li>
-            ))}
-          </ul>
-        </div>
-
-        <button className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition text-xl">
-          Book Now
-        </button>
+  <button className="w-full sm:w-auto bg-blue-600 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-md hover:bg-blue-700 transition text-sm sm:text-base">
+    Book Now
+  </button>
+</div>
+      {/* Image Carousel */}
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    {images.map((img, i) => (
+      <div key={i} className="w-full h-48 sm:h-56 md:h-64 overflow-hidden rounded-lg shadow">
+        <img
+          src={img}
+          alt={`${product.title} ${i + 1}`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+        />
       </div>
-    </div>
-    <Footer />
+    ))}
+  </div>
+</div>
+
+    
+
+      <Footer />
     </div>
   );
 };
