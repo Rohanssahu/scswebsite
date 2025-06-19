@@ -26,6 +26,7 @@ import {   initGA,
   trackPageStart,
   trackPageEnd, } from "./utils/analytics";
 import { useEffect } from "react";
+import ProductShowcase from "./pages/ProductShowcase";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const RoutesComponent = () => {
     <Route path="/gig/ui-ux-design" element={<UIUXDesign />} />
     <Route path="/gig/cloud-solutions" element={<CloudSolutions />} />
     <Route path="/gig/devops-services" element={<DevOpsServices />} />
+    <Route path="/products" element={<ProductShowcase />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
   );

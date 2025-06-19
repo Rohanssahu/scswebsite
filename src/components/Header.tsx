@@ -19,16 +19,8 @@ const Header = () => {
     { name: 'DevOps Services', path: '/gig/devops-services' },
   ];
 
-  const product = [
-    {
-      title: 'RoomJi',
-      subtitle: 'Find & Book Rooms and Flats Online',
-      description: 'Search nearby rooms, flats, and all types of properties, with easy online booking and image galleries.',
-      image: 'https://www.scssoftwares.com/images/roomji.png',
-      path: '/ProductDetailsPage'
-    }
 
-  ];
+  
   
   
 
@@ -77,48 +69,9 @@ const Header = () => {
               )}
             </div>
 
-            <div className="relative group">
-              <button 
-                className="flex items-center text-gray-700 hover:text-blue-600"
-                onMouseEnter={() => setIsProductOpen(true)}
-           
-              >
-                Product <ChevronDown className="ml-1 h-4 w-4" />
-              </button>
-            
-{isProductOpen && (
-  <div 
-    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[700px] bg-white rounded-lg shadow-xl border py-4 px-6 z-50 grid grid-cols-1 gap-4"
-    onMouseEnter={() => setIsProductOpen(true)}
-    onMouseLeave={() => setIsProductOpen(false)}
-  >
-    {product.map((item) => (
-      <Link 
-        to={item.path} 
-        key={item.path} 
-        className="hover:bg-blue-50 p-4 rounded-lg transition-all duration-200 flex items-center space-x-4"
-      >
-        {/* Image Left */}
-        {item.image && (
-          <img
-            src={item.image}
-            alt={item.title}
-            className="w-24 h-24 object-cover rounded-md flex-shrink-0"
-          />
-        )}
-
-        {/* Details Right */}
-        <div>
-          <h3 className="text-blue-600 font-semibold text-md">{item.title}</h3>
-          <p className="text-gray-800 font-medium">{item.subtitle}</p>
-          <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-        </div>
-      </Link>
-    ))}
-  </div>
-)}
-              
-            </div>
+            <Link to="/products" className={`text-gray-700 hover:text-blue-600 ${isActive('/about') && 'text-blue-600 font-semibold'}`}>
+            Products
+            </Link>
 
             <Link to="/about" className={`text-gray-700 hover:text-blue-600 ${isActive('/about') && 'text-blue-600 font-semibold'}`}>
               About

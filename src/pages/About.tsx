@@ -9,25 +9,25 @@ const About = () => {
     {
       name: 'Rohan Sahu',
       role: 'CEO & Founder',
-      image: 'https://media.licdn.com/dms/image/v2/D4D03AQGn0q3Se567FQ/profile-displayphoto-shrink_400_400/B4DZOS2oOVG0Ak-/0/1733335615462?e=1753920000&v=beta&t=bhcnaZKFFXbmCtT1gzhFWt-K0-UWfMc9aLb3qSk7MqU',
+      image: 'https://scssoftwares.com/images/rohan.png',
       bio: 'Tech entrepreneur with 9+ years of experience in software development and business strategy.'
     },
     {
       name: 'Aditi Gupta',
       role: 'CTO',
-      image: 'https://media.licdn.com/dms/image/v2/D4D03AQGdohH6yqRFVA/profile-displayphoto-shrink_800_800/B4DZafsxOZGgAc-/0/1746436036845?e=1753920000&v=beta&t=PjU1yWFrL2Kxgvqe3lINg0GeEPkPxE96G8uuTfmn33g',
+      image: 'https://scssoftwares.com/images/aditi.png',
       bio: 'Expert in scalable architecture and emerging technologies with a passion for innovation.'
     },
     {
       name: 'Sachin Basaiye',
       role: 'Project Manager',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
+      image: 'https://scssoftwares.com/images/sachin.png',
       bio: 'Creative Project Manager focused on user-centered strategies and delivering exceptional digital experiences'
     },
     {
-      name: 'Emily Johnson',
-      role: 'VP of Marketing',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&crop=face',
+      name: 'Shivani Parihar ',
+      role: 'Vp of Marketing',
+      image: 'https://scssoftwares.com/images/shivani.png ',
       bio: 'Digital marketing strategist helping businesses grow their online presence and reach.'
     }
   ];
