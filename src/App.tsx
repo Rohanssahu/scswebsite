@@ -61,7 +61,7 @@ const RoutesComponent = () => {
       trackPageEnd(location.pathname);
     };
   }, [location.pathname]);
-  // use location here safely
+
   return (
     <Routes>
     <Route path="/" element={<Index />} />
