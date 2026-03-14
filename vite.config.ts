@@ -6,7 +6,7 @@ export default defineConfig({
   // ⭐ custom domain ke liye
 
   plugins: [react()],
-  base: "/scswebsite/", 
+  base: "/", 
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
