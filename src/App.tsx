@@ -21,12 +21,7 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ConsultationForm from "./pages/ConsultationForm";
 import ProductDetailsPage from "./pages/ProductDetailsPage";
-import { useLocation } from "react-router-dom";
-import {   initGA,
-  logPageView,
-  trackPageStart,
-  trackPageEnd, } from "./utils/analytics";
-import { useEffect } from "react";
+
 import ProductShowcase from "./pages/ProductShowcase";
 
 const queryClient = new QueryClient();
@@ -48,20 +43,8 @@ const App = () => {
 };
 const RoutesComponent = () => {
 
-  const location = useLocation();
 
-  useEffect(() => {
-    initGA();
-  }, []);
 
-  useEffect(() => {
-    logPageView(location.pathname);
-    trackPageStart();
-
-    return () => {
-      trackPageEnd(location.pathname);
-    };
-  }, [location.pathname]);
 
   return (
     <Routes>
