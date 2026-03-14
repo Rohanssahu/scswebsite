@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig({
-  base: "/",   // ⭐ custom domain ke liye
+  base: "/scswebsite",   // ⭐ custom domain ke liye
 
   plugins: [react()],
 
