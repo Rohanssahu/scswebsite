@@ -4,7 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
-  base: "/scswebsite/",   // ⭐ IMPORTANT for GitHub Pages
+  base: "/",   // ⭐ IMPORTANT for GitHub Pages
 
   server: {
     host: "::",
