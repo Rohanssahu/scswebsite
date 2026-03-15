@@ -18,16 +18,16 @@ const Header = () => {
     { name: 'Cloud Solutions', path: '/gig/cloud-solutions' },
     { name: 'DevOps Services', path: '/gig/devops-services' },
   ];
-const products = [
-  { name: 'School Management System', path: '/products/school-management' },
-  { name: 'CRM Software', path: '/products/crm' },
-  { name: 'E-commerce Platform', path: '/products/ecommerce' },
-  { name: 'HR Management System', path: '/products/hrm' },
-];
+  const products = [
+    { name: 'School Management System', path: '/products/school-management' },
+    { name: 'CRM Software', path: '/products/crm' },
+    { name: 'E-commerce Platform', path: '/products/ecommerce' },
+    { name: 'HR Management System', path: '/products/hrm' },
+  ];
 
-  
-  
-  
+
+
+
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -50,17 +50,17 @@ const products = [
             </Link>
 
             <div className="relative group"
-                    onMouseEnter={() => setIsServicesOpen(true)}
-                    
+              onMouseEnter={() => setIsServicesOpen(true)}
+
             >
-              <button 
+              <button
                 className="flex items-center text-gray-700 hover:text-blue-600"
-        
+
               >
                 Services <ChevronDown className="ml-1 h-4 w-4" />
               </button>
               {isServicesOpen && (
-                <div 
+                <div
                   className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border py-2 z-50"
                   onMouseEnter={() => setIsServicesOpen(true)}
                   onMouseLeave={() => setIsServicesOpen(false)}
@@ -75,7 +75,7 @@ const products = [
             </div>
 
             <Link to="/products" className={`text-gray-700 hover:text-blue-600 ${isActive('/about') && 'text-blue-600 font-semibold'}`}>
-            Products
+              Products
             </Link>
 
             <Link to="/about" className={`text-gray-700 hover:text-blue-600 ${isActive('/about') && 'text-blue-600 font-semibold'}`}>
@@ -116,7 +116,7 @@ const products = [
           </div>
           <nav className="flex flex-col space-y-4">
             <Link to="/" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>Home</Link>
-            
+
             <div>
               <span className="font-medium text-gray-700">Services</span>
               <div className="pl-4 mt-2 space-y-1">
@@ -128,8 +128,9 @@ const products = [
               </div>
             </div>
 
-          
 
+
+            <Link to="/products" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>Products</Link>
             <Link to="/about" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>About</Link>
             <Link to="/contact" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>Contact</Link>
             <Link to="/careers" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>Career</Link>
