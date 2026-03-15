@@ -18,7 +18,12 @@ const Header = () => {
     { name: 'Cloud Solutions', path: '/gig/cloud-solutions' },
     { name: 'DevOps Services', path: '/gig/devops-services' },
   ];
-
+const products = [
+  { name: 'School Management System', path: '/products/school-management' },
+  { name: 'CRM Software', path: '/products/crm' },
+  { name: 'E-commerce Platform', path: '/products/ecommerce' },
+  { name: 'HR Management System', path: '/products/hrm' },
+];
 
   
   
@@ -123,16 +128,7 @@ const Header = () => {
               </div>
             </div>
 
-            <div>
-              <span className="font-medium text-gray-700">Product</span>
-              <div className="pl-4 mt-2 space-y-1">
-                {product.map(product => (
-                  <Link key={product.path} to={product.path} className="block text-gray-600 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>
-                    {product.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
+          
 
             <Link to="/about" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>About</Link>
             <Link to="/contact" className="text-gray-700 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>Contact</Link>
