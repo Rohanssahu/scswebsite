@@ -2,10 +2,10 @@ import React from "react";
 
 const officelife = [
   {
-    img: 'https://www.scssoftwares.com/images/office.png',
+    img: 'https://www.scssoftwares.com/images/reception.jpeg',
   },
   {
-    img: 'https://www.scssoftwares.com/images/office2.png',
+    img: 'https://www.scssoftwares.com/images/inside.jpeg',
   },
   {
     img: 'https://cdn.prod.website-files.com/631ec5866e474e5b101f6a41/66742bdb7a0658b92e561400_Life-at-Softude%20(6).webp',
