@@ -9,25 +9,25 @@ const About = () => {
     {
       name: 'Rohan Sahu',
       role: 'CEO & Founder',
-      image: 'https://scssoftwares.com/images/rohan.png',
+      image: 'https://scssoftwares.com/images/rohansahu.jpeg',
       bio: 'Tech entrepreneur with 9+ years of experience in software development and business strategy.'
     },
     {
-      name: 'Aditi Gupta',
+      name: 'Raju Burde',
       role: 'CTO',
-      image: 'https://scssoftwares.com/images/aditi.png',
+      image: 'https://scssoftwares.com/images/cto.png',
       bio: 'Expert in scalable architecture and emerging technologies with a passion for innovation.'
     },
     {
       name: 'Sachin Basaiye',
       role: 'Project Manager',
-      image: 'https://scssoftwares.com/images/sachin.png',
+      image: 'https://scssoftwares.com/images/project.png',
       bio: 'Creative Project Manager focused on user-centered strategies and delivering exceptional digital experiences'
     },
     {
-      name: 'Shivani Parihar ',
+      name: 'Priyanka Dalwani ',
       role: 'Vp of Marketing',
-      image: 'https://scssoftwares.com/images/shivani.png ',
+      image: 'https://scssoftwares.com/images/vp.png ',
       bio: 'Digital marketing strategist helping businesses grow their online presence and reach.'
     }
   ];

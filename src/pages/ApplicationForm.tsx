@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-
+import emailjs from "emailjs-com";
 const ApplicationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -12,61 +12,100 @@ const ApplicationForm = () => {
     contact: "",
     gender: "",
     cover_note: "",
-    resume: null,
+    resume1: null,
+   
   });
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
+
     if (type === "file") {
-      setFormData({ ...formData, resume: files[0] });
+      setFormData({ ...formData, [name]: files[0] });
     } else {
       setFormData({ ...formData, [name]: value });
     }
   };
+  const [dialog, setDialog] = useState({
+    open: false,
+    type: "", // success | error
+    message: ""
+  });
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-  
-    const payload = new FormData();
-    for (const key in formData) {
-      payload.append(key, formData[key]);
-    }
-  
-    try {
-      const response = await fetch(
-        "https://www.scssoftwares.com/scsapi/apply.php",
-        {
-          method: "POST",
-          body: payload,
-        }
-      );
-  
-      const result = await response.json();
-      alert(result.message);
-  
-      // Reset form on success
-      setFormData({
-        name: "",
-        email: "",
-        position: "",
-        contact: "",
-        gender: "",
-        cover_note: "",
-        resume: null,
-      });
-  
-      // Optional: Reset file input manually
-      document.getElementById("resumeInput").value = "";
-    } catch (err) {
-      console.error("Submission error:", err);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  try {
+    let resume1Url = "";
   
 
+    if (formData.resume1) {
+      resume1Url = await uploadFile(formData.resume1);
+    }
+
+ console.log("Resume URL:", resume1Url);
+    await emailjs.send(
+      "service_fz97kyb",
+      "template_shbutfo",
+      {
+        name: formData.name,
+        email: formData.email,
+        position: formData.position,
+        contact: formData.contact,
+        gender: formData.gender,
+        cover_note: formData.cover_note,
+        resume1: resume1Url,
+       
+      },
+      "np--atCig3crdyD1t"
+    );
+
+    setDialog({
+      open: true,
+      type: "success",
+      message: `Thank you ${formData.name}! Your application has been submitted successfully. Our team will contact you within 24-48 hours.`,
+    });
+
+    setFormData({
+      name: "",
+      email: "",
+      position: "",
+      contact: "",
+      gender: "",
+      cover_note: "",
+      resume1: null,
+ 
+    });
+
+  } catch (error) {
+    console.error(error);
+    setDialog({
+      open: true,
+      type: "error",
+      message: "Failed to submit application. Try again.",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const uploadFile = async (file) => {
+  const data = new FormData();
+  data.append("file", file);
+  data.append("upload_preset", "resume_upload");
+
+  const res = await fetch(
+    "https://api.cloudinary.com/v1_1/dwrkulmwh/auto/upload",
+    {
+      method: "POST",
+      body: data,
+    }
+  );
+
+  const result = await res.json();
+  console.log("Cloudinary response:", result); // 🔥 debug
+
+  return result.secure_url;
+};
   return (
     <div>
       <Header />
@@ -138,16 +177,20 @@ const ApplicationForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block mb-1 font-medium">Upload Resume</label>
-              <input
-  type="file"
-  name="resume"
-  id="resumeInput"
-  onChange={handleChange}
-  className="w-full border border-gray-300 p-2 rounded"
-  accept=".pdf,.doc,.docx"
-  required
-/>
+             
+              <div>
+                <label className="block mb-1 font-medium">Upload Resume*</label>
+                <input
+                  type="file"
+                  name="resume1"
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 p-2 rounded"
+                  accept=".pdf,.doc,.docx"
+                  required
+                />
+              </div>
+
+       
 
             </div>
             <div>
@@ -198,15 +241,14 @@ const ApplicationForm = () => {
           </div>
 
           <div className="flex gap-4">
-          <button
-  type="submit"
-  disabled={isSubmitting}
-  className={`px-6 py-2 rounded text-white ${
-    isSubmitting ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-  }`}
->
-  {isSubmitting ? "Submitting..." : "Submit"}
-</button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-6 py-2 rounded text-white ${isSubmitting ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+                }`}
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </button>
 
             <button
               type="reset"
@@ -228,6 +270,50 @@ const ApplicationForm = () => {
           </div>
         </form>
       </section>
+      {dialog.open && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDialog({ ...dialog, open: false })}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-xl shadow-xl p-6 w-[90%] max-w-md text-center animate-fadeIn">
+
+            {/* Icon */}
+            <div className={`mx-auto w-14 h-14 flex items-center justify-center rounded-full mb-4 
+        ${dialog.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+
+              {dialog.type === 'success' ? (
+                <span className="text-green-600 text-2xl">✔</span>
+              ) : (
+                <span className="text-red-600 text-2xl">✖</span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              {dialog.type === 'success' ? 'Application Submitted 🎉' : 'Error'}
+            </h3>
+
+            {/* Message */}
+            <p className="text-gray-600 mb-6">
+              {dialog.message}
+            </p>
+
+            {/* Button */}
+            <button
+              onClick={() => setDialog({ ...dialog, open: false })}
+              className="px-6 py-2 rounded-lg text-white font-medium 
+        bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:opacity-90"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );

@@ -4,7 +4,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import ReactGA from "react-ga4";
-
+import emailjs from 'emailjs-com';
 const Contact = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -14,60 +14,64 @@ const Contact = () => {
     message: ''
   });
   const [loading, setLoading] = useState(false); // <-- loading state added
+const [dialog, setDialog] = useState({
+  open: false,
+  type: '', // success | error
+  message: ''
+});
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    ReactGA.event({
-      category: "Contact",
-      action: "Submit",
-      label: "Contact Form"
+  const { name, email, message } = formData;
+
+if (!name || !email || !message) {
+  setDialog({
+    open: true,
+    type: 'error',
+    message: 'Please fill all required fields'
+  });
+  return;
+}
+  setLoading(true);
+
+  try {
+    await emailjs.send(
+      "service_fz97kyb",
+      "template_shbutfo",
+      formData,
+      "np--atCig3crdyD1t"
+    );
+
+ setDialog({
+  open: true,
+  type: 'success',
+  message: `Thank you ${name}! Your inquiry has been submitted successfully. Our team will contact you within 24 hours.`
+});
+
+    setFormData({
+      name: '',
+      email: '',
+      company: '',
+      service: '',
+      message: ''
     });
-    const { name, email, message } = formData;
 
-    if (!name?.trim() || !email?.trim() || !message?.trim()) {
-      alert("Please fill in your name, email, and message.");
-      return;
-    }
+  } catch (error) {
+    console.error(error);
+setDialog({
+  open: true,
+  type: 'error',
+  message: 'Failed to send message. Try again.'
+});
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true); // start loading
 
-    try {
-      const response = await fetch("https://www.scssoftwares.com/scsapi/send_email.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
 
-      if (!response.ok) {
-        const errorResult = await response.json();
-        alert(errorResult.message || "Failed to send email.");
-        setLoading(false);
-        return;
-      }
 
-      const result = await response.json();
-      alert(result.message);
 
-      // Reset form after successful submission
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        service: '',
-        message: ''
-      });
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false); // stop loading in all cases
-    }
-  };
-
-  
-  
-
-  
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -79,13 +83,13 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 to-indigo-700 text-white py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-5xl font-bold mb-6">Get In Touch</h1>
           <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-            Ready to transform your business with technology? Let's discuss your 
+            Ready to transform your business with technology? Let's discuss your
             project and how we can help you achieve your goals.
           </p>
         </div>
@@ -131,7 +135,7 @@ const Contact = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="company" className="block text-gray-700 font-medium mb-2">
@@ -186,89 +190,89 @@ const Contact = () => {
                 </div>
 
                 <button
-          type="submit"
-          disabled={loading}  // disable when loading
-          className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-lg font-semibold hover:shadow-lg transition-all transform hover:scale-105 flex items-center justify-center
+                  type="submit"
+                  disabled={loading}  // disable when loading
+                  className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-lg font-semibold hover:shadow-lg transition-all transform hover:scale-105 flex items-center justify-center
             ${loading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
           `}
-        >
-          {loading ? 'Sending...' : 'Send Message'}
-          {!loading && <Send className="ml-2 h-5 w-5" />}
-        </button>
+                >
+                  {loading ? 'Sending...' : 'Send Message'}
+                  {!loading && <Send className="ml-2 h-5 w-5" />}
+                </button>
               </form>
             </div>
 
             {/* Contact Info */}
             <div>
-  <h2 className="text-3xl font-bold text-gray-800 mb-8">Get in touch</h2>
+              <h2 className="text-3xl font-bold text-gray-800 mb-8">Get in touch</h2>
 
-  <div className="space-y-8">
-    {/* Office */}
-    <div className="flex items-start space-x-4">
-      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-        <MapPin className="h-6 w-6 text-blue-600" />
-      </div>
-      <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">Our Office</h3>
-        <p className="text-gray-600">
-        9th Floor, Shekhar central, <br />Palasia Square, Manorama Ganj, <br />Indore, Madhya Pradesh 452001<br />
-          
-        </p>
-      </div>
-    </div>
+              <div className="space-y-8">
+                {/* Office */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Our Office</h3>
+                    <p className="text-gray-600">
+                      9th Floor, Shekhar central, <br />Palasia Square, Manorama Ganj, <br />Indore, Madhya Pradesh 452001<br />
 
-    {/* Phone */}
-    <div className="flex items-start space-x-4">
-      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-        <Phone className="h-6 w-6 text-green-600" />
-      </div>
-      <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">Phone</h3>
-        <p className="text-gray-600">+91 7828690192</p>
-        <p className="text-sm text-gray-500 mt-1">Mon–Fri 10AM–7PM IST</p>
-      </div>
-    </div>
+                    </p>
+                  </div>
+                </div>
 
-    {/* Email */}
-    <div className="flex items-start space-x-4">
-      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-        <Mail className="h-6 w-6 text-purple-600" />
-      </div>
-      <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">Email</h3>
-        <p className="text-gray-600">info@scssoftwares.com</p>
-        <p className="text-sm text-gray-500 mt-1">We reply within 24 hours</p>
-      </div>
-    </div>
+                {/* Phone */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Phone className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Phone</h3>
+                    <p className="text-gray-600">+91 7828690192</p>
+                    <p className="text-sm text-gray-500 mt-1">Mon–Fri 10AM–7PM IST</p>
+                  </div>
+                </div>
 
-    {/* WhatsApp */}
-    <div className="flex items-start space-x-4">
-      <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-        <svg
-          className="h-6 w-6 text-green-500"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path d="M12.004 2.001c-5.522 0-10 4.477-10 10 0 1.756.462 3.458 1.341 4.966L2 22l5.142-1.336c1.466.809 3.11 1.229 4.862 1.229 5.523 0 10-4.478 10-10s-4.477-10-10-10zm0 18.25c-1.471 0-2.907-.394-4.164-1.142l-.296-.175-3.049.791.812-2.964-.193-.305C4.38 15.005 4 13.519 4 12.001c0-4.418 3.583-8 8.004-8 4.418 0 7.996 3.582 7.996 8 0 4.417-3.578 8.25-7.996 8.25zm4.137-6.081c-.226-.113-1.336-.659-1.543-.735-.207-.075-.357-.113-.506.113-.15.226-.58.735-.71.885-.132.15-.263.169-.488.056-.225-.113-.949-.35-1.807-1.116-.668-.596-1.118-1.335-1.25-1.56-.131-.225-.014-.346.099-.459.102-.101.226-.263.338-.394.112-.131.15-.225.226-.375.075-.15.037-.281-.019-.394-.056-.112-.506-1.222-.694-1.674-.182-.435-.369-.377-.506-.383-.132-.006-.282-.007-.432-.007-.15 0-.394.057-.6.282s-.788.77-.788 1.878c0 1.108.807 2.179.918 2.33.112.15 1.59 2.428 3.86 3.404 2.27.977 2.27.651 2.675.613.394-.038 1.336-.544 1.522-1.07.188-.525.188-.976.132-1.07-.057-.094-.207-.15-.432-.263z" />
-        </svg>
-      </div>
-      <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">WhatsApp</h3>
-        <a
-          href="https://wa.me/917828690192"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-green-600 hover:underline"
-        >
-          +91 7869742922
-        </a>
-        <p className="text-sm text-gray-500 mt-1">Available anytime on chat</p>
-      </div>
-    </div>
-  </div>
+                {/* Email */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Email</h3>
+                    <p className="text-gray-600">info@scssoftwares.com</p>
+                    <p className="text-sm text-gray-500 mt-1">We reply within 24 hours</p>
+                  </div>
+                </div>
 
-  {/* Schedule Consultation */}
-  {/* <div className="mt-12 p-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
+                {/* WhatsApp */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12.004 2.001c-5.522 0-10 4.477-10 10 0 1.756.462 3.458 1.341 4.966L2 22l5.142-1.336c1.466.809 3.11 1.229 4.862 1.229 5.523 0 10-4.478 10-10s-4.477-10-10-10zm0 18.25c-1.471 0-2.907-.394-4.164-1.142l-.296-.175-3.049.791.812-2.964-.193-.305C4.38 15.005 4 13.519 4 12.001c0-4.418 3.583-8 8.004-8 4.418 0 7.996 3.582 7.996 8 0 4.417-3.578 8.25-7.996 8.25zm4.137-6.081c-.226-.113-1.336-.659-1.543-.735-.207-.075-.357-.113-.506.113-.15.226-.58.735-.71.885-.132.15-.263.169-.488.056-.225-.113-.949-.35-1.807-1.116-.668-.596-1.118-1.335-1.25-1.56-.131-.225-.014-.346.099-.459.102-.101.226-.263.338-.394.112-.131.15-.225.226-.375.075-.15.037-.281-.019-.394-.056-.112-.506-1.222-.694-1.674-.182-.435-.369-.377-.506-.383-.132-.006-.282-.007-.432-.007-.15 0-.394.057-.6.282s-.788.77-.788 1.878c0 1.108.807 2.179.918 2.33.112.15 1.59 2.428 3.86 3.404 2.27.977 2.27.651 2.675.613.394-.038 1.336-.544 1.522-1.07.188-.525.188-.976.132-1.07-.057-.094-.207-.15-.432-.263z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">WhatsApp</h3>
+                    <a
+                      href="https://wa.me/917828690192"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:underline"
+                    >
+                      +91 7869742922
+                    </a>
+                    <p className="text-sm text-gray-500 mt-1">Available anytime on chat</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Schedule Consultation */}
+              {/* <div className="mt-12 p-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
     <h3 className="text-xl font-bold text-gray-800 mb-4">Ready to start your project?</h3>
     <p className="text-gray-600 mb-6">
       Schedule a free consultation with our experts to discuss your 
@@ -281,11 +285,53 @@ const Contact = () => {
       Schedule Consultation
     </button>
   </div> */}
-</div>
+            </div>
           </div>
         </div>
       </section>
+{dialog.open && (
+  <div className="fixed inset-0 flex items-center justify-center z-50">
+    
+    {/* Overlay */}
+    <div 
+      className="absolute inset-0 bg-black/50"
+      onClick={() => setDialog({ ...dialog, open: false })}
+    />
 
+    {/* Modal */}
+    <div className="relative bg-white rounded-xl shadow-xl p-6 w-[90%] max-w-md text-center animate-fadeIn">
+      
+      {/* Icon */}
+      <div className={`mx-auto w-14 h-14 flex items-center justify-center rounded-full mb-4 
+        ${dialog.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+        
+        {dialog.type === 'success' ? (
+          <span className="text-green-600 text-2xl">✔</span>
+        ) : (
+          <span className="text-red-600 text-2xl">✖</span>
+        )}
+      </div>
+
+      {/* Message */}
+      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+        {dialog.type === 'success' ? 'Success' : 'Error'}
+      </h3>
+
+      <p className="text-gray-600 mb-6">
+        {dialog.message}
+      </p>
+
+      {/* Button */}
+      <button
+        onClick={() => setDialog({ ...dialog, open: false })}
+        className="px-6 py-2 rounded-lg text-white font-medium 
+        bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:opacity-90"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
       <Footer />
     </div>
   );
