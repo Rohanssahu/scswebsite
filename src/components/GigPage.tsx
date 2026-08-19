@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
-import { ArrowRight, CheckCircle, Star, Clock, Users, Award } from 'lucide-react';
+import Reveal from './Reveal';
+import { ArrowRight, CheckCircle, Star, Sparkles, PhoneCall, Users, Clock, DollarSign, CalendarRange } from 'lucide-react';
 
 interface GigPageProps {
   title: string;
@@ -18,6 +18,19 @@ interface GigPageProps {
   portfolio: { title: string; description: string; image: string }[];
 }
 
+const primaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
+const secondaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-7 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
+
+const SectionHeading = ({ eyebrow, title, sub }: { eyebrow: string; title: React.ReactNode; sub?: string }) => (
+  <div className="mx-auto mb-12 max-w-2xl text-center">
+    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{eyebrow}</span>
+    <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">{title}</h2>
+    {sub && <p className="mt-4 text-gray-600">{sub}</p>}
+  </div>
+);
+
 const GigPage: React.FC<GigPageProps> = ({
   title,
   description,
@@ -26,242 +39,232 @@ const GigPage: React.FC<GigPageProps> = ({
   features,
   technologies,
   process,
-  pricing,
   testimonials,
-  portfolio
+  portfolio,
 }) => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
-      
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 to-indigo-700 text-white py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center">
-                  <Icon className="h-8 w-8 text-white" />
+
+      {/* ===== Hero ===== */}
+      <section className="relative overflow-hidden">
+        <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[50rem] -translate-x-1/2 animate-pulse-glow rounded-full bg-pink-200/60 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-purple-200/50 blur-3xl" aria-hidden="true" />
+
+        <div className="container relative mx-auto px-4 py-20 sm:py-24">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div className="text-center lg:text-left">
+              <Reveal>
+                <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" /> Our services
+                </span>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl">
+                  <span className="text-gradient-ai">{title}</span>
+                </h1>
+              </Reveal>
+              <Reveal delay={0.2}>
+                <p className="mt-6 text-lg leading-relaxed text-gray-600">{description}</p>
+              </Reveal>
+              <Reveal delay={0.3}>
+                <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+                  <Link to="/contact" className={primaryBtn}>
+                    Get Started <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link to="/contact" className={secondaryBtn}>
+                    Get Quote
+                  </Link>
                 </div>
-                <h1 className="text-4xl lg:text-5xl font-bold">{title}</h1>
-              </div>
-              <p className="text-xl text-blue-100 leading-relaxed">{description}</p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  to="/contact" 
-                  className="bg-white text-blue-600 px-8 py-4 rounded-full font-semibold hover:bg-blue-50 transition-all transform hover:scale-105 flex items-center justify-center"
-                >
-                  Get Started
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-                <Link 
-                  to="/contact" 
-                  className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition-all"
-                >
-                  Get Quote
-                </Link>
-              </div>
+              </Reveal>
             </div>
-            <div className="relative">
-              <img 
-                src={heroImage} 
-                alt={title}
-                className="rounded-2xl shadow-2xl"
-              />
-            </div>
+            <Reveal delay={0.2}>
+              <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
+                <img
+                  src={heroImage}
+                  alt={title}
+                  loading="lazy"
+                  className="h-64 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-80 lg:h-96"
+                />
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-white">
+      {/* ===== Features ===== */}
+      <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Why Choose Our <span className="text-blue-600">{title}</span> Services?
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <SectionHeading
+            eyebrow="What's included"
+            title={<>Why choose our <span className="text-gradient-ai">{title}</span> services?</>}
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-start space-x-4">
-                <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
-                <span className="text-gray-700">{feature}</span>
-              </div>
+              <Reveal key={feature} delay={index * 0.04}>
+                <div className="flex h-full items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5 transition-colors hover:border-pink-300">
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <span className="text-sm font-medium text-gray-700">{feature}</span>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Technologies Section */}
-      <section className="py-20 bg-gray-50">
+      {/* ===== Technologies ===== */}
+      <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Technologies We <span className="text-blue-600">Use</span>
-            </h2>
-          </div>
-          
-          <div className="flex flex-wrap justify-center gap-4">
-            {technologies.map((tech, index) => (
-              <span 
-                key={index} 
-                className="bg-white px-6 py-3 rounded-full shadow-md text-gray-700 font-medium"
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Process Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Our <span className="text-blue-600">Process</span>
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {process.map((step, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
-                  {index + 1}
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{step.step}</h3>
-                <p className="text-gray-600">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Portfolio Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Related <span className="text-blue-600">Projects</span>
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {portfolio.map((item, index) => (
-              <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group">
-                <div className="relative overflow-hidden">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h3>
-                  <p className="text-gray-600">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Client <span className="text-blue-600">Testimonials</span>
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8">
-                <div className="flex items-center mb-6">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover mr-4"
-                  />
-                  <div>
-                    <h4 className="font-bold text-gray-800">{testimonial.name}</h4>
-                    <p className="text-gray-600 text-sm">{testimonial.company}</p>
-                  </div>
-                </div>
-                <p className="text-gray-700 italic">"{testimonial.quote}"</p>
-                <div className="flex mt-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">
-              Choose Your <span className="text-blue-600">Plan</span>
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricing.map((plan, index) => (
-              <div 
-                key={index} 
-                className={`bg-white rounded-2xl p-8 shadow-lg ${index === 1 ? 'transform scale-105 border-4 border-blue-500' : ''}`}
-              >
-                {index === 1 && (
-                  <div className="bg-blue-500 text-white text-center py-2 px-4 rounded-full text-sm font-semibold mb-4">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">{plan.plan}</h3>
-                <div className="text-4xl font-bold text-blue-600 mb-6">{plan.price}</div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link 
-                  to="/contact" 
-                  className={`block text-center py-3 px-6 rounded-full font-semibold transition-all ${
-                    index === 1 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  }`}
+          <SectionHeading eyebrow="Tech stack" title={<>Technologies we <span className="text-gradient-ai">use</span></>} />
+          <Reveal>
+            <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-3">
+              {technologies.map((tech) => (
+                <span
+                  key={tech}
+                  className="rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900"
                 >
-                  Get Started
+                  {tech}
+                </span>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== Process ===== */}
+      <section className="border-t border-gray-200 py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading eyebrow="How we work" title={<>Our <span className="text-gradient-ai">process</span></>} />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {process.map((step, index) => (
+              <Reveal key={step.step} delay={index * 0.08}>
+                <div className="glow-card h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-lg font-bold text-white">
+                    {index + 1}
+                  </div>
+                  <h3 className="mt-4 font-semibold text-gray-900">{step.step}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{step.description}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Portfolio ===== */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading eyebrow="Portfolio" title={<>Related <span className="text-gradient-ai">projects</span></>} />
+          <div className="grid gap-6 md:grid-cols-3">
+            {portfolio.map((item, index) => (
+              <Reveal key={item.title} delay={index * 0.08}>
+                <article className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-pink-300">
+                  <div className="overflow-hidden">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      loading="lazy"
+                      className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-gray-900">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.description}</p>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Testimonials ===== */}
+      <section className="border-t border-gray-200 py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading eyebrow="Testimonials" title="What our clients say" />
+          <div className="grid gap-6 md:grid-cols-3">
+            {testimonials.map((testimonial, index) => (
+              <Reveal key={testimonial.name} delay={index * 0.08}>
+                <figure className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-7">
+                  <div className="flex gap-1" aria-label="5 out of 5 stars">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-current text-amber-400" aria-hidden="true" />
+                    ))}
+                  </div>
+                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-gray-700">“{testimonial.quote}”</blockquote>
+                  <figcaption className="mt-5 flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-sm font-bold text-white">
+                      {testimonial.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                      <p className="text-xs text-gray-500">{testimonial.company}</p>
+                    </div>
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Project Estimate ===== */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading
+            eyebrow="Project estimate"
+            title={<>Know your project cost <span className="text-gradient-ai">before you hire</span></>}
+            sub={`Share your ${title.toLowerCase()} idea and get an estimated team, development hours, cost and delivery timeline — free, no signup.`}
+          />
+          <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              { icon: Users, label: 'Recommended team' },
+              { icon: Clock, label: 'Hours per role' },
+              { icon: DollarSign, label: 'Cost breakdown' },
+              { icon: CalendarRange, label: 'Delivery timeline' },
+            ].map((item, i) => (
+              <Reveal key={item.label} delay={i * 0.05}>
+                <div className="flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center transition-colors hover:border-pink-300">
+                  <item.icon className="h-6 w-6 text-pink-600" aria-hidden="true" />
+                  <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.2}>
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to="/project-analysis" className={primaryBtn}>
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> Estimate My Project
+              </Link>
+              <Link to="/project-analysis?method=manual" className={secondaryBtn}>
+                Start Manually
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== CTA ===== */}
+      <section className="py-20 pt-4">
+        <div className="container mx-auto px-4">
+          <Reveal>
+            <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
+              <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
+              <h2 className="text-2xl font-bold sm:text-3xl">Ready to get started?</h2>
+              <p className="max-w-xl text-gray-600">
+                Let's discuss your {title.toLowerCase()} project and how we can help you achieve your goals.
+              </p>
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link to="/contact" className={primaryBtn}>
+                  Start Your Project Today <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+                <Link to="/schedule-call" className={secondaryBtn}>
+                  Schedule a call
                 </Link>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to Get Started?</h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Let's discuss your {title.toLowerCase()} project and how we can help you achieve your goals.
-          </p>
-          <Link 
-            to="/contact" 
-            className="bg-white text-blue-600 px-8 py-4 rounded-full font-semibold hover:bg-blue-50 transition-all transform hover:scale-105"
-          >
-            Start Your Project Today
-          </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 
