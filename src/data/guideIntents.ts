@@ -22,6 +22,17 @@ function toGuideAction(a: AssistantAction): GuideAction {
 /** Guide-specific intents, checked before the shared assistant intents. */
 export const GUIDE_INTENTS: GuideIntent[] = [
   {
+    id: 'what-is-scs',
+    keywords: [['what', 'does', 'scs'], ['what', 'scs', 'do'], ['about', 'scs'], ['who', 'are', 'you']],
+    response:
+      'SCS Softwares is a software agency that builds and rescues digital products: web development, mobile apps, UI/UX design, cloud solutions, DevOps and digital marketing. You describe your project, see an estimated team, cost and timeline up front, and confirm everything with a consultant on a free call.',
+    actions: [
+      { label: 'See all services', kind: 'navigate', to: '/#services' },
+      { label: 'Take the website tour', kind: 'start-tour' },
+      { label: 'Start a project', kind: 'flow-new' },
+    ],
+  },
+  {
     id: 'tour',
     keywords: [['tour'], ['show', 'around'], ['walk', 'through'], ['guide', 'me'], ['show', 'website']],
     response:

@@ -198,7 +198,7 @@ const ProductShowcase = () => {
       </section>
 
       {/* ===== Filter + Grid ===== */}
-      <section className="border-t border-gray-200 py-16">
+      <section data-guide-id="products-grid" className="border-t border-gray-200 py-16">
         <div className="container mx-auto px-4">
           <Reveal>
             <div className="mb-12 flex flex-wrap justify-center gap-2.5">

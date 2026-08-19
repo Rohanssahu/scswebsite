@@ -108,7 +108,7 @@ const Index = () => {
       <Header />
 
       {/* ===== Hero ===== */}
-      <section className="relative overflow-hidden">
+      <section data-guide-id="home-hero" className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[50rem] -translate-x-1/2 animate-pulse-glow rounded-full bg-pink-200/60 blur-3xl" aria-hidden="true" />
         <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-purple-200/50 blur-3xl" aria-hidden="true" />
@@ -159,7 +159,7 @@ const Index = () => {
       </section>
 
       {/* ===== How It Works ===== */}
-      <section className="border-t border-gray-200 py-20">
+      <section data-guide-id="home-process" className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
             eyebrow="How it works"
@@ -349,7 +349,7 @@ const Index = () => {
       </section>
 
       {/* ===== Why Choose SCS ===== */}
-      <section className="py-20">
+      <section id="why-scs" data-guide-id="home-benefits" className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading eyebrow="Why SCS Softwares" title="Built to be the safest way to hire developers" />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -372,7 +372,7 @@ const Index = () => {
       </section>
 
       {/* ===== Services ===== */}
-      <section id="services" className="border-t border-gray-200 py-20">
+      <section id="services" data-guide-id="home-services" className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading eyebrow="Services" title="Everything under one roof" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -392,7 +392,7 @@ const Index = () => {
       </section>
 
       {/* ===== Portfolio ===== */}
-      <section className="py-20">
+      <section data-guide-id="home-portfolio" className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading eyebrow="Portfolio" title="Recent case studies" />
           <div className="grid gap-6 md:grid-cols-3">

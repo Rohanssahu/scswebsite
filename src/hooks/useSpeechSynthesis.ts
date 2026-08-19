@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Optional browser text-to-speech via the Web Speech API.
 // Nothing is recorded or uploaded; unsupported browsers degrade to captions only.
+// The onEnd callback is guaranteed to fire exactly once per speak() call —
+// including when the utterance is cancelled — so message queues never stall.
 
 interface SpeakOptions {
   onEnd?: () => void;
@@ -11,19 +13,24 @@ export function useSpeechSynthesis() {
   const [supported] = useState(() => typeof window !== 'undefined' && 'speechSynthesis' in window);
   const [speaking, setSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const onEndRef = useRef<(() => void) | null>(null);
+
+  const flush = useCallback(() => {
+    if (utteranceRef.current) {
+      utteranceRef.current.onend = null;
+      utteranceRef.current.onerror = null;
+      utteranceRef.current = null;
+    }
+    if (supported) window.speechSynthesis.cancel();
+    setSpeaking(false);
+    const cb = onEndRef.current;
+    onEndRef.current = null;
+    cb?.();
+  }, [supported]);
 
   const cancel = useCallback(() => {
-    if (supported) {
-      // Detach handlers so cancel() doesn't fire onEnd callbacks.
-      if (utteranceRef.current) {
-        utteranceRef.current.onend = null;
-        utteranceRef.current.onerror = null;
-      }
-      window.speechSynthesis.cancel();
-    }
-    utteranceRef.current = null;
-    setSpeaking(false);
-  }, [supported]);
+    flush();
+  }, [flush]);
 
   const speak = useCallback(
     (text: string, options?: SpeakOptions) => {
@@ -31,28 +38,30 @@ export function useSpeechSynthesis() {
         options?.onEnd?.();
         return;
       }
-      window.speechSynthesis.cancel();
+      flush(); // settle any previous utterance first
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1;
       utterance.pitch = 1;
-      utterance.onend = () => {
-        utteranceRef.current = null;
-        setSpeaking(false);
-        options?.onEnd?.();
+      const settle = () => {
+        if (utteranceRef.current === utterance) {
+          utteranceRef.current = null;
+          setSpeaking(false);
+          const cb = onEndRef.current;
+          onEndRef.current = null;
+          cb?.();
+        }
       };
-      utterance.onerror = () => {
-        utteranceRef.current = null;
-        setSpeaking(false);
-        options?.onEnd?.();
-      };
+      utterance.onend = settle;
+      utterance.onerror = settle;
       utteranceRef.current = utterance;
+      onEndRef.current = options?.onEnd ?? null;
       setSpeaking(true);
       window.speechSynthesis.speak(utterance);
     },
-    [supported],
+    [flush, supported],
   );
 
-  // Stop speaking if the component unmounts or the page navigates away.
+  // Stop speaking if the component unmounts or the page unloads.
   useEffect(() => {
     if (!supported) return;
     const stop = () => window.speechSynthesis.cancel();

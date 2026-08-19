@@ -129,7 +129,7 @@ const ScheduleCall = () => {
               </p>
             </div>
 
-            <form onSubmit={submit} className="glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8">
+            <form data-guide-id="schedule-form" onSubmit={submit} className="glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8">
               {/* Date */}
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 <CalendarDays className="h-4 w-4" aria-hidden="true" /> 1. Select a date

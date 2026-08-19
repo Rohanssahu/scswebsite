@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Send, Loader2, MessageCircle, Sparkles, ArrowRight, PhoneCall } from 'lucide-react';
 import emailjs from 'emailjs-com';
@@ -29,6 +29,24 @@ const Contact = () => {
     service: '',
     message: '',
   });
+  // One-time prefill written by the SCS Virtual Guide (demo) — nothing is sent
+  // automatically; the visitor still reviews and submits the form themselves.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('scs-guide-contact-prefill');
+      if (!raw) return;
+      const prefill = JSON.parse(raw) as { service?: string; message?: string };
+      setFormData((prev) => ({
+        ...prev,
+        service: prev.service || prefill.service || '',
+        message: prev.message || prefill.message || '',
+      }));
+      localStorage.removeItem('scs-guide-contact-prefill');
+    } catch {
+      /* ignore malformed prefill */
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [dialog, setDialog] = useState({
     open: false,
@@ -125,7 +143,7 @@ const Contact = () => {
               <div className="glow-card rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Contact form</span>
                 <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">Send us a message</h2>
-                <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                <form data-guide-id="contact-form" onSubmit={handleSubmit} className="mt-8 space-y-5">
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                       <label htmlFor="name" className={labelClass}>

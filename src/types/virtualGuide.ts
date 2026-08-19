@@ -25,7 +25,8 @@ export type GuideActionKind =
   | 'open-results' // open the detailed recommendation panel
   | 'contact-handoff' // prefill the contact form and navigate there
   | 'schedule-handoff' // navigate to the schedule-call page
-  | 'run-analysis'; // start the simulated demo analysis
+  | 'run-analysis' // start the simulated demo analysis
+  | 'flow-edit'; // reopen the requirement flow at the review step
 
 export interface GuideAction {
   label: string;

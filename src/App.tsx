@@ -28,7 +28,8 @@ import ScheduleCall from "./pages/ScheduleCall";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
-import AssistantWidget from "./components/ai-assistant/AssistantWidget";
+import VirtualGuide from "./components/virtual-guide/VirtualGuide";
+import ScrollButtons from "./components/ScrollButtons";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,8 @@ const App = () => {
         <BrowserRouter>
           <ScrollToTop />
           <RoutesComponent />
-          <AssistantWidget />
+          <VirtualGuide />
+          <ScrollButtons />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
