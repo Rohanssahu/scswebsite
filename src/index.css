@@ -99,3 +99,56 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Subtle blueprint grid used on the estimator surfaces (light theme) */
+  .bg-grid-glow {
+    background-image:
+      linear-gradient(rgba(107, 114, 128, 0.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(107, 114, 128, 0.09) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  /* Brand gradient text — matches the site's original orange/pink/purple */
+  .text-gradient-ai {
+    @apply bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .glow-card {
+    box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.05), 0 12px 32px -14px rgba(236, 72, 153, 0.35);
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print styles: show only the estimate document on the result page */
+@media print {
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .print-area {
+    color: #111 !important;
+    background: #fff !important;
+  }
+  .print-area * {
+    color: #111 !important;
+    background: transparent !important;
+    border-color: #ddd !important;
+    box-shadow: none !important;
+  }
+}
