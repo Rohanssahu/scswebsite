@@ -5,6 +5,7 @@ import { ASSISTANT_OPEN_EVENT } from '@/components/ai-assistant/assistantBus';
 import { getQuestions } from '@/data/analysisQuestions';
 import { buildGuideEstimate, ESTIMATE_DISCLAIMER_KEY, GUIDE_WEEKLY_CAPACITY_HOURS } from '@/data/demoEstimate';
 import { getRouteQuickActions, GUIDE_WELCOME_KEY, WELCOME_ACTIONS, WHATSAPP_NUMBER } from '@/data/guideContent';
+import { emitBuddyReaction, looksLikeJoke } from '@/data/buddyReactions';
 import { clarifyReply, routeMessage } from '@/data/guideIntents';
 import { TOUR_STEPS } from '@/data/guideTour';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -302,6 +303,7 @@ export function useVirtualGuide() {
   const enterReview = useCallback(
     (mode: ProjectMode) => {
       setFlow((f) => (f ? { ...f, status: 'review', index: getQuestions(mode).length } : f));
+      emitBuddyReaction('step-complete');
       enqueueGuide([
         {
           key: 'guide.msg.review',
@@ -348,6 +350,7 @@ export function useVirtualGuide() {
       const q = questions[f.index];
       if (!q) return;
       pushUser(displayAnswer(value));
+      emitBuddyReaction('answered');
       const answers = { ...f.answers, [q.id]: value };
       const nextIndex = f.index + 1;
       const draft = loadDraft();
@@ -436,6 +439,7 @@ export function useVirtualGuide() {
     saveResult(result);
     setFlow({ ...f, status: 'done' });
     setCelebrating(true);
+    emitBuddyReaction('requirement-complete');
     addTimer(() => setCelebrating(false), 4000);
     const roles = result.team
       .map((r) =>
@@ -653,7 +657,10 @@ export function useVirtualGuide() {
         return;
       }
       pushUser(text);
-      const reply = routeMessage(text, pathRef.current) ?? clarifyReply(pathRef.current);
+      const matched = routeMessage(text, pathRef.current);
+      if (!matched) emitBuddyReaction('unknown');
+      else if (looksLikeJoke(text)) emitBuddyReaction('joke');
+      const reply = matched ?? clarifyReply(pathRef.current);
       enqueueGuide([{ key: reply.key, params: reply.params, actions: reply.actions }]);
     },
     [answerQuestion, enqueueGuide, pushUser],
@@ -669,7 +676,10 @@ export function useVirtualGuide() {
         return;
       }
       pushUser(tValue('actions', action.label));
-      const reply = routeMessage(action.message, pathRef.current) ?? clarifyReply(pathRef.current);
+      const matched = routeMessage(action.message, pathRef.current);
+      if (!matched) emitBuddyReaction('unknown');
+      else if (looksLikeJoke(action.message)) emitBuddyReaction('joke');
+      const reply = matched ?? clarifyReply(pathRef.current);
       enqueueGuide([{ key: reply.key, params: reply.params, actions: reply.actions }]);
     },
     [answerQuestion, enqueueGuide, pushUser],
@@ -681,6 +691,7 @@ export function useVirtualGuide() {
       switch (action.kind) {
         case 'navigate': {
           if (!action.to) return;
+          if (action.to.includes('services') || action.to.includes('product')) emitBuddyReaction('service-selected');
           const [path, hash] = action.to.split('#');
           navigate(path || '/');
           if (hash) {

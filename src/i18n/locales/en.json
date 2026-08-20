@@ -678,6 +678,19 @@
   },
   "guide": {
     "name": "Buddy",
+    "buddy": {
+      "waitBubble": "I'll wait here whenever you need me.",
+      "goodbye": "No problem—I'll be in my little home. Knock whenever you need help.",
+      "back": "I'm back! How can I help?",
+      "knockLabel": "Knock on Buddy's door to call Buddy back",
+      "settingsTitle": "Buddy character",
+      "sendHome": "Send Buddy home",
+      "bringBack": "Bring Buddy back",
+      "pauseAnimations": "Pause Buddy animations",
+      "reduceMotion": "Reduce motion",
+      "sounds": "Sound effects",
+      "soundsHint": "Off by default. Only a soft knock sound when you tap the door."
+    },
     "fullName": "Buddy — Your SCS Guide",
     "tagline": "Demo — scripted guide, no live person or AI",
     "openLabel": "Open Buddy — Your SCS Guide (demo)",

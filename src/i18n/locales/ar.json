@@ -682,6 +682,19 @@
   },
   "guide": {
     "name": "Buddy",
+    "buddy": {
+      "waitBubble": "سأنتظر هنا متى احتجت إليّ.",
+      "goodbye": "لا مشكلة — سأكون في بيتي الصغير. اطرق الباب متى احتجت إلى مساعدة.",
+      "back": "لقد عدت! كيف يمكنني مساعدتك؟",
+      "knockLabel": "اطرق باب Buddy لاستدعائه من جديد",
+      "settingsTitle": "شخصية Buddy",
+      "sendHome": "أرسل Buddy إلى بيته",
+      "bringBack": "أعد Buddy",
+      "pauseAnimations": "إيقاف حركات Buddy مؤقتًا",
+      "reduceMotion": "تقليل الحركة",
+      "sounds": "المؤثرات الصوتية",
+      "soundsHint": "متوقفة افتراضيًا. صوت طرق خفيف فقط عند النقر على الباب."
+    },
     "fullName": "Buddy — دليلك في SCS",
     "tagline": "تجريبي — دليل بسيناريو جاهز، بدون شخص حقيقي أو AI",
     "openLabel": "افتح Buddy — دليلك في SCS (تجريبي)",

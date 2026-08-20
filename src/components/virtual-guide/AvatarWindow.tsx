@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { GripHorizontal, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { BuddyApi } from '@/hooks/useBuddyAnimation';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 import GuideAvatar from './GuideAvatar';
 import GuideChat from './GuideChat';
@@ -15,10 +16,11 @@ import GuideSettings from './GuideSettings';
 
 interface AvatarWindowProps {
   guide: VirtualGuideApi;
+  buddy: BuddyApi;
   isMobile: boolean;
 }
 
-const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
+const AvatarWindow = ({ guide, buddy, isMobile }: AvatarWindowProps) => {
   const { t } = useTranslation();
   const constraintsRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -115,7 +117,7 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
         </div>
       </div>
 
-      {guide.settingsMode ? <GuideSettings guide={guide} /> : <GuideChat guide={guide} />}
+      {guide.settingsMode ? <GuideSettings guide={guide} buddy={buddy} /> : <GuideChat guide={guide} />}
     </motion.div>
   );
 
