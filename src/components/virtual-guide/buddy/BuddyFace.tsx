@@ -79,12 +79,14 @@ const BuddyFace = ({ face, talking, animate }: BuddyFaceProps) => {
           initial={false}
           animate={{
             rx: Math.max(face.mouthWidth * 0.3, 2.5),
-            ry: animate && talking ? [1, 4.5, 2, 5, 1] : openRy,
+            ry: animate && talking ? [1, 4.5, 2, 5, 1] : Math.max(openRy, 0.01),
           }}
+          // Tweens only: a spring would overshoot ry below 0, which is
+          // invalid for SVG ellipses.
           transition={
             animate && talking
-              ? { ry: { duration: 0.7, repeat: Infinity, ease: 'easeInOut' }, rx: BUDDY_SPRING }
-              : BUDDY_SPRING
+              ? { ry: { duration: 0.7, repeat: Infinity, ease: 'easeInOut' }, rx: { duration: 0.25, ease: 'easeOut' } }
+              : { duration: 0.25, ease: 'easeOut' }
           }
         />
         <motion.path

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BuddyApi } from '@/hooks/useBuddyAnimation';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
@@ -42,6 +43,19 @@ const BuddyStage = ({ guide, buddy }: BuddyStageProps) => {
   const charWidth = characterSize * 0.8;
   const stageWidth = walkDistance + homeSize + charWidth;
 
+  // What the bubble shows: home/inactivity messages first, then a comic
+  // thought-cloud while thinking, then live captions while speaking.
+  const thinking = buddy.characterState === 'thinking';
+  const speakingNow = buddy.characterState === 'speaking';
+  const bubbleText = buddy.bubbleKey
+    ? t(buddy.bubbleKey)
+    : thinking
+      ? t('guide.chat.typing')
+      : speakingNow && guide.caption
+        ? t(guide.caption.key, guide.caption.params)
+        : null;
+  const bubbleVariant = !buddy.bubbleKey && thinking ? ('thought' as const) : ('speech' as const);
+
   return (
     <div
       className="pointer-events-none fixed bottom-2 end-2 z-[78]"
@@ -50,6 +64,22 @@ const BuddyStage = ({ guide, buddy }: BuddyStageProps) => {
       <div className="relative" style={{ width: stageWidth, height: characterSize * 1.35 }}>
         {/* Home at the outer edge */}
         <div className="absolute bottom-0 end-0">
+          {/* Clear call-to-action while Buddy is inside */}
+          {buddy.insideHome && (
+            <motion.button
+              type="button"
+              initial={buddy.animate ? { opacity: 0, y: 4 } : false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              onClick={() => {
+                buddy.knock();
+                buddy.markInteraction();
+              }}
+              className="pointer-events-auto absolute -top-9 end-0 min-h-9 whitespace-nowrap rounded-full border border-pink-300 bg-white/95 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            >
+              👋 {t('guide.buddy.knockButton')}
+            </motion.button>
+          )}
           <BuddyHome
             phase={buddy.homePhase}
             size={homeSize}
@@ -83,9 +113,9 @@ const BuddyStage = ({ guide, buddy }: BuddyStageProps) => {
                 scale: { duration: entering ? 0.6 : 0.3 },
               }}
             >
-              {/* Speech bubble above Buddy */}
-              <div className="absolute -top-16 start-0">
-                <BuddySpeechBubble text={buddy.bubbleKey ? t(buddy.bubbleKey) : null} animate={buddy.animate} />
+              {/* Speech / thought bubble above Buddy */}
+              <div className="absolute bottom-full end-0 mb-4 flex w-56 justify-end">
+                <BuddySpeechBubble text={bubbleText} animate={buddy.animate} variant={bubbleVariant} />
               </div>
 
               <button
@@ -106,17 +136,33 @@ const BuddyStage = ({ guide, buddy }: BuddyStageProps) => {
                   animate={buddy.animate}
                 />
                 <span className="absolute -top-1 start-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gray-900 px-2 py-0.5 text-[9px] font-medium text-white rtl:translate-x-1/2">
-                  {t('common.demoBadge')}
+                  {t('guide.name')}
                 </span>
               </button>
+
+              {/* Quick "send Buddy home" control (after the launcher so it
+                  paints above the character and stays clickable) */}
+              {buddy.homePhase === 'outside' && (
+                <button
+                  type="button"
+                  aria-label={t('guide.buddy.sendHome')}
+                  title={t('guide.buddy.sendHome')}
+                  onClick={() => buddy.sendHome()}
+                  className="pointer-events-auto absolute -start-5 -top-3 z-10 flex h-11 w-11 items-center justify-center focus:outline-none"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white/95 text-gray-500 shadow-md transition-colors hover:border-pink-400 hover:text-pink-600">
+                    <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Bubble stays readable while Buddy is inside the home */}
-        {hidden && (
-          <div className="absolute -top-10 end-0">
-            <BuddySpeechBubble text={buddy.bubbleKey ? t(buddy.bubbleKey) : null} animate={buddy.animate} />
+        {hidden && buddy.bubbleKey && (
+          <div className="absolute bottom-full end-0 mb-2 flex w-56 justify-end">
+            <BuddySpeechBubble text={t(buddy.bubbleKey)} animate={buddy.animate} />
           </div>
         )}
       </div>
