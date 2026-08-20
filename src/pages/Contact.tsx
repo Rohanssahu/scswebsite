@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Phone, MapPin, Send, Loader2, MessageCircle, Sparkles, ArrowRight, PhoneCall } from 'lucide-react';
@@ -6,6 +6,11 @@ import emailjs from 'emailjs-com';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
+import TurnstileWidget, { TurnstileWidgetHandle } from '../components/forms/TurnstileWidget';
+import HoneypotField from '../components/forms/HoneypotField';
+import { validateContactForm } from '@/lib/leadValidation';
+import { buildContactRequest, submitLead, LeadSubmissionError } from '@/services/leadService';
+import { isLeadCaptureReady } from '@/services/supabaseClient';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -23,7 +28,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 
 const Contact = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -50,50 +55,100 @@ const Contact = () => {
   }, []);
 
   const [loading, setLoading] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const [dialog, setDialog] = useState({
     open: false,
     type: '', // success | error
     message: '',
+    reference: '',
+    note: '',
   });
+
+  const emptyForm = { name: '', email: '', company: '', service: '', message: '' };
+
+  // Secondary email notification — fired only AFTER the lead is stored.
+  // Its failure never affects the stored lead or the success dialog.
+  const sendNotificationEmail = async (): Promise<boolean> => {
+    try {
+      await emailjs.send('service_fz97kyb', 'template_shbutfo', formData, 'np--atCig3crdyD1t');
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return; // duplicate-click guard
 
     const { name, email, message } = formData;
 
     if (!name || !email || !message) {
-      setDialog({
-        open: true,
-        type: 'error',
-        message: t('contact.fillRequired'),
-      });
+      setDialog({ open: true, type: 'error', message: t('contact.fillRequired'), reference: '', note: '' });
       return;
     }
-    setLoading(true);
 
+    // Secure database path (primary) — used whenever Supabase + Turnstile
+    // public config is present. Otherwise the legacy EmailJS-only path keeps
+    // the form working exactly as before.
+    if (isLeadCaptureReady) {
+      const errors = validateContactForm({ name, email, message, company: formData.company });
+      const firstError = Object.values(errors)[0];
+      if (firstError) {
+        setDialog({ open: true, type: 'error', message: t(firstError), reference: '', note: '' });
+        return;
+      }
+      if (!turnstileToken) {
+        setDialog({ open: true, type: 'error', message: t('leadForm.turnstileRequired'), reference: '', note: '' });
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const request = buildContactRequest(
+          { name, email, company: formData.company, service: formData.service, message },
+          turnstileToken,
+          { route: '/contact', language: i18n.language },
+          honeypot,
+        );
+        const result = await submitLead(request);
+        const emailSent = await sendNotificationEmail();
+        setDialog({
+          open: true,
+          type: 'success',
+          message: t('contact.successMessage', { name }),
+          reference: result.referenceCode,
+          note: emailSent ? '' : t('contact.emailNotifyFailed'),
+        });
+        setFormData(emptyForm);
+      } catch (error) {
+        const message =
+          error instanceof LeadSubmissionError
+            ? error.code === 'rate_limited'
+              ? t('leadForm.rateLimited')
+              : error.code === 'turnstile_failed'
+                ? t('leadForm.turnstileRequired')
+                : error.message
+            : t('contact.failedMessage');
+        setDialog({ open: true, type: 'error', message, reference: '', note: '' });
+      } finally {
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Legacy path (Supabase not configured): EmailJS only, as before.
+    setLoading(true);
     try {
       await emailjs.send('service_fz97kyb', 'template_shbutfo', formData, 'np--atCig3crdyD1t');
-
-      setDialog({
-        open: true,
-        type: 'success',
-        message: t('contact.successMessage', { name }),
-      });
-
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        service: '',
-        message: '',
-      });
-    } catch (error) {
-      console.error(error);
-      setDialog({
-        open: true,
-        type: 'error',
-        message: t('contact.failedMessage'),
-      });
+      setDialog({ open: true, type: 'success', message: t('contact.successMessage', { name }), reference: '', note: '' });
+      setFormData(emptyForm);
+    } catch {
+      setDialog({ open: true, type: 'error', message: t('contact.failedMessage'), reference: '', note: '' });
     } finally {
       setLoading(false);
     }
@@ -145,6 +200,7 @@ const Contact = () => {
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('contact.formEyebrow')}</span>
                 <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">{t('contact.formTitle')}</h2>
                 <form data-guide-id="contact-form" onSubmit={handleSubmit} className="mt-8 space-y-5">
+                  <HoneypotField value={honeypot} onChange={setHoneypot} />
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                       <label htmlFor="name" className={labelClass}>
@@ -224,6 +280,12 @@ const Contact = () => {
                       placeholder={t('contact.messagePlaceholder')}
                     />
                   </div>
+
+                  {isLeadCaptureReady && (
+                    <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} key={i18n.language} />
+                  )}
+
+                  <p className="text-xs text-gray-500">{t('leadForm.consentNote')}</p>
 
                   <button type="submit" disabled={loading} className={`${primaryBtn} w-full ${loading ? 'cursor-not-allowed opacity-70 hover:scale-100' : ''}`}>
                     {loading ? (
@@ -363,6 +425,12 @@ const Contact = () => {
 
             <h3 className="text-lg font-bold text-gray-900">{dialog.type === 'success' ? t('common.success') : t('common.error')}</h3>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">{dialog.message}</p>
+            {dialog.reference && (
+              <p className="mt-3 text-sm text-gray-700">
+                {t('contact.referenceLabel')}: <span className="font-mono font-semibold text-gray-900">{dialog.reference}</span>
+              </p>
+            )}
+            {dialog.note && <p className="mt-2 text-xs text-amber-700">{dialog.note}</p>}
 
             <button onClick={() => setDialog({ ...dialog, open: false })} className={`${primaryBtn} mt-6 px-10`}>
               {t('common.ok')}

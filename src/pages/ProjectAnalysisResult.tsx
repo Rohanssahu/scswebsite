@@ -24,7 +24,8 @@ import HealthScore from '../components/estimation/HealthScore';
 import TeamBreakdown from '../components/estimation/TeamBreakdown';
 import MilestoneTimeline from '../components/estimation/MilestoneTimeline';
 import IssueCards from '../components/estimation/IssueCards';
-import { loadResult } from '@/lib/analysisStore';
+import SubmitRequirementDialog, { SubmitVariant } from '../components/estimation/SubmitRequirementDialog';
+import { loadDraft, loadResult } from '@/lib/analysisStore';
 import { DISCLAIMER, estimatedWeeks, sampleAnalysis, totalCost, totalHours } from '@/data/demoAnalysis';
 import { openAssistant } from '@/components/ai-assistant/assistantBus';
 import { useToast } from '@/hooks/use-toast';
@@ -68,6 +69,8 @@ const ProjectAnalysisResult = () => {
   const stored = useMemo(loadResult, []);
   const [isSample] = useState(!stored);
   const result = stored ?? sampleAnalysis();
+  const draftAnswers = useMemo(() => loadDraft().answers, []);
+  const [submitDialog, setSubmitDialog] = useState<SubmitVariant | null>(null);
 
   const hours = totalHours(result.team);
   const cost = totalCost(result.team);
@@ -242,6 +245,15 @@ const ProjectAnalysisResult = () => {
                   ))}
                 </ol>
                 <div className="no-print mt-5 flex flex-col gap-2">
+                  {!isSample && (
+                    <button
+                      type="button"
+                      onClick={() => setSubmitDialog('project_requirement')}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    >
+                      <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Submit Requirement to SCS
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => openAssistant('estimate')}
@@ -249,12 +261,22 @@ const ProjectAnalysisResult = () => {
                   >
                     <Sparkles className="h-4 w-4" aria-hidden="true" /> Ask AI About This Estimate
                   </button>
-                  <Link
-                    to="/contact"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-                  >
-                    <UserCheck className="h-4 w-4" aria-hidden="true" /> Request Human Review
-                  </Link>
+                  {isSample ? (
+                    <Link
+                      to="/contact"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      <UserCheck className="h-4 w-4" aria-hidden="true" /> Request Human Review
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSubmitDialog('human_review')}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      <UserCheck className="h-4 w-4" aria-hidden="true" /> Request Human Review
+                    </button>
+                  )}
                   <Link
                     to="/schedule-call"
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
@@ -270,6 +292,16 @@ const ProjectAnalysisResult = () => {
         <p className="mt-10 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-center text-sm text-amber-800">
           {DISCLAIMER}
         </p>
+
+        {submitDialog && !isSample && (
+          <SubmitRequirementDialog
+            variant={submitDialog}
+            open
+            onClose={() => setSubmitDialog(null)}
+            result={result}
+            answers={draftAnswers}
+          />
+        )}
       </main>
 
       <Footer />
