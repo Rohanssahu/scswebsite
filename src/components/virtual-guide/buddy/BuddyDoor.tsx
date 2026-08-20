@@ -32,9 +32,9 @@ const BuddyDoor = ({ open, knocking, animate }: BuddyDoorProps) => (
       >
         {/* Symmetric anchor keeps the transform origin exactly on the hinge (x=0). */}
         <rect x={-24} y={62} width={48} height={41} fill="none" stroke="none" />
-        <rect x={0} y={62} width={24} height={41} rx={3} fill="#7c3aed" stroke="#5b21b6" strokeWidth={1.5} />
-        <rect x={3.5} y={66} width={17} height={16} rx={2} fill="none" stroke="#a78bfa" strokeWidth={1.2} />
-        <rect x={3.5} y={85} width={17} height={14} rx={2} fill="none" stroke="#a78bfa" strokeWidth={1.2} />
+        <rect x={0} y={62} width={24} height={41} rx={3} fill="#9333EA" stroke="#7E22CE" strokeWidth={1.5} />
+        <rect x={3.5} y={66} width={17} height={16} rx={2} fill="none" stroke="#E9D5FF" strokeWidth={1.2} />
+        <rect x={3.5} y={85} width={17} height={14} rx={2} fill="none" stroke="#E9D5FF" strokeWidth={1.2} />
         {/* Door handle */}
         <circle cx={20} cy={84} r={1.9} fill="#fbbf24" stroke="#b45309" strokeWidth={0.8} />
       </motion.g>

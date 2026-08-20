@@ -7,8 +7,8 @@ import { HandPose, HandShape } from '@/types/buddy';
 // +y continues along the arm direction, so a pointing finger extends the
 // way the whole arm is aimed.
 
-const GLOVE = '#ffffff';
-const GLOVE_EDGE = '#7e22ce';
+const GLOVE = '#FFFFFF';
+const GLOVE_EDGE = '#A855F7';
 
 const shapeShapes: Record<HandShape, React.ReactNode> = {
   relaxed: (

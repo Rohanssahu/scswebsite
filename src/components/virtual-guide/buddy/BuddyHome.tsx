@@ -35,8 +35,9 @@ const BuddyHome = ({ phase, size, animate, onKnock, className }: BuddyHomeProps)
     <svg viewBox="0 0 100 110" width={size} height={height} aria-hidden="true" focusable="false" style={{ overflow: 'visible' }}>
       <defs>
         <linearGradient id={`buddy-roof-${uid}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#f472b6" />
-          <stop offset="100%" stopColor="#9333ea" />
+          <stop offset="0%" stopColor="#F97316" />
+          <stop offset="50%" stopColor="#EC4899" />
+          <stop offset="100%" stopColor="#9333EA" />
         </linearGradient>
       </defs>
 
@@ -57,9 +58,9 @@ const BuddyHome = ({ phase, size, animate, onKnock, className }: BuddyHomeProps)
       {/* Wall */}
       <rect x={12} y={44} width={76} height={60} rx={6} fill="#fef3c7" stroke="#f59e0b" strokeWidth={2} />
       {/* Roof */}
-      <polygon points="4,46 50,8 96,46" fill={`url(#buddy-roof-${uid})`} stroke="#7e22ce" strokeWidth={2} strokeLinejoin="round" />
+      <polygon points="4,46 50,8 96,46" fill={`url(#buddy-roof-${uid})`} stroke="#7E22CE" strokeWidth={2} strokeLinejoin="round" />
       {/* Chimney */}
-      <rect x={70} y={20} width={9} height={16} rx={2} fill="#9333ea" />
+      <rect x={70} y={20} width={9} height={16} rx={2} fill="#9333EA" />
 
       {/* Round window */}
       <circle cx={26} cy={64} r={9} fill={lightOn ? '#fde047' : '#bae6fd'} stroke="#f59e0b" strokeWidth={2} />
@@ -69,16 +70,17 @@ const BuddyHome = ({ phase, size, animate, onKnock, className }: BuddyHomeProps)
       {/* Buddy peeking through the window */}
       {peeking && (
         <motion.g initial={animate ? { opacity: 0, y: 3 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <circle cx={26} cy={64} r={6.5} fill="#ffffff" />
-          <circle cx={23.5} cy={62.5} r={1.2} fill="#1f2937" />
-          <circle cx={28.5} cy={62.5} r={1.2} fill="#1f2937" />
-          <path d="M 23 66.5 Q 26 69 29 66.5" fill="none" stroke="#db2777" strokeWidth={1.4} strokeLinecap="round" />
+          <circle cx={26} cy={64} r={6.5} fill="#FDFCFF" />
+          <rect x={20.5} y={59.5} width={11} height={8.5} rx={4} fill="#2E1065" />
+          <circle cx={23.5} cy={63} r={1.3} fill="#F9A8D4" />
+          <circle cx={28.5} cy={63} r={1.3} fill="#F9A8D4" />
+          <path d="M 23.5 66 Q 26 68 28.5 66" fill="none" stroke="#F9A8D4" strokeWidth={1.2} strokeLinecap="round" />
         </motion.g>
       )}
 
       {/* Nameplate above the door */}
       <rect x={35} y={49} width={30} height={10} rx={2.5} fill="#ffffff" stroke="#d97706" strokeWidth={1.2} />
-      <text x={50} y={56.5} textAnchor="middle" fontSize={7} fontWeight={700} fill="#9333ea" fontFamily="inherit">
+      <text x={50} y={56.5} textAnchor="middle" fontSize={7} fontWeight={700} fill="#DB2777" fontFamily="inherit">
         {t('guide.name')}
       </text>
 
@@ -91,7 +93,7 @@ const BuddyHome = ({ phase, size, animate, onKnock, className }: BuddyHomeProps)
           y={40}
           fontSize={9}
           fontWeight={700}
-          fill="#a855f7"
+          fill="#C084FC"
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0.9, 0], y: [42, 34, 30] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}

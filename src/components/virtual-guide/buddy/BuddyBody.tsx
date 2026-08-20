@@ -56,11 +56,13 @@ interface BuddyBodyProps {
 /** Torso drawn upward from its bottom-center pivot at local (0, 0). */
 const BuddyBody = ({ fill }: BuddyBodyProps) => (
   <g>
-    <rect x={-22} y={-50} width={44} height={51} rx={19} fill={fill} />
-    {/* Belly highlight */}
-    <ellipse cx={0} cy={-19} rx={13} ry={15} fill="#ffffff" opacity={0.28} />
-    {/* Collar */}
-    <path d="M -10 -48 Q 0 -42 10 -48" fill="none" stroke="#ffffff" strokeOpacity={0.6} strokeWidth={2.4} strokeLinecap="round" />
+    {/* White robot shell */}
+    <rect x={-22} y={-50} width={44} height={51} rx={19} fill={fill} stroke="#EDE4F7" strokeWidth={1.6} />
+    {/* Top sheen */}
+    <ellipse cx={-5} cy={-42} rx={11} ry={4} fill="#ffffff" opacity={0.7} />
+    {/* Belly seam with a small button */}
+    <path d="M -21 -17 Q 0 -12 21 -17" fill="none" stroke="#E2D5F0" strokeWidth={1.8} strokeLinecap="round" />
+    <circle cx={0} cy={-14} r={2.6} fill="#DDD0F0" stroke="#B49CD8" strokeWidth={1} />
   </g>
 );
 

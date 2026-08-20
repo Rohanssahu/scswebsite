@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { BUDDY_SPRING } from '@/data/buddyTiming';
 import { FacePose } from '@/types/buddy';
 
-// Buddy's expressive face: two eyes, two eyebrows and a morphing mouth.
+// Buddy's expressive face: two glowing eyes, two eyebrows and a morphing
+// mouth, drawn inside the robot's dark visor plate.
 // Rendered in head-local coordinates (neck pivot at 0,0; head center 0,-26).
 
-const EYE = '#1f2937';
-const BROW = '#4b5563';
-const MOUTH = '#db2777';
-const MOUTH_INNER = '#9f1239';
+const EYE = '#F9A8D4';
+const BROW = '#FBCFE8';
+const MOUTH = '#F472B6';
+const MOUTH_INNER = '#BE185D';
 
 interface BuddyFaceProps {
   face: FacePose;
@@ -60,15 +61,17 @@ const BuddyFace = ({ face, talking, animate }: BuddyFaceProps) => {
                 : BUDDY_SPRING
             }
           >
-            <ellipse rx={2.7} ry={3.6} fill={EYE} />
+            {/* Soft glow halo behind each eye */}
+            <ellipse rx={4} ry={4.8} fill={EYE} opacity={0.25} />
+            <ellipse rx={2.8} ry={3.7} fill={EYE} />
             <circle cx={0.9} cy={-1.2} r={0.9} fill="#ffffff" />
           </motion.g>
         </g>
       ))}
 
-      {/* Blush */}
-      <circle cx={-16.5} cy={-21} r={3.2} fill="#f9a8d4" opacity={0.55} />
-      <circle cx={16.5} cy={-21} r={3.2} fill="#f9a8d4" opacity={0.55} />
+      {/* Soft blush dots on the helmet, outside the visor */}
+      <circle cx={-16.5} cy={-8} r={2.2} fill="#F9A8D4" opacity={0.55} />
+      <circle cx={16.5} cy={-8} r={2.2} fill="#F9A8D4" opacity={0.55} />
 
       {/* Mouth: curve line + open-mouth ellipse (speaking, laughing, surprise) */}
       <g transform="translate(0 -15)">

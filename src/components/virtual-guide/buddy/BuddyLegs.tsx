@@ -5,8 +5,8 @@ import { LimbPose } from '@/types/buddy';
 // One hip-pivoted leg with its foot. Rendered in character coordinates
 // (viewBox 0 0 120 150); hips sit at (52,106) and (68,106).
 
-const LEG = '#6b21a8';
-const SHOE = '#581c87';
+const LEG = '#CFC0E8';
+const SHOE = '#F97316';
 
 interface BuddyLegProps {
   side: 'left' | 'right';

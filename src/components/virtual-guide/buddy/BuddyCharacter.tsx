@@ -56,10 +56,9 @@ const BuddyCharacter = ({
       focusable="false"
     >
       <defs>
-        <linearGradient id={bodyGradient} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="50%" stopColor="#ec4899" />
-          <stop offset="100%" stopColor="#9333ea" />
+        <linearGradient id={bodyGradient} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F3EDFA" />
         </linearGradient>
       </defs>
 
@@ -80,14 +79,18 @@ const BuddyCharacter = ({
 
         {/* Head pivot at the neck */}
         <Pivot x={0} y={-48} extent={66} rotate={pose.head.rotate} dy={pose.head.y} cycle={pose.cycle} animate={animate}>
-          {/* Antenna */}
-          <line x1={0} y1={-51} x2={0} y2={-57} stroke="#9333ea" strokeWidth={2} strokeLinecap="round" />
-          <circle cx={0} cy={-59} r={2.6} fill="#ec4899" />
-          {/* Head */}
-          <circle cx={0} cy={-26} r={25} fill="#ffffff" stroke="#f3e8ff" strokeWidth={2} />
-          {/* Headset hint (video-call feel, kept from the original avatar) */}
-          <path d="M -25 -30 A 8 8 0 0 0 -19 -14" fill="none" stroke="#a855f7" strokeWidth={2.6} strokeLinecap="round" />
-          <circle cx={-18} cy={-13} r={2.2} fill="#a855f7" />
+          {/* Antenna nub */}
+          <line x1={0} y1={-51} x2={0} y2={-56} stroke="#CFC0E8" strokeWidth={2.4} strokeLinecap="round" />
+          <circle cx={0} cy={-58.5} r={2.8} fill="#F97316" stroke="#C2410C" strokeWidth={1} />
+          {/* White rounded helmet head */}
+          <rect x={-24} y={-50} width={48} height={47} rx={19} fill="#FDFCFF" stroke="#EDE4F7" strokeWidth={2} />
+          {/* Ear discs */}
+          <circle cx={-24} cy={-26} r={4.5} fill="#9333EA" stroke="#7E22CE" strokeWidth={1.2} />
+          <circle cx={24} cy={-26} r={4.5} fill="#9333EA" stroke="#7E22CE" strokeWidth={1.2} />
+          {/* Deep-violet visor face plate (eyes + mouth glow inside it) */}
+          <rect x={-19.5} y={-43} width={39} height={32} rx={13} fill="#2E1065" stroke="#1E0A47" strokeWidth={1.4} />
+          {/* Visor gloss */}
+          <ellipse cx={-6} cy={-38} rx={10} ry={3.5} fill="#ffffff" opacity={0.08} />
           <BuddyFace face={pose.face} talking={talking ?? pose.talking ?? false} animate={animate} />
         </Pivot>
       </Pivot>
