@@ -283,7 +283,7 @@ export type ValidationResult =
 const TOP_LEVEL_KEYS = new Set([
   'action',
   'turnstileToken',
-  'website',
+  'scs_hp_check',
   'consent',
   'lead',
   'requirement',
@@ -316,8 +316,11 @@ export function validateSubmission(body: unknown): ValidationResult {
     if (!TOP_LEVEL_KEYS.has(key)) return fail(`Unexpected property "${key}".`);
   }
 
-  // Honeypot: hidden "website" field must stay empty.
-  if (asTrimmed(body.website) !== '') {
+  // Honeypot: the hidden trap field must stay empty. Non-semantic name so
+  // browsers/password managers never autofill it (a semantic "website" name
+  // falsely rejected real autofill-using visitors). A stray legacy `website`
+  // property is still rejected by the unexpected-property check above.
+  if (asTrimmed(body.scs_hp_check) !== '') {
     return { ok: false, error: 'honeypot', message: 'Invalid submission.' };
   }
 

@@ -35,7 +35,7 @@ function base(overrides: Record<string, unknown> = {}) {
   return {
     action: 'contact',
     turnstileToken: 'tok-1234567890',
-    website: '',
+    scs_hp_check: '',
     consent: true,
     lead: {
       name: 'Jane Doe',
@@ -92,9 +92,31 @@ describe('validateSubmission — structure', () => {
     if (!result.ok) expect(result.message).toMatch(/action/i);
   });
 
-  it('rejects honeypot submissions', () => {
-    const result = validateSubmission(base({ website: 'https://spam.example' }));
+  it('rejects deliberately filled honeypot submissions', () => {
+    const result = validateSubmission(base({ scs_hp_check: 'https://spam.example' }));
     expect(result).toMatchObject({ ok: false, error: 'honeypot' });
+  });
+
+  it('regression: a legacy "website" property is rejected as unexpected, not accepted', () => {
+    const result = validateSubmission(base({ website: 'https://user-autofilled.example' }));
+    expect(result).toMatchObject({ ok: false, error: 'invalid_request' });
+  });
+
+  it('regression: legitimate autofill-style data with an empty honeypot passes validation', () => {
+    // A visitor whose browser autofills name/email/company — the honeypot
+    // stays empty because its field is non-semantic and readonly.
+    const result = validateSubmission(
+      base({
+        scs_hp_check: '',
+        lead: {
+          name: 'Jane Autofill',
+          email: 'jane.autofill@example.com',
+          company: 'Autofill Inc',
+          project_summary: 'I need a website for my bakery business.',
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
   });
 
   it('rejects a missing or too-short turnstile token', () => {

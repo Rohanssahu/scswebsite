@@ -1,0 +1,12 @@
+# Supabase CLI project configuration.
+# project_id is the LOCAL name for this project directory (not a secret).
+
+project_id = "scswebsite"
+
+# submit-lead is a deliberately public endpoint: browsers call it with the
+# sb_publishable_* key, which is not a JWT, so platform JWT verification must
+# be off for THIS function only. Its access control lives in the function
+# itself: origin allowlist, server-side Turnstile verification, honeypot,
+# strict validation, rate limiting and a body-size cap.
+[functions.submit-lead]
+verify_jwt = false

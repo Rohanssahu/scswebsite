@@ -54,8 +54,13 @@ export interface SubmitLeadRequest {
   action: LeadAction;
   turnstileToken: string;
   consent: true;
-  /** Honeypot — must always be sent empty; bots that fill it are rejected. */
-  website: string;
+  /**
+   * Honeypot — must always be sent empty; bots that fill it are rejected.
+   * Deliberately non-semantic name: autofill/password managers must never
+   * recognize it (a semantic name like "website" caused false rejections
+   * of real autofill-using visitors).
+   */
+  scs_hp_check: string;
   lead: LeadDetails;
   requirement?: RequirementPayload;
   review?: ReviewPayload;

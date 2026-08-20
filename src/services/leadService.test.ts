@@ -55,11 +55,42 @@ describe('buildContactRequest', () => {
     expect(req.action).toBe('contact');
     expect(req.turnstileToken).toBe('tok-123');
     expect(req.consent).toBe(true);
-    expect(req.website).toBe('');
+    expect(req.scs_hp_check).toBe('');
     expect(req.lead.name).toBe('Jane');
     expect(req.lead.company).toBeUndefined(); // whitespace-only → dropped
     expect(req.lead.project_summary).toBe('A shop website with delivery tracking.');
     expect(req.context).toEqual(context);
+  });
+});
+
+describe('honeypot mapping regression', () => {
+  it('never maps company/website/contact values into the honeypot key', () => {
+    const req = buildContactRequest(
+      {
+        name: 'Jane',
+        email: 'jane@example.com',
+        company: 'https://janes-website.example', // website-looking company value
+        service: 'web-development',
+        message: 'Please build https://janes-website.example for me.',
+      },
+      'tok',
+      context,
+      // honeypot argument untouched by any other field:
+      '',
+    );
+    expect(req.scs_hp_check).toBe('');
+    // and the deprecated semantic key must not exist on the wire at all
+    expect('website' in req).toBe(false);
+  });
+
+  it('passes a deliberately filled honeypot through unchanged (bots stay caught)', () => {
+    const req = buildContactRequest(
+      { name: 'Bot', email: 'bot@example.com', message: 'Twenty characters of spam text.' },
+      'tok',
+      context,
+      'http://spam.example',
+    );
+    expect(req.scs_hp_check).toBe('http://spam.example');
   });
 });
 

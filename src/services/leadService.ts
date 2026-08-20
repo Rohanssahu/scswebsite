@@ -60,7 +60,7 @@ export function buildContactRequest(
     action: 'contact',
     turnstileToken,
     consent: true,
-    website: honeypot,
+    scs_hp_check: honeypot,
     lead: {
       name: input.name.trim(),
       email: input.email.trim(),
@@ -96,7 +96,7 @@ export function buildConsultationRequest(
     action: 'consultation',
     turnstileToken,
     consent: true,
-    website: honeypot,
+    scs_hp_check: honeypot,
     lead: {
       name: input.name.trim(),
       email: input.email.trim(),
@@ -205,7 +205,7 @@ export function buildRequirementRequest(
     action: 'project_requirement',
     turnstileToken,
     consent: true,
-    website: honeypot,
+    scs_hp_check: honeypot,
     lead: {
       name: input.contact.name.trim(),
       email: input.contact.email.trim(),

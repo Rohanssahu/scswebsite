@@ -73,8 +73,14 @@ missing the function fails closed).
 ## 5. Deploy the Edge Function and set its secrets
 
 ```bash
-supabase functions deploy submit-lead
+supabase functions deploy submit-lead --no-verify-jwt
 ```
+
+`--no-verify-jwt` is required: the project uses the new `sb_publishable_…`
+API-key format, which is not a JWT, so the platform's JWT check would reject
+every browser call. The function's own protections (origin allowlist,
+server-side Turnstile verification, rate limiting, honeypot) are the access
+control for this deliberately-public endpoint.
 
 Then set the server-side secrets (Dashboard → **Edge Functions → submit-lead →
 Secrets**, or CLI):
