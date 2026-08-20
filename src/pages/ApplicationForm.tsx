@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import emailjs from "emailjs-com";
 const ApplicationForm = () => {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -62,7 +64,7 @@ const handleSubmit = async (e) => {
     setDialog({
       open: true,
       type: "success",
-      message: `Thank you ${formData.name}! Your application has been submitted successfully. Our team will contact you within 24-48 hours.`,
+      message: t('application.successMessage', { name: formData.name }),
     });
 
     setFormData({
@@ -81,7 +83,7 @@ const handleSubmit = async (e) => {
     setDialog({
       open: true,
       type: "error",
-      message: "Failed to submit application. Try again.",
+      message: t('application.failedMessage'),
     });
   } finally {
     setIsSubmitting(false);
@@ -110,7 +112,7 @@ const uploadFile = async (file) => {
     <div>
       <Header />
       <section id="application-form" className="py-12 px-6 bg-white">
-        <h2 className="text-3xl font-bold text-center mb-10">Apply Now</h2>
+        <h2 className="text-3xl font-bold text-center mb-10">{t('application.title')}</h2>
         <form
           className="max-w-5xl mx-auto space-y-6"
           onSubmit={handleSubmit}
@@ -119,7 +121,7 @@ const uploadFile = async (file) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block mb-1 font-medium">
-                Candidate Name <span className="text-red-500">*</span>
+                {t('application.candidateName')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -132,7 +134,7 @@ const uploadFile = async (file) => {
             </div>
             <div>
               <label className="block mb-1 font-medium">
-                Email ID <span className="text-red-500">*</span>
+                {t('application.email')} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -150,21 +152,21 @@ const uploadFile = async (file) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block mb-1 font-medium">Position</label>
+              <label className="block mb-1 font-medium">{t('application.position')}</label>
               <select
                 name="position"
                 value={formData.position}
                 onChange={handleChange}
                 className="w-full border border-gray-300 p-2 rounded"
               >
-                <option value="">Select Position</option>
+                <option value="">{t('application.selectPosition')}</option>
                 <option>Dot Net Indore - T088</option>
                 <option>React Developer - Remote</option>
                 <option>UI/UX Designer - Pune</option>
               </select>
             </div>
             <div>
-              <label className="block mb-1 font-medium">Contact</label>
+              <label className="block mb-1 font-medium">{t('application.contact')}</label>
               <input
                 type="tel"
                 name="contact"
@@ -179,7 +181,7 @@ const uploadFile = async (file) => {
             <div>
              
               <div>
-                <label className="block mb-1 font-medium">Upload Resume*</label>
+                <label className="block mb-1 font-medium">{t('application.uploadResume')}</label>
                 <input
                   type="file"
                   name="resume1"
@@ -195,7 +197,7 @@ const uploadFile = async (file) => {
             </div>
             <div>
               <label className="block mb-1 font-medium">
-                Gender <span className="text-red-500">*</span>
+                {t('application.gender')} <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-4 mt-2">
                 <label className="flex items-center gap-2">
@@ -206,7 +208,7 @@ const uploadFile = async (file) => {
                     checked={formData.gender === "Male"}
                     onChange={handleChange}
                   />{" "}
-                  Male
+                  {t('application.male')}
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -216,14 +218,14 @@ const uploadFile = async (file) => {
                     checked={formData.gender === "Female"}
                     onChange={handleChange}
                   />{" "}
-                  Female
+                  {t('application.female')}
                 </label>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block mb-1 font-medium">Cover Note</label>
+            <label className="block mb-1 font-medium">{t('application.coverNote')}</label>
             <textarea
               name="cover_note"
               value={formData.cover_note}
@@ -236,7 +238,7 @@ const uploadFile = async (file) => {
           <div className="flex items-start gap-2">
             <input type="checkbox" id="policy" required />
             <label htmlFor="policy" className="text-sm">
-              I agree to the privacy policy and give consent to be contacted.
+              {t('application.consent')}
             </label>
           </div>
 
@@ -247,7 +249,7 @@ const uploadFile = async (file) => {
               className={`px-6 py-2 rounded text-white ${isSubmitting ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
                 }`}
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? t('common.submitting') : t('common.submit')}
             </button>
 
             <button
@@ -265,7 +267,7 @@ const uploadFile = async (file) => {
                 })
               }
             >
-              Reset
+              {t('common.reset')}
             </button>
           </div>
         </form>
@@ -295,7 +297,7 @@ const uploadFile = async (file) => {
 
             {/* Title */}
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {dialog.type === 'success' ? 'Application Submitted 🎉' : 'Error'}
+              {dialog.type === 'success' ? t('application.submittedTitle') : t('common.error')}
             </h3>
 
             {/* Message */}
@@ -309,7 +311,7 @@ const uploadFile = async (file) => {
               className="px-6 py-2 rounded-lg text-white font-medium 
         bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:opacity-90"
             >
-              OK
+              {t('common.ok')}
             </button>
           </div>
         </div>

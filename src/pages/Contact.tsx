@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Mail, Phone, MapPin, Send, Loader2, MessageCircle, Sparkles, ArrowRight, PhoneCall } from 'lucide-react';
 import emailjs from 'emailjs-com';
 import Header from '../components/Header';
@@ -22,6 +23,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 
 const Contact = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,7 +31,7 @@ const Contact = () => {
     service: '',
     message: '',
   });
-  // One-time prefill written by the SCS Virtual Guide (demo) — nothing is sent
+  // One-time prefill written by Buddy — Your SCS Guide (demo) — nothing is sent
   // automatically; the visitor still reviews and submits the form themselves.
   useEffect(() => {
     try {
@@ -63,7 +65,7 @@ const Contact = () => {
       setDialog({
         open: true,
         type: 'error',
-        message: 'Please fill all required fields',
+        message: t('contact.fillRequired'),
       });
       return;
     }
@@ -75,7 +77,7 @@ const Contact = () => {
       setDialog({
         open: true,
         type: 'success',
-        message: `Thank you ${name}! Your inquiry has been submitted successfully. Our team will contact you within 24 hours.`,
+        message: t('contact.successMessage', { name }),
       });
 
       setFormData({
@@ -90,7 +92,7 @@ const Contact = () => {
       setDialog({
         open: true,
         type: 'error',
-        message: 'Failed to send message. Try again.',
+        message: t('contact.failedMessage'),
       });
     } finally {
       setLoading(false);
@@ -117,18 +119,17 @@ const Contact = () => {
         <div className="container relative mx-auto px-4 py-20 text-center sm:py-28">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> We reply within 24 hours
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {t('contact.badge')}
             </span>
           </Reveal>
           <Reveal delay={0.1}>
             <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              Get In <span className="text-gradient-ai">Touch</span>
+              {t('contact.heroTitle1')} <span className="text-gradient-ai">{t('contact.heroTitle2')}</span>
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-              Ready to transform your business with technology? Let's discuss your project and how we can help you
-              achieve your goals.
+              {t('contact.heroSub')}
             </p>
           </Reveal>
         </div>
@@ -141,13 +142,13 @@ const Contact = () => {
             {/* Contact Form */}
             <Reveal className="lg:col-span-3">
               <div className="glow-card rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Contact form</span>
-                <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">Send us a message</h2>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('contact.formEyebrow')}</span>
+                <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">{t('contact.formTitle')}</h2>
                 <form data-guide-id="contact-form" onSubmit={handleSubmit} className="mt-8 space-y-5">
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                       <label htmlFor="name" className={labelClass}>
-                        Full Name *
+                        {t('contact.fullName')}
                       </label>
                       <input
                         type="text"
@@ -157,12 +158,12 @@ const Contact = () => {
                         onChange={handleChange}
                         required
                         className={inputClass}
-                        placeholder="Your full name"
+                        placeholder={t('contact.fullNamePlaceholder')}
                       />
                     </div>
                     <div>
                       <label htmlFor="email" className={labelClass}>
-                        Email Address *
+                        {t('contact.email')}
                       </label>
                       <input
                         type="email"
@@ -172,7 +173,7 @@ const Contact = () => {
                         onChange={handleChange}
                         required
                         className={inputClass}
-                        placeholder="your@email.com"
+                        placeholder={t('contact.emailPlaceholder')}
                       />
                     </div>
                   </div>
@@ -180,7 +181,7 @@ const Contact = () => {
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                       <label htmlFor="company" className={labelClass}>
-                        Company Name
+                        {t('contact.company')}
                       </label>
                       <input
                         type="text"
@@ -189,28 +190,28 @@ const Contact = () => {
                         value={formData.company}
                         onChange={handleChange}
                         className={inputClass}
-                        placeholder="Your company name"
+                        placeholder={t('contact.companyPlaceholder')}
                       />
                     </div>
                     <div>
                       <label htmlFor="service" className={labelClass}>
-                        Service Interested In
+                        {t('contact.service')}
                       </label>
                       <select id="service" name="service" value={formData.service} onChange={handleChange} className={inputClass}>
-                        <option value="">Select a service</option>
-                        <option value="web-development">Web Development</option>
-                        <option value="mobile-development">Mobile App Development</option>
-                        <option value="digital-marketing">Digital Marketing</option>
-                        <option value="ui-ux-design">UI/UX Design</option>
-                        <option value="cloud-solutions">Cloud Solutions</option>
-                        <option value="devops-services">DevOps Services</option>
+                        <option value="">{t('contact.selectService')}</option>
+                        <option value="web-development">{t('services.names.web-development')}</option>
+                        <option value="mobile-development">{t('services.names.mobile-app-development')}</option>
+                        <option value="digital-marketing">{t('services.names.digital-marketing')}</option>
+                        <option value="ui-ux-design">{t('services.names.ui-ux-design')}</option>
+                        <option value="cloud-solutions">{t('services.names.cloud-solutions')}</option>
+                        <option value="devops-services">{t('services.names.devops-services')}</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="message" className={labelClass}>
-                      Message *
+                      {t('contact.message')}
                     </label>
                     <textarea
                       id="message"
@@ -220,18 +221,18 @@ const Contact = () => {
                       required
                       rows={6}
                       className={inputClass}
-                      placeholder="Tell us about your project..."
+                      placeholder={t('contact.messagePlaceholder')}
                     />
                   </div>
 
                   <button type="submit" disabled={loading} className={`${primaryBtn} w-full ${loading ? 'cursor-not-allowed opacity-70 hover:scale-100' : ''}`}>
                     {loading ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Sending...
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {t('common.sending')}
                       </>
                     ) : (
                       <>
-                        Send Message <Send className="h-4 w-4" aria-hidden="true" />
+                        {t('contact.sendMessage')} <Send className="h-4 w-4" aria-hidden="true" />
                       </>
                     )}
                   </button>
@@ -242,8 +243,8 @@ const Contact = () => {
             {/* Contact Info */}
             <div className="lg:col-span-2">
               <Reveal delay={0.1}>
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Contact details</span>
-                <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">Other ways to reach us</h2>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('contact.detailsEyebrow')}</span>
+                <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">{t('contact.detailsTitle')}</h2>
               </Reveal>
 
               <div className="mt-8 space-y-4">
@@ -253,7 +254,7 @@ const Contact = () => {
                       <MapPin className="h-5 w-5 text-white" aria-hidden="true" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Our Office</h3>
+                      <h3 className="font-semibold text-gray-900">{t('contact.office')}</h3>
                       <p className="mt-1 text-sm leading-relaxed text-gray-600">
                         9th Floor, Shekhar Central,
                         <br />
@@ -271,9 +272,9 @@ const Contact = () => {
                       <Phone className="h-5 w-5 text-white" aria-hidden="true" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Phone</h3>
+                      <h3 className="font-semibold text-gray-900">{t('contact.phone')}</h3>
                       <p className="mt-1 text-sm text-gray-600">+91 7828690192</p>
-                      <p className="mt-1 text-xs text-gray-500">Mon–Fri 10AM–7PM IST</p>
+                      <p className="mt-1 text-xs text-gray-500">{t('contact.phoneHours')}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -284,9 +285,9 @@ const Contact = () => {
                       <Mail className="h-5 w-5 text-white" aria-hidden="true" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Email</h3>
+                      <h3 className="font-semibold text-gray-900">{t('contact.emailLabel')}</h3>
                       <p className="mt-1 text-sm text-gray-600">info@scssoftwares.com</p>
-                      <p className="mt-1 text-xs text-gray-500">We reply within 24 hours</p>
+                      <p className="mt-1 text-xs text-gray-500">{t('contact.emailNote')}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -298,16 +299,16 @@ const Contact = () => {
                         <WhatsAppIcon className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">WhatsApp</h3>
+                        <h3 className="font-semibold text-gray-900">{t('contact.whatsapp')}</h3>
                         <p className="mt-1 text-sm text-gray-600">+91 7828690192</p>
-                        <p className="mt-1 text-xs text-gray-500">Available anytime on chat</p>
+                        <p className="mt-1 text-xs text-gray-500">{t('contact.whatsappNote')}</p>
                         <a
                           href="https://wa.me/917828690192"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                         >
-                          <MessageCircle className="h-4 w-4" aria-hidden="true" /> Chat on WhatsApp
+                          <MessageCircle className="h-4 w-4" aria-hidden="true" /> {t('contact.chatOnWhatsApp')}
                         </a>
                       </div>
                     </div>
@@ -325,17 +326,16 @@ const Contact = () => {
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
               <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
-              <h2 className="text-2xl font-bold sm:text-3xl">Ready to start your project?</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{t('contact.ctaTitle')}</h2>
               <p className="max-w-xl text-gray-600">
-                Schedule a free consultation with our experts to discuss your requirements and get a personalized
-                quote.
+                {t('contact.ctaText')}
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/consultation-form" className={primaryBtn}>
-                  Schedule Consultation <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  {t('contact.scheduleConsultation')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link to="/schedule-call" className={secondaryBtn}>
-                  Book a free call
+                  {t('contact.bookFreeCall')}
                 </Link>
               </div>
             </div>
@@ -361,11 +361,11 @@ const Contact = () => {
               )}
             </div>
 
-            <h3 className="text-lg font-bold text-gray-900">{dialog.type === 'success' ? 'Success' : 'Error'}</h3>
+            <h3 className="text-lg font-bold text-gray-900">{dialog.type === 'success' ? t('common.success') : t('common.error')}</h3>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">{dialog.message}</p>
 
             <button onClick={() => setDialog({ ...dialog, open: false })} className={`${primaryBtn} mt-6 px-10`}>
-              OK
+              {t('common.ok')}
             </button>
           </div>
         </div>

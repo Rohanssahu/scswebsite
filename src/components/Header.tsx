@@ -2,31 +2,39 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown, Sparkles } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+
+// Service names come from the shared services.names.* i18n table so they stay
+// consistent with Buddy and the footer. Layout uses logical properties so the
+// navbar mirrors correctly in RTL (Arabic/Urdu).
 
 const services = [
-  { name: 'Web Development', path: '/gig/web-development' },
-  { name: 'Mobile App Development', path: '/gig/mobile-development' },
-  { name: 'Digital Marketing', path: '/gig/digital-marketing' },
-  { name: 'UI/UX Design', path: '/gig/ui-ux-design' },
-  { name: 'Cloud Solutions', path: '/gig/cloud-solutions' },
-  { name: 'DevOps Services', path: '/gig/devops-services' },
+  { nameKey: 'web-development', path: '/gig/web-development' },
+  { nameKey: 'mobile-app-development', path: '/gig/mobile-development' },
+  { nameKey: 'digital-marketing', path: '/gig/digital-marketing' },
+  { nameKey: 'ui-ux-design', path: '/gig/ui-ux-design' },
+  { nameKey: 'cloud-solutions', path: '/gig/cloud-solutions' },
+  { nameKey: 'devops-services', path: '/gig/devops-services' },
 ];
 
 const navLinks = [
-  { name: 'Home', path: '/' },
-  { name: 'Products', path: '/products' },
-  { name: 'Project Estimate', path: '/project-analysis' },
-  { name: 'About', path: '/about' },
-  { name: 'Contact', path: '/contact' },
-  { name: 'Career', path: '/careers' },
+  { key: 'nav.home', path: '/' },
+  { key: 'nav.products', path: '/products' },
+  { key: 'nav.projectEstimate', path: '/project-analysis' },
+  { key: 'nav.about', path: '/about' },
+  { key: 'nav.contact', path: '/contact' },
+  { key: 'nav.career', path: '/careers' },
 ];
 
 const Header = () => {
+  const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const location = useLocation();
   const reduceMotion = useReducedMotion();
+  const rtl = i18n.dir() === 'rtl';
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -45,7 +53,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/85 backdrop-blur-md">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+          {/* Logo — never mirrored */}
           <Link
             to="/"
             onClick={scrollToTop}
@@ -62,7 +70,7 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 lg:flex">
             <Link to="/" className={linkCls('/')}>
-              Home
+              {t('nav.home')}
             </Link>
 
             <div
@@ -77,14 +85,14 @@ const Header = () => {
                 aria-expanded={isServicesOpen}
                 onClick={() => setIsServicesOpen((o) => !o)}
               >
-                Services
+                {t('nav.services')}
                 <ChevronDown
                   className={`h-4 w-4 transition-transform ${isServicesOpen ? 'rotate-180' : ''}`}
                   aria-hidden="true"
                 />
               </button>
               {isServicesOpen && (
-                <div className="absolute left-0 top-full z-50 w-64 pt-2">
+                <div className="absolute start-0 top-full z-50 w-64 pt-2">
                   <div className="glow-card overflow-hidden rounded-2xl border border-gray-200 bg-white py-2">
                     {services.map((service) => (
                       <Link
@@ -95,7 +103,7 @@ const Header = () => {
                         }`}
                         onClick={() => setIsServicesOpen(false)}
                       >
-                        {service.name}
+                        {t(`services.names.${service.nameKey}`)}
                       </Link>
                     ))}
                   </div>
@@ -104,40 +112,44 @@ const Header = () => {
             </div>
 
             <Link to="/products" className={linkCls('/products')}>
-              Products
+              {t('nav.products')}
             </Link>
             <Link to="/project-analysis" className={linkCls('/project-analysis')}>
-              Project Estimate
+              {t('nav.projectEstimate')}
             </Link>
             <Link to="/about" className={linkCls('/about')}>
-              About
+              {t('nav.about')}
             </Link>
             <Link to="/contact" className={linkCls('/contact')}>
-              Contact
+              {t('nav.contact')}
             </Link>
             <Link to="/careers" className={linkCls('/careers')}>
-              Career
+              {t('nav.career')}
             </Link>
+            <LanguageSwitcher />
             <Link
               to="/project-analysis"
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-pink-400/30 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
             >
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Get Estimate
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {t('common.getEstimate')}
             </Link>
           </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="rounded-lg p-1.5 text-gray-700 transition-colors hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 lg:hidden"
-            onClick={() => setIsMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
+          {/* Mobile: language switcher + menu button */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageSwitcher compact />
+            <button
+              className="rounded-lg p-1.5 text-gray-700 transition-colors hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label={t('a11y.openMenu')}
+            >
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer — slides in from the logical end side */}
       {isMenuOpen && (
         <>
           <div
@@ -146,10 +158,10 @@ const Header = () => {
             aria-hidden="true"
           />
           <motion.div
-            initial={reduceMotion ? false : { x: '100%' }}
+            initial={reduceMotion ? false : { x: rtl ? '-100%' : '100%' }}
             animate={{ x: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-y-0 right-0 z-50 w-80 max-w-full overflow-y-auto border-l border-gray-200 bg-white p-6 shadow-2xl lg:hidden"
+            className="fixed inset-y-0 end-0 z-50 w-80 max-w-full overflow-y-auto border-s border-gray-200 bg-white p-6 shadow-2xl lg:hidden"
           >
             <div className="mb-6 flex items-center justify-between">
               <span className="text-lg font-bold">
@@ -157,7 +169,7 @@ const Header = () => {
               </span>
               <button
                 onClick={() => setIsMenuOpen(false)}
-                aria-label="Close menu"
+                aria-label={t('a11y.closeMenu')}
                 className="rounded-lg p-1.5 text-gray-700 transition-colors hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
               >
                 <X className="h-6 w-6" aria-hidden="true" />
@@ -173,12 +185,12 @@ const Header = () => {
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               ))}
 
               <div className="mt-3 border-t border-gray-200 pt-4">
-                <span className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Services</span>
+                <span className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.services')}</span>
                 <div className="mt-2 flex flex-col gap-1">
                   {services.map((service) => (
                     <Link
@@ -189,7 +201,7 @@ const Header = () => {
                       }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {service.name}
+                      {t(`services.names.${service.nameKey}`)}
                     </Link>
                   ))}
                 </div>
@@ -200,7 +212,7 @@ const Header = () => {
                 className="mt-5 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-pink-400/30 transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> Get Estimate
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('common.getEstimate')}
               </Link>
             </nav>
           </motion.div>

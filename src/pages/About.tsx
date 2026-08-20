@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Award,
@@ -36,52 +37,54 @@ const SectionHeading = ({ eyebrow, title, sub }: { eyebrow: string; title: React
 const TEAM = [
   {
     name: 'Rohan Sahu',
-    role: 'CEO & Founder',
+    roleKey: 'about.team.role1',
     image: 'https://scssoftwares.com/images/rohansahu.jpeg',
-    bio: 'Tech entrepreneur with 9+ years of experience in software development and business strategy.',
+    bioKey: 'about.team.bio1',
   },
   {
     name: 'Raju Burde',
-    role: 'CTO',
+    roleKey: 'about.team.role2',
     image: 'https://scssoftwares.com/images/cto.png',
-    bio: 'Expert in scalable architecture and emerging technologies with a passion for innovation.',
+    bioKey: 'about.team.bio2',
   },
   {
     name: 'Sachin Basaiye',
-    role: 'Project Manager',
+    roleKey: 'about.team.role3',
     image: 'https://scssoftwares.com/images/project.png',
-    bio: 'Creative Project Manager focused on user-centered strategies and delivering exceptional digital experiences.',
+    bioKey: 'about.team.bio3',
   },
   {
     name: 'Priyanka Dalwani',
-    role: 'VP of Marketing',
+    roleKey: 'about.team.role4',
     image: 'https://scssoftwares.com/images/vp.png',
-    bio: 'Digital marketing strategist helping businesses grow their online presence and reach.',
+    bioKey: 'about.team.bio4',
   },
 ];
 
 const VALUES = [
-  { icon: Target, title: 'Innovation', description: 'We stay ahead of technology trends to deliver cutting-edge solutions.' },
-  { icon: Users, title: 'Collaboration', description: 'We work closely with our clients as partners in their success.' },
-  { icon: Award, title: 'Excellence', description: 'We maintain the highest standards in everything we do.' },
-  { icon: Heart, title: 'Passion', description: 'We love what we do and it shows in our work quality.' },
+  { icon: Target, titleKey: 'about.values.innovationTitle', textKey: 'about.values.innovationText' },
+  { icon: Users, titleKey: 'about.values.collaborationTitle', textKey: 'about.values.collaborationText' },
+  { icon: Award, titleKey: 'about.values.excellenceTitle', textKey: 'about.values.excellenceText' },
+  { icon: Heart, titleKey: 'about.values.passionTitle', textKey: 'about.values.passionText' },
 ];
 
 const APPROACH = [
-  { icon: FileSearch, title: '1. Discover', text: 'We start by understanding your business, users and goals before writing a single line of code.' },
-  { icon: Palette, title: '2. Design', text: 'Wireframes and pixel-perfect screens shape the product together with you, iteration by iteration.' },
-  { icon: Code, title: '3. Build', text: 'A dedicated team develops in short cycles with weekly demos, so you always see real progress.' },
-  { icon: Rocket, title: '4. Launch & support', text: 'We ship, monitor and keep improving — your product stays fast, secure and up to date.' },
+  { icon: FileSearch, titleKey: 'about.approach.s1Title', textKey: 'about.approach.s1Text' },
+  { icon: Palette, titleKey: 'about.approach.s2Title', textKey: 'about.approach.s2Text' },
+  { icon: Code, titleKey: 'about.approach.s3Title', textKey: 'about.approach.s3Text' },
+  { icon: Rocket, titleKey: 'about.approach.s4Title', textKey: 'about.approach.s4Text' },
 ];
 
 const WHY_SCS = [
-  { icon: BadgeCheck, title: 'Estimate before commitment', text: 'See team, cost and timeline before you spend a rupee.' },
-  { icon: ShieldCheck, title: 'You own everything', text: 'Source code, designs and infrastructure are yours from day one.' },
-  { icon: Users, title: 'Dedicated team', text: 'A project manager plus named developers — not a rotating pool.' },
-  { icon: Clock, title: 'Weekly demos', text: 'Progress you can click every week, not status reports.' },
+  { icon: BadgeCheck, titleKey: 'home.why.estimateTitle', textKey: 'home.why.estimateText' },
+  { icon: ShieldCheck, titleKey: 'home.why.ownTitle', textKey: 'home.why.ownText' },
+  { icon: Users, titleKey: 'home.why.teamTitle', textKey: 'home.why.teamText' },
+  { icon: Clock, titleKey: 'home.why.demosTitle', textKey: 'home.why.demosText' },
 ];
 
 const About = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
@@ -95,27 +98,26 @@ const About = () => {
         <div className="container relative mx-auto px-4 py-20 text-center sm:py-28">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> About us
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {t('about.badge')}
             </span>
           </Reveal>
           <Reveal delay={0.1}>
             <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              About <span className="text-gradient-ai">SCS Softwares</span>
+              {t('about.heroTitle1')} <span className="text-gradient-ai">SCS Softwares</span>
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-              We're a passionate team of developers, designers and digital strategists committed to transforming
-              businesses through innovative technology solutions.
+              {t('about.heroSub')}
             </p>
           </Reveal>
           <Reveal delay={0.3}>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/contact" className={primaryBtn}>
-                Work with us <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {t('about.workWithUs')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <Link to="/careers" className={secondaryBtn}>
-                Join the team
+                {t('about.joinTeam')}
               </Link>
             </div>
           </Reveal>
@@ -128,23 +130,18 @@ const About = () => {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <Reveal>
               <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Our story</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('about.story.eyebrow')}</span>
                 <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
-                  From a small team to a <span className="text-gradient-ai">trusted partner</span>
+                  {t('about.story.title1')} <span className="text-gradient-ai">{t('about.story.title2')}</span>
                 </h2>
                 <p className="mt-6 leading-relaxed text-gray-600">
-                  Founded in 2018, SCS Softwares began as a small team of passionate developers who believed technology
-                  could solve complex business challenges. Today, we've grown into a leading software development
-                  company serving clients worldwide.
+                  {t('about.story.p1')}
                 </p>
                 <p className="mt-4 leading-relaxed text-gray-600">
-                  Our journey has been marked by continuous learning, innovation and a commitment to delivering
-                  exceptional results. We've helped over 500 businesses transform their operations and achieve their
-                  digital goals.
+                  {t('about.story.p2')}
                 </p>
                 <p className="mt-4 leading-relaxed text-gray-600">
-                  At SCS Softwares, we don't just write code — we craft solutions that make a real difference in
-                  people's lives and businesses.
+                  {t('about.story.p3')}
                 </p>
               </div>
             </Reveal>
@@ -152,7 +149,7 @@ const About = () => {
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
                 <img
                   src="https://www.scssoftwares.com/images/inside.jpeg"
-                  alt="Inside the SCS Softwares office"
+                  alt={t('about.story.imageAlt')}
                   loading="lazy"
                   className="h-72 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-96"
                 />
@@ -166,19 +163,19 @@ const About = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Mission & values"
-            title="What we stand for"
-            sub="These core values guide everything we do and shape our company culture."
+            eyebrow={t('about.values.eyebrow')}
+            title={t('about.values.title')}
+            sub={t('about.values.sub')}
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {VALUES.map((value, i) => (
-              <Reveal key={value.title} delay={i * 0.08}>
+              <Reveal key={value.titleKey} delay={i * 0.08}>
                 <div className="glow-card h-full rounded-2xl border border-gray-200 bg-white p-6 text-center transition-colors hover:border-pink-300">
                   <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600">
                     <value.icon className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
-                  <h3 className="mt-4 font-semibold text-gray-900">{value.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{value.description}</p>
+                  <h3 className="mt-4 font-semibold text-gray-900">{t(value.titleKey)}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{t(value.textKey)}</p>
                 </div>
               </Reveal>
             ))}
@@ -190,9 +187,9 @@ const About = () => {
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Our team"
-            title="Meet the people behind SCS"
-            sub="Our diverse team of experts brings together years of experience and a shared passion for excellence."
+            eyebrow={t('about.team.eyebrow')}
+            title={t('about.team.title')}
+            sub={t('about.team.sub')}
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {TEAM.map((member, i) => (
@@ -205,8 +202,8 @@ const About = () => {
                     className="mx-auto h-28 w-28 rounded-full object-cover ring-2 ring-gray-100 transition-transform duration-300 group-hover:scale-105 group-hover:ring-pink-200"
                   />
                   <h3 className="mt-4 font-semibold text-gray-900">{member.name}</h3>
-                  <p className="text-sm font-medium text-pink-600">{member.role}</p>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{member.bio}</p>
+                  <p className="text-sm font-medium text-pink-600">{t(member.roleKey)}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{t(member.bioKey)}</p>
                 </article>
               </Reveal>
             ))}
@@ -218,17 +215,17 @@ const About = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="How we work"
-            title={<>A clear path from idea to <span className="text-gradient-ai">launch</span></>}
-            sub="Every project follows the same transparent process, so you always know what happens next."
+            eyebrow={t('about.approach.eyebrow')}
+            title={<>{t('about.approach.title1')} <span className="text-gradient-ai">{t('about.approach.title2')}</span></>}
+            sub={t('about.approach.sub')}
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {APPROACH.map((step, i) => (
-              <Reveal key={step.title} delay={i * 0.08}>
+              <Reveal key={step.titleKey} delay={i * 0.08}>
                 <div className="glow-card h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
                   <step.icon className="h-7 w-7 text-pink-600" aria-hidden="true" />
-                  <h3 className="mt-4 font-semibold text-gray-900">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{step.text}</p>
+                  <h3 className="mt-4 font-semibold text-gray-900">{t(step.titleKey)}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{t(step.textKey)}</p>
                 </div>
               </Reveal>
             ))}
@@ -239,14 +236,14 @@ const About = () => {
       {/* ===== Why Choose SCS ===== */}
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Why SCS Softwares" title="Built to be the safest way to hire developers" />
+          <SectionHeading eyebrow={t('home.why.eyebrow')} title={t('home.why.title')} />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {WHY_SCS.map((item, i) => (
-              <Reveal key={item.title} delay={i * 0.08}>
+              <Reveal key={item.titleKey} delay={i * 0.08}>
                 <div className="h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
                   <item.icon className="h-7 w-7 text-pink-600" aria-hidden="true" />
-                  <h3 className="mt-4 font-semibold text-gray-900">{item.title}</h3>
-                  <p className="mt-2 text-sm text-gray-600">{item.text}</p>
+                  <h3 className="mt-4 font-semibold text-gray-900">{t(item.titleKey)}</h3>
+                  <p className="mt-2 text-sm text-gray-600">{t(item.textKey)}</p>
                 </div>
               </Reveal>
             ))}
@@ -260,17 +257,16 @@ const About = () => {
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
               <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
-              <h2 className="text-2xl font-bold sm:text-3xl">Let's build something together</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{t('about.cta.title')}</h2>
               <p className="max-w-xl text-gray-600">
-                Tell us about your idea or existing project — we'll get back to you within 24 hours with the next
-                steps.
+                {t('about.cta.text')}
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/contact" className={primaryBtn}>
-                  Contact us <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  {t('common.contactUs')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link to="/schedule-call" className={secondaryBtn}>
-                  Schedule a call
+                  {t('common.scheduleCall')}
                 </Link>
               </div>
             </div>

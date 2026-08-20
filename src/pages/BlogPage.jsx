@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './BlogPage.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -122,18 +123,22 @@ const blogPosts = [
 ];
 
 
-const BlogCard = ({ title, image, tag, link }) => (
-  <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:scale-105">
-    <img src={image} alt={title} className="w-full h-48 object-cover" />
-    <div className="p-4">
-      <div className="text-sm text-purple-600 font-semibold mb-2">{tag}</div>
-      <h4 className="text-lg font-bold text-gray-800 mb-2">{title}</h4>
-      <a href={link} className="text-blue-500 hover:underline">Read full story →</a>
+const BlogCard = ({ title, image, tag, link }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:scale-105">
+      <img src={image} alt={title} className="w-full h-48 object-cover" />
+      <div className="p-4">
+        <div className="text-sm text-purple-600 font-semibold mb-2">{tag}</div>
+        <h4 className="text-lg font-bold text-gray-800 mb-2">{title}</h4>
+        <a href={link} className="text-blue-500 hover:underline">{t('blog.readFullStory')}</a>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const BlogPage = () => {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -159,7 +164,7 @@ const BlogPage = () => {
       className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
       onClick={() => window.location.href = '/blogs'}
     >
-      View All Blogs
+      {t('blog.viewAll')}
     </button>
   </div>
 </section>

@@ -3,12 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import { ASSISTANT_OPEN_EVENT } from '@/components/ai-assistant/assistantBus';
 import { getQuestions } from '@/data/analysisQuestions';
-import { buildGuideEstimate, ESTIMATE_DISCLAIMER } from '@/data/demoEstimate';
-import { getRouteQuickActions, GUIDE_WELCOME, WELCOME_ACTIONS, WHATSAPP_NUMBER } from '@/data/guideContent';
+import { buildGuideEstimate, ESTIMATE_DISCLAIMER_KEY, GUIDE_WEEKLY_CAPACITY_HOURS } from '@/data/demoEstimate';
+import { getRouteQuickActions, GUIDE_WELCOME_KEY, WELCOME_ACTIONS, WHATSAPP_NUMBER } from '@/data/guideContent';
 import { clarifyReply, routeMessage } from '@/data/guideIntents';
 import { TOUR_STEPS } from '@/data/guideTour';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import i18n, { setAppLanguage } from '@/i18n/config';
+import { formatUsd, getLocaleConfig, isSupportedLanguage, LanguageCode, SpeechSpeed, valueKey } from '@/i18n/languageConfig';
 import { loadDraft, saveDraft, saveResult } from '@/lib/analysisStore';
 import { AnswerValue, ProjectMode } from '@/types/projectAnalysis';
 import {
@@ -20,25 +22,45 @@ import {
   TourState,
 } from '@/types/virtualGuide';
 
-// Central conversation / tour / requirement-flow state for the Virtual Guide.
-// Deterministic frontend logic only — swap `routeMessage` and
+// Central conversation / tour / requirement-flow state for Buddy — Your SCS
+// Guide. Deterministic frontend logic only — swap `routeMessage` and
 // `buildGuideEstimate` for a real AI service later without touching the UI.
+//
+// Language-aware: guide messages are stored as i18n keys, so the whole
+// conversation re-renders when the visitor changes language, and speech uses
+// the selected language's voice and rate. The language itself is detected
+// automatically from the visitor's country/browser settings (English is the
+// fallback, including India); "Change language" lives in Buddy's settings and
+// the navbar switcher. Storage keys are versioned (v2) so older saved
+// assistant data can never break this flow.
 
-const CONVERSATION_KEY = 'scs-guide-conversation';
-const PREFS_KEY = 'scs-guide-prefs';
-const INVITE_KEY = 'scs-guide-invite-dismissed';
-const ESTIMATE_KEY = 'scs-guide-estimate';
+const CONVERSATION_KEY = 'scs-buddy-conversation-v2';
+const PREFS_KEY = 'scs-buddy-prefs-v2';
+const INVITE_KEY = 'scs-buddy-invite-dismissed-v2';
+const ESTIMATE_KEY = 'scs-buddy-estimate-v2';
+const TOUR_PROGRESS_KEY = 'scs-buddy-tour-v2';
 const CONTACT_PREFILL_KEY = 'scs-guide-contact-prefill';
 const SKIPPED = '(skipped)';
 
 interface QueueItem {
-  text: string;
+  key: string;
+  params?: Record<string, unknown>;
   actions?: GuideAction[];
 }
 
 interface GuidePrefs {
   voiceEnabled: boolean;
+  speechSpeed: SpeechSpeed;
 }
+
+/** Caption stored as key+params so it re-renders in the current language. */
+export interface CaptionState {
+  key: string;
+  params?: Record<string, unknown>;
+}
+
+/** Which auxiliary view fills the panel body. */
+export type GuideSettingsMode = 'settings' | null;
 
 let messageCounter = 0;
 function nextId(): string {
@@ -55,19 +77,40 @@ function safeParse<T>(raw: string | null): T | null {
   }
 }
 
+function welcomeMessage(): GuideChatMessage {
+  return {
+    id: nextId(),
+    from: 'guide',
+    text: i18n.t(GUIDE_WELCOME_KEY),
+    tKey: GUIDE_WELCOME_KEY,
+    actions: WELCOME_ACTIONS,
+  };
+}
+
 function initialMessages(): GuideChatMessage[] {
   const stored = safeParse<GuideChatMessage[]>(sessionStorage.getItem(CONVERSATION_KEY));
-  if (stored && stored.length) return stored;
-  return [{ id: nextId(), from: 'guide', text: GUIDE_WELCOME, actions: WELCOME_ACTIONS }];
+  if (stored && Array.isArray(stored) && stored.length && stored.every((m) => m && typeof m.text === 'string')) {
+    return stored;
+  }
+  return [welcomeMessage()];
 }
 
 function loadPrefs(): GuidePrefs {
-  return safeParse<GuidePrefs>(localStorage.getItem(PREFS_KEY)) ?? { voiceEnabled: false };
+  const stored = safeParse<Partial<GuidePrefs>>(localStorage.getItem(PREFS_KEY));
+  return {
+    voiceEnabled: stored?.voiceEnabled === true,
+    speechSpeed: stored?.speechSpeed === 'slow' || stored?.speechSpeed === 'fast' ? stored.speechSpeed : 'normal',
+  };
+}
+
+/** Translate an enumerable canonical value for display; falls back to itself. */
+function tValue(category: string, value: string): string {
+  return i18n.t(`${category}.${valueKey(value)}`, { defaultValue: value });
 }
 
 function displayAnswer(value: AnswerValue): string {
-  const text = Array.isArray(value) ? value.join(', ') : value;
-  return text === SKIPPED ? 'Skipped' : text;
+  if (Array.isArray(value)) return value.map((v) => tValue('options', v)).join(', ');
+  return value === SKIPPED ? i18n.t('options.skipped') : tValue('options', value);
 }
 
 export function useVirtualGuide() {
@@ -76,27 +119,33 @@ export function useVirtualGuide() {
   const reduceMotion = useReducedMotion() ?? false;
   const tts = useSpeechSynthesis();
 
+  const [settingsMode, setSettingsMode] = useState<GuideSettingsMode>(null);
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<GuideChatMessage[]>(initialMessages);
   const [typing, setTyping] = useState(false);
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState<CaptionState | null>(null);
   const [paused, setPaused] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(() => loadPrefs().voiceEnabled);
+  const [prefs, setPrefs] = useState<GuidePrefs>(loadPrefs);
   const [muted, setMuted] = useState(false);
   const [flow, setFlow] = useState<RequirementFlowState | null>(null);
   const [tour, setTour] = useState<TourState>({ active: false, index: 0, paused: false });
-  const [estimate, setEstimate] = useState<GuideEstimate | null>(() => safeParse<GuideEstimate>(localStorage.getItem(ESTIMATE_KEY)));
+  const [estimate, setEstimate] = useState<GuideEstimate | null>(() => {
+    const stored = safeParse<GuideEstimate>(localStorage.getItem(ESTIMATE_KEY));
+    // Versioned shape check — invalid/legacy data resets safely to defaults.
+    return stored && Array.isArray(stored.summaryItems) ? stored : null;
+  });
   const [resultsOpen, setResultsOpen] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [inviteVisible, setInviteVisible] = useState(() => localStorage.getItem(INVITE_KEY) !== '1');
+  const [langTick, setLangTick] = useState(0);
 
   const queueRef = useRef<QueueItem[]>([]);
   const processingRef = useRef(false);
   const timersRef = useRef<number[]>([]);
   const pausedRef = useRef(false);
-  const voiceRef = useRef({ enabled: voiceEnabled, muted });
-  voiceRef.current = { enabled: voiceEnabled, muted };
+  const voiceRef = useRef({ enabled: prefs.voiceEnabled, muted, speed: prefs.speechSpeed });
+  voiceRef.current = { enabled: prefs.voiceEnabled, muted, speed: prefs.speechSpeed };
   const flowRef = useRef(flow);
   flowRef.current = flow;
   const tourRef = useRef(tour);
@@ -105,6 +154,10 @@ export function useVirtualGuide() {
   estimateRef.current = estimate;
   const pathRef = useRef(location.pathname);
   pathRef.current = location.pathname;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  const speechRate = useCallback(() => getLocaleConfig(i18n.language).speechRates[voiceRef.current.speed], []);
 
   // ---------- persistence ----------
   useEffect(() => {
@@ -112,12 +165,16 @@ export function useVirtualGuide() {
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ voiceEnabled }));
-  }, [voiceEnabled]);
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  }, [prefs]);
 
   useEffect(() => {
     if (estimate) localStorage.setItem(ESTIMATE_KEY, JSON.stringify(estimate));
   }, [estimate]);
+
+  useEffect(() => {
+    if (tour.active) sessionStorage.setItem(TOUR_PROGRESS_KEY, JSON.stringify({ index: tour.index }));
+  }, [tour.active, tour.index]);
 
   // ---------- timers ----------
   const addTimer = useCallback((fn: () => void, ms: number) => {
@@ -150,22 +207,26 @@ export function useVirtualGuide() {
           return;
         }
         setTyping(false);
-        setMessages((prev) => [...prev, { id: nextId(), from: 'guide', text: item.text, actions: item.actions }]);
-        setCaption(item.text);
+        const text = i18n.t(item.key, item.params);
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), from: 'guide', text, tKey: item.key, tParams: item.params, actions: item.actions },
+        ]);
+        setCaption({ key: item.key, params: item.params });
         const finish = () => {
           processingRef.current = false;
           processQueue();
         };
         const { enabled, muted: isMuted } = voiceRef.current;
         if (enabled && !isMuted && tts.supported) {
-          tts.speak(item.text, { onEnd: finish });
+          tts.speak(text, { lang: i18n.language, rate: speechRate(), onEnd: finish });
         } else {
           addTimer(finish, reduceMotion ? 100 : 500);
         }
       },
       reduceMotion ? 100 : 650,
     );
-  }, [addTimer, reduceMotion, tts]);
+  }, [addTimer, reduceMotion, speechRate, tts]);
 
   const enqueueGuide = useCallback(
     (items: QueueItem[]) => {
@@ -233,7 +294,7 @@ export function useVirtualGuide() {
     (mode: ProjectMode, index: number) => {
       const questions = getQuestions(mode);
       const q = questions[index];
-      if (q) enqueueGuide([{ text: q.chatPrompt + (q.optional ? ' (Optional — you can skip.)' : '') }]);
+      if (q) enqueueGuide([{ key: `questions.${mode}.${q.id}.prompt` }]);
     },
     [enqueueGuide],
   );
@@ -243,7 +304,7 @@ export function useVirtualGuide() {
       setFlow((f) => (f ? { ...f, status: 'review', index: getQuestions(mode).length } : f));
       enqueueGuide([
         {
-          text: "That's everything I need! Review your answers above (use Back to change any), then I'll run a quick demo analysis to prepare your preliminary estimate.",
+          key: 'guide.msg.review',
           actions: [{ label: 'Run demo analysis', kind: 'run-analysis' }],
         },
       ]);
@@ -264,16 +325,15 @@ export function useVirtualGuide() {
       const index = firstUnanswered === -1 ? questions.length : firstUnanswered;
       setFlow({ mode, answers, index, status: index >= questions.length ? 'review' : 'active' });
       saveDraft({ ...draft, mode, method: 'ai', answers });
-      const intro =
-        mode === 'new'
-          ? "Let's plan your new project! I'll ask a few short questions — answer with the quick options or type freely. You can go back, skip optional ones, or switch flows anytime."
-          : "Let's rescue your existing project. A few quick questions about what you have, what works and what's broken — then I'll estimate the fix.";
-      const resumed = index > 0 && index < questions.length ? ' I restored your saved answers, continuing where you left off.' : '';
+      const introKey = mode === 'new' ? 'guide.msg.introNew' : 'guide.msg.introExisting';
       if (index >= questions.length) {
-        enqueueGuide([{ text: intro + ' I already have your saved answers.' }]);
+        enqueueGuide([{ key: introKey }, { key: 'guide.msg.haveSavedSuffix' }]);
         enterReview(mode);
+      } else if (index > 0) {
+        enqueueGuide([{ key: introKey }, { key: 'guide.msg.resumedSuffix' }]);
+        askCurrentQuestion(mode, index);
       } else {
-        enqueueGuide([{ text: intro + resumed }]);
+        enqueueGuide([{ key: introKey }]);
         askCurrentQuestion(mode, index);
       }
     },
@@ -314,7 +374,9 @@ export function useVirtualGuide() {
     const draft = loadDraft();
     saveDraft({ ...draft, mode: f.mode, method: 'ai', answers });
     setFlow({ ...f, answers, index: prevIndex, status: 'active' });
-    enqueueGuide([{ text: `Let's edit that. ${prev.chatPrompt}` }]);
+    enqueueGuide([
+      { key: 'guide.msg.editThat', params: { prompt: i18n.t(`questions.${f.mode}.${prev.id}.prompt`) } },
+    ]);
   }, [enqueueGuide]);
 
   const flowSkip = useCallback(() => {
@@ -330,7 +392,7 @@ export function useVirtualGuide() {
     const draft = loadDraft();
     saveDraft({ ...draft, mode: f.mode, method: 'ai', answers: {} });
     setFlow({ mode: f.mode, answers: {}, index: 0, status: 'active' });
-    enqueueGuide([{ text: 'Fresh start! All answers cleared.' }]);
+    enqueueGuide([{ key: 'guide.msg.freshStart' }]);
     askCurrentQuestion(f.mode, 0);
   }, [askCurrentQuestion, enqueueGuide]);
 
@@ -338,7 +400,7 @@ export function useVirtualGuide() {
     const f = flowRef.current;
     if (!f) return;
     const mode: ProjectMode = f.mode === 'new' ? 'existing' : 'new';
-    enqueueGuide([{ text: `Switching to the ${mode === 'new' ? 'new-project' : 'existing-project'} flow — shared answers are kept.` }]);
+    enqueueGuide([{ key: mode === 'new' ? 'guide.msg.switchingNew' : 'guide.msg.switchingExisting' }]);
     const questions = getQuestions(mode);
     const firstUnanswered = questions.findIndex((q) => f.answers[q.id] === undefined);
     const index = firstUnanswered === -1 ? questions.length : firstUnanswered;
@@ -355,16 +417,14 @@ export function useVirtualGuide() {
 
   const flowCancel = useCallback(() => {
     setFlow(null);
-    enqueueGuide([
-      { text: 'No problem — your answers stay saved, so we can pick this up anytime. Anything else I can help with?', actions: WELCOME_ACTIONS },
-    ]);
+    enqueueGuide([{ key: 'guide.msg.cancelFlow', actions: WELCOME_ACTIONS }]);
   }, [enqueueGuide]);
 
   // ---------- demo analysis + estimate explanation ----------
   const runAnalysis = useCallback(() => {
     const f = flowRef.current;
     if (!f) return;
-    pushUser('Run demo analysis');
+    pushUser(i18n.t('guide.msg.runDemoAnalysis'));
     setFlow({ ...f, status: 'analyzing' });
   }, [pushUser]);
 
@@ -377,22 +437,39 @@ export function useVirtualGuide() {
     setFlow({ ...f, status: 'done' });
     setCelebrating(true);
     addTimer(() => setCelebrating(false), 4000);
-    const roles = result.team.map((r) => `${r.role} — ${r.hours}h at $${r.hourlyRate}/hr`).join('; ');
+    const roles = result.team
+      .map((r) =>
+        i18n.t('guide.msg.teamRole', {
+          role: tValue('roles', r.role),
+          hours: r.hours,
+          rate: r.hourlyRate,
+        }),
+      )
+      .join('; ');
     enqueueGuide([
       {
-        text: `Your demo estimate is ready! Recommended service: ${result.recommendedService}, suggested technology: ${result.suggestedTech.join(', ')}.`,
+        key: 'guide.msg.estimateReady',
+        params: {
+          service: tValue('services.names', result.recommendedService),
+          tech: result.suggestedTech.join(', '),
+        },
+      },
+      { key: 'guide.msg.teamRequirement', params: { roles, hours: result.totalHours, cost: result.totalCost } },
+      { key: 'guide.msg.duration', params: { capacity: result.weeklyCapacityHours, weeks: result.estimatedWeeks } },
+      {
+        key: 'guide.msg.whyWorks',
+        params: {
+          pro: i18n.t(result.pros[0]),
+          con: i18n.t(result.cons[0]),
+          risk: i18n.t(result.risks[0]),
+        },
       },
       {
-        text: `Team requirement: ${roles}. That totals ${result.totalHours} hours ≈ $${result.totalCost.toLocaleString()}.`,
-      },
-      {
-        text: `Duration: with a ${result.weeklyCapacityHours}-hour weekly capacity, delivery is roughly ${result.estimatedWeeks} week${result.estimatedWeeks > 1 ? 's' : ''} plus a launch week.`,
-      },
-      {
-        text: `Why this works — ${result.pros[0]}. Watch-outs: ${result.cons[0]} Main risk: ${result.risks[0]}.`,
-      },
-      {
-        text: `${ESTIMATE_DISCLAIMER} ${result.recommendedNextStep}`,
+        key: 'guide.msg.disclaimerNext',
+        params: {
+          disclaimer: i18n.t(ESTIMATE_DISCLAIMER_KEY),
+          next: i18n.t(result.recommendedNextStep.key, result.recommendedNextStep.params),
+        },
         actions: [
           { label: 'View detailed breakdown', kind: 'open-results' },
           { label: 'Edit requirements', kind: 'flow-edit' },
@@ -409,9 +486,15 @@ export function useVirtualGuide() {
   const buildSummaryText = useCallback(() => {
     const e = estimateRef.current;
     if (e) {
-      return `Hello SCS Softwares! I used the Virtual Guide demo. ${e.requirementSummary.join('. ')}. Demo estimate: ${e.totalHours} hours, ~$${e.totalCost.toLocaleString()}, about ${e.estimatedWeeks} week(s). I'd like to discuss the next steps.`;
+      const summary = e.summaryItems.map((it) => i18n.t(it.key, it.params)).join('. ');
+      return i18n.t('guide.msg.whatsappSummary', {
+        summary,
+        hours: e.totalHours,
+        cost: formatUsd(e.totalCost, i18n.language),
+        weeks: e.estimatedWeeks,
+      });
     }
-    return 'Hello SCS Softwares! I explored your website with the Virtual Guide and would like to discuss a project.';
+    return i18n.t('guide.msg.whatsappNoEstimate');
   }, []);
 
   const openWhatsApp = useCallback(() => {
@@ -437,29 +520,30 @@ export function useVirtualGuide() {
     setMinimized(true); // compact avatar bubble; the tour card carries captions
     setResultsOpen(false);
     stopSpeaking();
-    setTour({ active: true, index: 0, paused: false });
+    // Resume saved tour progress from this session, if any.
+    const saved = safeParse<{ index: number }>(sessionStorage.getItem(TOUR_PROGRESS_KEY));
+    const index = saved && Number.isInteger(saved.index) && saved.index > 0 && saved.index < TOUR_STEPS.length ? saved.index : 0;
+    setTour({ active: true, index, paused: false });
   }, [dismissInvite, stopSpeaking]);
 
   const endTour = useCallback(
     (completed: boolean) => {
       stopSpeaking();
       setTour({ active: false, index: 0, paused: false });
+      sessionStorage.removeItem(TOUR_PROGRESS_KEY);
       setOpen(true);
       setMinimized(false);
       enqueueGuide([
         completed
           ? {
-              text: "That's the full tour! The best next step: tell me about your project and I'll prepare a preliminary demo estimate.",
+              key: 'guide.msg.tourDoneComplete',
               actions: [
                 { label: 'I have a new project', kind: 'flow-new' },
                 { label: 'Fix an existing project', kind: 'flow-existing' },
                 { label: 'Schedule a call', kind: 'schedule-handoff' },
               ],
             }
-          : {
-              text: 'Tour ended — explore freely! I stay right here if you need directions, explanations or an estimate.',
-              actions: WELCOME_ACTIONS,
-            },
+          : { key: 'guide.msg.tourDoneEarly', actions: WELCOME_ACTIONS },
       ]);
     },
     [enqueueGuide, stopSpeaking],
@@ -488,7 +572,7 @@ export function useVirtualGuide() {
     setTour((t) => ({ ...t, paused: true }));
     setMinimized(false);
     setOpen(true);
-    enqueueGuide([{ text: 'Tour paused — ask me anything, or press Resume tour when ready.' }]);
+    enqueueGuide([{ key: 'guide.msg.tourPausedAsk' }]);
   }, [enqueueGuide, stopSpeaking]);
 
   const tourResume = useCallback(() => {
@@ -506,19 +590,56 @@ export function useVirtualGuide() {
 
   const currentTourStep = tour.active ? TOUR_STEPS[tour.index] : null;
 
-  // Navigate to the step's route and speak its text.
+  // Navigate to the step's route and speak its text. Re-runs on language
+  // change (langTick) so captions and speech restart in the new language.
   useEffect(() => {
     if (!tour.active || tour.paused) return;
     const step = TOUR_STEPS[tour.index];
     if (!step) return;
     if (pathRef.current !== step.route) navigate(step.route);
-    setCaption(step.text);
+    setCaption({ key: step.textKey });
     if (voiceRef.current.enabled && !voiceRef.current.muted && tts.supported) {
-      tts.speak(step.text);
+      tts.speak(i18n.t(step.textKey), { lang: i18n.language, rate: speechRate() });
     }
     return () => tts.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tour.active, tour.index, tour.paused]);
+  }, [tour.active, tour.index, tour.paused, langTick]);
+
+  // ---------- language ----------
+  const chooseLanguage = useCallback(
+    (code: LanguageCode, remember: boolean) => {
+      if (!isSupportedLanguage(code)) return;
+      stopSpeaking(); // stop current speech immediately; captions re-render via keys
+      setAppLanguage(code, remember);
+      setLangTick((n) => n + 1);
+    },
+    [stopSpeaking],
+  );
+
+  const openSettings = useCallback(() => {
+    stopSpeaking();
+    setSettingsMode('settings');
+    setOpen(true);
+    setMinimized(false);
+  }, [stopSpeaking]);
+
+  const closeSettings = useCallback(() => {
+    setSettingsMode((m) => (m === 'settings' ? null : m));
+  }, []);
+
+  const setSpeechSpeed = useCallback((speed: SpeechSpeed) => {
+    setPrefs((p) => ({ ...p, speechSpeed: speed }));
+  }, []);
+
+  // Stop speech whenever the app language changes from anywhere (e.g. navbar).
+  useEffect(() => {
+    const onChange = () => {
+      stopSpeaking();
+      setLangTick((n) => n + 1);
+    };
+    i18n.on('languageChanged', onChange);
+    return () => i18n.off('languageChanged', onChange);
+  }, [stopSpeaking]);
 
   // ---------- messaging ----------
   const sendMessage = useCallback(
@@ -533,7 +654,23 @@ export function useVirtualGuide() {
       }
       pushUser(text);
       const reply = routeMessage(text, pathRef.current) ?? clarifyReply(pathRef.current);
-      enqueueGuide([{ text: reply.text, actions: reply.actions }]);
+      enqueueGuide([{ key: reply.key, params: reply.params, actions: reply.actions }]);
+    },
+    [answerQuestion, enqueueGuide, pushUser],
+  );
+
+  /** Canned quick-reply: show the translated label as the user's bubble, match on the canonical message. */
+  const sendCanned = useCallback(
+    (action: GuideAction) => {
+      if (!action.message) return;
+      const f = flowRef.current;
+      if (f && f.status === 'active') {
+        answerQuestion(action.message);
+        return;
+      }
+      pushUser(tValue('actions', action.label));
+      const reply = routeMessage(action.message, pathRef.current) ?? clarifyReply(pathRef.current);
+      enqueueGuide([{ key: reply.key, params: reply.params, actions: reply.actions }]);
     },
     [answerQuestion, enqueueGuide, pushUser],
   );
@@ -561,7 +698,7 @@ export function useVirtualGuide() {
           startFlow('existing');
           break;
         case 'send':
-          if (action.message) sendMessage(action.message);
+          sendCanned(action);
           break;
         case 'whatsapp':
           openWhatsApp();
@@ -586,7 +723,7 @@ export function useVirtualGuide() {
         }
       }
     },
-    [addTimer, contactHandoff, navigate, openWhatsApp, reduceMotion, runAnalysis, sendMessage, startFlow, startTour],
+    [addTimer, contactHandoff, navigate, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
   );
 
   const restartConversation = useCallback(() => {
@@ -597,16 +734,16 @@ export function useVirtualGuide() {
     setTyping(false);
     setFlow(null);
     setTour({ active: false, index: 0, paused: false });
-    setCaption('');
+    setCaption(null);
     sessionStorage.removeItem(CONVERSATION_KEY);
-    setMessages([{ id: nextId(), from: 'guide', text: GUIDE_WELCOME, actions: WELCOME_ACTIONS }]);
+    setMessages([welcomeMessage()]);
   }, [clearTimers, stopSpeaking]);
 
   // ---------- voice controls ----------
   const toggleVoice = useCallback(() => {
-    setVoiceEnabled((v) => {
-      if (v) tts.cancel();
-      return !v;
+    setPrefs((p) => {
+      if (p.voiceEnabled) tts.cancel();
+      return { ...p, voiceEnabled: !p.voiceEnabled };
     });
   }, [tts]);
 
@@ -631,14 +768,21 @@ export function useVirtualGuide() {
         queueRef.current.push(
           stored
             ? {
-                text: `Here's your demo estimate in short: ${stored.totalHours} hours ≈ $${stored.totalCost.toLocaleString()}, about ${stored.estimatedWeeks} week(s) at ${stored.weeklyCapacityHours}h/week. ${ESTIMATE_DISCLAIMER}`,
+                key: 'guide.msg.estimateShort',
+                params: {
+                  hours: stored.totalHours,
+                  cost: stored.totalCost,
+                  weeks: stored.estimatedWeeks,
+                  capacity: stored.weeklyCapacityHours ?? GUIDE_WEEKLY_CAPACITY_HOURS,
+                  disclaimer: i18n.t(ESTIMATE_DISCLAIMER_KEY),
+                },
                 actions: [
                   { label: 'View detailed breakdown', kind: 'open-results' },
                   { label: 'Schedule a review call', kind: 'schedule-handoff' },
                 ],
               }
             : {
-                text: "You don't have a demo estimate from me yet — answer a few questions and I'll prepare one.",
+                key: 'guide.msg.noEstimateYet',
                 actions: [
                   { label: 'Start requirement flow', kind: 'flow-new' },
                   { label: 'Fix an existing project', kind: 'flow-existing' },
@@ -683,6 +827,8 @@ export function useVirtualGuide() {
 
   const showInvite = inviteVisible && !open && location.pathname === '/';
 
+  const voiceAvailableForLanguage = tts.voiceAvailable(i18n.language);
+
   return {
     // panel
     open,
@@ -707,13 +853,21 @@ export function useVirtualGuide() {
     pause,
     resume,
     // voice
-    voiceEnabled,
+    voiceEnabled: prefs.voiceEnabled,
     toggleVoice,
     muted,
     toggleMute,
     ttsSupported: tts.supported,
     speaking: tts.speaking,
+    voiceAvailableForLanguage,
+    speechSpeed: prefs.speechSpeed,
+    setSpeechSpeed,
     recognition,
+    // language
+    settingsMode,
+    chooseLanguage,
+    openSettings,
+    closeSettings,
     // flow
     flow,
     currentQuestion,

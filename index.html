@@ -1,8 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Apply the saved/auto-detected language direction before first paint
+         (RTL for Arabic/Urdu). The i18n runtime keeps it in sync afterwards. -->
+    <script>
+      (function () {
+        try {
+          var rtl = { ar: 1, ur: 1 };
+          var raw = localStorage.getItem('scs-lang-v2') || sessionStorage.getItem('scs-lang-v2');
+          var code = raw ? (JSON.parse(raw) || {}).code : null;
+          if (!code) {
+            var langs = navigator.languages || [navigator.language];
+            for (var i = 0; i < langs.length; i++) {
+              var base = (langs[i] || '').toLowerCase().split('-')[0];
+              if (base === 'ar' || base === 'ur' || base === 'en') { code = base; break; }
+            }
+          }
+          if (code) {
+            document.documentElement.lang = code;
+            document.documentElement.dir = rtl[code] ? 'rtl' : 'ltr';
+          }
+        } catch (e) { /* defaults stay English LTR */ }
+      })();
+    </script>
     
     <title>Scs Softwares - Leading Software Development Company</title>
 

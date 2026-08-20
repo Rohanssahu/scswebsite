@@ -1,12 +1,16 @@
 import React from 'react';
 import { CalendarClock, DollarSign, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ESTIMATE_DISCLAIMER } from '@/data/demoEstimate';
+import { ESTIMATE_DISCLAIMER_KEY } from '@/data/demoEstimate';
+import { formatNumber, formatUsd, valueKey } from '@/i18n/languageConfig';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 import QuickReplies from './QuickReplies';
 
 // Detailed demo-estimate panel. Opens over the conversation (Sheet handles
 // focus trap + Escape) so the visitor never loses their chat context.
+// Fully language-aware: labels and rule-generated content are i18n keys;
+// amounts stay in USD (clearly labelled) formatted per locale — no conversion.
 
 interface RecommendationPanelProps {
   guide: VirtualGuideApi;
@@ -28,107 +32,114 @@ const List = ({ items }: { items: string[] }) => (
 );
 
 const RecommendationPanel = ({ guide }: RecommendationPanelProps) => {
+  const { t, i18n } = useTranslation();
   const e = guide.estimate;
+  const lang = i18n.language;
+  const usd = (n: number) => formatUsd(n, lang);
+  const num = (n: number) => formatNumber(n, lang);
+
   return (
     <Sheet open={guide.resultsOpen} onOpenChange={guide.setResultsOpen}>
       <SheetContent side="right" className="z-[90] w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Preliminary demo estimate</SheetTitle>
-          <SheetDescription>{ESTIMATE_DISCLAIMER}</SheetDescription>
+          <SheetTitle>{t('guide.estimate.panelTitle')}</SheetTitle>
+          <SheetDescription>{t(ESTIMATE_DISCLAIMER_KEY)}</SheetDescription>
         </SheetHeader>
 
         {!e ? (
-          <p className="mt-6 text-sm text-gray-600">
-            No estimate yet — answer the requirement questions with the Virtual Guide and your breakdown appears here.
-          </p>
+          <p className="mt-6 text-sm text-gray-600">{t('guide.estimate.noEstimate')}</p>
         ) : (
           <div className="pb-6">
             {/* Key numbers */}
             <div className="mt-5 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                 <Users className="mx-auto h-4 w-4 text-pink-600" aria-hidden="true" />
-                <p className="mt-1 text-lg font-bold text-gray-900">{e.totalHours}h</p>
-                <p className="text-[10px] text-gray-500">Total hours</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">{num(e.totalHours)}h</p>
+                <p className="text-[10px] text-gray-500">{t('guide.estimate.totalHours')}</p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                 <DollarSign className="mx-auto h-4 w-4 text-pink-600" aria-hidden="true" />
-                <p className="mt-1 text-lg font-bold text-gray-900">${e.totalCost.toLocaleString()}</p>
-                <p className="text-[10px] text-gray-500">Estimated cost</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">{usd(e.totalCost)}</p>
+                <p className="text-[10px] text-gray-500">{t('guide.estimate.estimatedCost')}</p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                 <CalendarClock className="mx-auto h-4 w-4 text-pink-600" aria-hidden="true" />
-                <p className="mt-1 text-lg font-bold text-gray-900">
-                  ~{e.estimatedWeeks} wk{e.estimatedWeeks > 1 ? 's' : ''}
-                </p>
-                <p className="text-[10px] text-gray-500">{e.weeklyCapacityHours}h/week capacity</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">{t('guide.estimate.weeksShort', { weeks: num(e.estimatedWeeks) })}</p>
+                <p className="text-[10px] text-gray-500">{t('guide.estimate.capacity', { capacity: num(e.weeklyCapacityHours) })}</p>
               </div>
             </div>
 
-            <SectionTitle>Requirement summary</SectionTitle>
-            <List items={e.requirementSummary} />
+            <SectionTitle>{t('guide.estimate.requirementSummary')}</SectionTitle>
+            <List items={e.summaryItems.map((it) => t(it.key, it.params))} />
 
-            <SectionTitle>Recommended service & technology</SectionTitle>
+            <SectionTitle>{t('guide.estimate.recommendedService')}</SectionTitle>
             <p className="mt-1.5 text-sm text-gray-700">
-              <span className="font-semibold text-gray-900">{e.recommendedService}</span> — suggested stack:{' '}
-              {e.suggestedTech.join(', ')}.
+              <span className="font-semibold text-gray-900">
+                {t(`services.names.${valueKey(e.recommendedService)}`, { defaultValue: e.recommendedService })}
+              </span>{' '}
+              — {t('guide.estimate.suggestedStack')} {e.suggestedTech.join(', ')}.
             </p>
 
-            <SectionTitle>Team & hours</SectionTitle>
+            <SectionTitle>{t('guide.estimate.teamHours')}</SectionTitle>
             <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-start text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
-                    <th scope="col" className="px-3 py-2 font-medium">Role</th>
-                    <th scope="col" className="px-3 py-2 font-medium">Hours</th>
-                    <th scope="col" className="px-3 py-2 font-medium">Rate</th>
-                    <th scope="col" className="px-3 py-2 font-medium">Cost</th>
+                    <th scope="col" className="px-3 py-2 text-start font-medium">{t('guide.estimate.role')}</th>
+                    <th scope="col" className="px-3 py-2 text-start font-medium">{t('guide.estimate.hours')}</th>
+                    <th scope="col" className="px-3 py-2 text-start font-medium">{t('guide.estimate.rate')}</th>
+                    <th scope="col" className="px-3 py-2 text-start font-medium">{t('guide.estimate.cost')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {e.team.map((r) => (
                     <tr key={r.role} className="border-b border-gray-100 last:border-0">
-                      <td className="px-3 py-2 text-gray-900">{r.role}</td>
-                      <td className="px-3 py-2 text-gray-700">{r.hours}h</td>
-                      <td className="px-3 py-2 text-gray-700">${r.hourlyRate}/h</td>
-                      <td className="px-3 py-2 font-medium text-gray-900">${(r.hours * r.hourlyRate).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-gray-900">{t(`roles.${valueKey(r.role)}`, { defaultValue: r.role })}</td>
+                      <td className="px-3 py-2 text-gray-700">{num(r.hours)}h</td>
+                      <td className="px-3 py-2 text-gray-700">{usd(r.hourlyRate)}/h</td>
+                      <td className="px-3 py-2 font-medium text-gray-900">{usd(r.hours * r.hourlyRate)}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-50 font-semibold text-gray-900">
-                    <td className="px-3 py-2">Total</td>
-                    <td className="px-3 py-2">{e.totalHours}h</td>
+                    <td className="px-3 py-2">{t('guide.estimate.total')}</td>
+                    <td className="px-3 py-2">{num(e.totalHours)}h</td>
                     <td className="px-3 py-2" />
-                    <td className="px-3 py-2">${e.totalCost.toLocaleString()}</td>
+                    <td className="px-3 py-2">{usd(e.totalCost)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <SectionTitle>Benefits</SectionTitle>
+            <SectionTitle>{t('guide.estimate.benefits')}</SectionTitle>
             <List items={e.benefits} />
 
-            <SectionTitle>Pros</SectionTitle>
-            <List items={e.pros} />
+            <SectionTitle>{t('guide.estimate.pros')}</SectionTitle>
+            <List items={e.pros.map((k) => t(k, { defaultValue: k }))} />
 
-            <SectionTitle>Cons</SectionTitle>
-            <List items={e.cons} />
+            <SectionTitle>{t('guide.estimate.cons')}</SectionTitle>
+            <List items={e.cons.map((k) => t(k, { defaultValue: k }))} />
 
-            <SectionTitle>Risks</SectionTitle>
-            <List items={e.risks} />
+            <SectionTitle>{t('guide.estimate.risks')}</SectionTitle>
+            <List items={e.risks.map((k) => t(k, { defaultValue: k }))} />
 
-            <SectionTitle>Alternatives</SectionTitle>
-            <List items={[`Cheaper: ${e.cheaperAlternative}`, `Faster: ${e.fasterAlternative}`]} />
+            <SectionTitle>{t('guide.estimate.alternatives')}</SectionTitle>
+            <List
+              items={[
+                `${t('guide.estimate.cheaperPrefix')} ${t(e.cheaperAlternative.key, e.cheaperAlternative.params)}`,
+                `${t('guide.estimate.fasterPrefix')} ${t(e.fasterAlternative.key, e.fasterAlternative.params)}`,
+              ]}
+            />
 
-            <SectionTitle>Recommended next step</SectionTitle>
-            <p className="mt-1.5 text-sm text-gray-700">{e.recommendedNextStep}</p>
+            <SectionTitle>{t('guide.estimate.nextStep')}</SectionTitle>
+            <p className="mt-1.5 text-sm text-gray-700">{t(e.recommendedNextStep.key, e.recommendedNextStep.params)}</p>
 
             <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-              {ESTIMATE_DISCLAIMER} This demo result is generated by frontend example rules — it is not a real code or
-              requirement analysis.
+              {t(ESTIMATE_DISCLAIMER_KEY)} {t('guide.estimate.demoNote')}
             </p>
 
             <QuickReplies
               className="mt-4"
-              ariaLabel="Next actions"
+              ariaLabel={t('guide.estimate.nextActions')}
               onAction={(a) => {
                 guide.setResultsOpen(false);
                 guide.runAction(a);

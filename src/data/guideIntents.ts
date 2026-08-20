@@ -1,13 +1,17 @@
-// Local intent router for the SCS Virtual Guide — Demo.
-// Purely keyword-based, deterministic frontend logic. Reuses the existing
-// assistant intents and layers guide-specific intents plus route context on top.
+// Local intent router for Buddy — Your SCS Guide.
+// Purely keyword-based, deterministic frontend logic. Keyword matching stays
+// on canonical English keywords; every RESPONSE resolves through i18n so Buddy
+// always answers in the currently selected language.
 
+import i18n from '@/i18n/config';
 import { ASSISTANT_INTENTS, AssistantAction } from '@/data/assistantIntents';
-import { getPageInfo, getRouteQuickActions, CLARIFY_RESPONSE } from '@/data/guideContent';
+import { getPageInfo, getRouteQuickActions } from '@/data/guideContent';
 import { GuideAction, GuideIntent } from '@/types/virtualGuide';
 
 export interface GuideReply {
-  text: string;
+  /** i18n key of the reply text. */
+  key: string;
+  params?: Record<string, unknown>;
   actions: GuideAction[];
 }
 
@@ -22,21 +26,9 @@ function toGuideAction(a: AssistantAction): GuideAction {
 /** Guide-specific intents, checked before the shared assistant intents. */
 export const GUIDE_INTENTS: GuideIntent[] = [
   {
-    id: 'what-is-scs',
-    keywords: [['what', 'does', 'scs'], ['what', 'scs', 'do'], ['about', 'scs'], ['who', 'are', 'you']],
-    response:
-      'SCS Softwares is a software agency that builds and rescues digital products: web development, mobile apps, UI/UX design, cloud solutions, DevOps and digital marketing. You describe your project, see an estimated team, cost and timeline up front, and confirm everything with a consultant on a free call.',
-    actions: [
-      { label: 'See all services', kind: 'navigate', to: '/#services' },
-      { label: 'Take the website tour', kind: 'start-tour' },
-      { label: 'Start a project', kind: 'flow-new' },
-    ],
-  },
-  {
     id: 'tour',
     keywords: [['tour'], ['show', 'around'], ['walk', 'through'], ['guide', 'me'], ['show', 'website']],
-    response:
-      "Happy to! I'll walk you through the website — services, products, how we work, and how to reach the team. You can skip or ask questions at any step.",
+    responseKey: 'guide.intents.tour',
     actions: [
       { label: 'Start the tour', kind: 'start-tour' },
       { label: 'Explore myself', kind: 'navigate', to: '/' },
@@ -45,8 +37,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'benefits',
     keywords: [['benefit'], ['advantage'], ['why', 'choose'], ['why', 'scs']],
-    response:
-      'The main benefits of working with SCS Softwares: you see an estimated team, cost and timeline before committing; pricing is transparent and hourly; you own the full source code from day one; and you get weekly clickable demos with a dedicated project manager.',
+    responseKey: 'guide.intents.benefits',
     actions: [
       { label: 'See why-SCS section', kind: 'navigate', to: '/#why-scs' },
       { label: 'Get a demo estimate', kind: 'flow-new' },
@@ -55,8 +46,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'pros-cons',
     keywords: [['pros'], ['cons'], ['limitation'], ['drawback'], ['downside']],
-    response:
-      'Fair question. Pros: transparent estimates, full code ownership, one team for design-to-deploy, weekly demos. Cons to be aware of: custom builds take longer than ready-made products, third-party costs (hosting, gateways) are separate, and final quotes need a scoping call. For your specific project I can generate a pros/cons list with the requirement flow.',
+    responseKey: 'guide.intents.pros-cons',
     actions: [
       { label: 'Analyze my project', kind: 'flow-new' },
       { label: 'View ready products', kind: 'navigate', to: '/products' },
@@ -65,8 +55,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'products',
     keywords: [['product']],
-    response:
-      'SCS offers ready-made, customizable products across web, mobile, cloud, marketing and DevOps — proven bases you can launch quickly instead of building from zero. Want to browse them or tell me what you need so I can point you to a fit?',
+    responseKey: 'guide.intents.products',
     actions: [
       { label: 'View products', kind: 'navigate', to: '/products' },
       { label: 'I need a similar solution', kind: 'flow-new' },
@@ -75,8 +64,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'need-website',
     keywords: [['need', 'website'], ['want', 'website'], ['build', 'website'], ['website', 'for']],
-    response:
-      "Great — websites are our core service. To recommend the right team and give you a preliminary demo estimate, I'll ask a few quick questions about what you want to build.",
+    responseKey: 'guide.intents.need-website',
     actions: [
       { label: 'Start requirement flow', kind: 'flow-new' },
       { label: 'See web development service', kind: 'navigate', to: '/gig/web-development' },
@@ -85,8 +73,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'choose-service',
     keywords: [['which', 'service'], ['suitable'], ['help', 'choose'], ['right', 'for', 'me'], ['recommend', 'service']],
-    response:
-      'That depends on where you are: a brand-new idea usually starts with UI/UX design plus web or mobile development, while an existing app that misbehaves starts with a rescue audit. Which describes you better?',
+    responseKey: 'guide.intents.choose-service',
     actions: [
       { label: 'I have a new idea', kind: 'flow-new' },
       { label: 'I have an existing project', kind: 'flow-existing' },
@@ -96,8 +83,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'how-long',
     keywords: [['how', 'long'], ['duration'], ['delivery', 'time'], ['when', 'ready'], ['take', 'weeks']],
-    response:
-      'Duration depends on scope. As a demo reference: a typical web app estimate lands around 50–70 hours, and with a 40-hour weekly team capacity that is roughly 2 weeks of build plus a launch week. Answer the requirement questions and I will calculate a duration for your exact project.',
+    responseKey: 'guide.intents.how-long',
     actions: [
       { label: 'Estimate my timeline', kind: 'flow-new' },
       { label: 'Schedule a call', kind: 'schedule-handoff' },
@@ -106,8 +92,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'application-process',
     keywords: [['application', 'process'], ['apply', 'job'], ['how', 'apply']],
-    response:
-      'Applying is simple: check the open positions on the careers page, then submit the application form with your details and portfolio. The team reviews applications and contacts shortlisted candidates for an interview.',
+    responseKey: 'guide.intents.application-process',
     actions: [
       { label: 'Show positions', kind: 'navigate', to: '/careers#openings' },
       { label: 'Open application form', kind: 'navigate', to: '/ApplicationForm' },
@@ -116,7 +101,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
   {
     id: 'whatsapp',
     keywords: [['whatsapp']],
-    response: 'You can chat with the SCS team on WhatsApp — I will open it with a short intro message you can review and send yourself.',
+    responseKey: 'guide.intents.whatsapp',
     actions: [
       { label: 'Open WhatsApp', kind: 'whatsapp' },
       { label: 'Contact form instead', kind: 'navigate', to: '/contact' },
@@ -131,28 +116,39 @@ function matchContextIntent(text: string, pathname: string): GuideReply | null {
   const t = text.toLowerCase();
   const has = (...words: string[]) => words.every((w) => t.includes(w));
 
+  // Params resolve in the currently selected language at send time.
+  const name = i18n.t(`services.names.${info.nameKey}`);
+  const page = (field: string) => i18n.t(`guide.pages.${info.pageKey}.${field}`);
+  const pageList = (field: string) => {
+    const items = i18n.t(`guide.pages.${info.pageKey}.${field}`, { returnObjects: true });
+    return Array.isArray(items) ? items.join('; ') : String(items);
+  };
+
   if (has('explain') || has('what', 'is', 'this') || has('tell', 'about')) {
     return {
-      text: `${info.name}: ${info.blurb}`,
+      key: 'guide.context.explain',
+      params: { name, blurb: page('blurb') },
       actions: [
-        { label: 'Who is it for?', kind: 'send', message: `Who is ${info.name} for?` },
-        { label: 'Benefits', kind: 'send', message: `What are the benefits of ${info.name}?` },
+        { label: 'Who is it for?', kind: 'send', message: 'Who is this for?' },
+        { label: 'Benefits', kind: 'send', message: 'What are the benefits?' },
         { label: 'Discuss my requirement', kind: 'flow-new' },
       ],
     };
   }
   if (has('who') && (has('for') || has('use'))) {
     return {
-      text: `${info.name} is a great fit for: ${info.forWho}`,
+      key: 'guide.context.whoFor',
+      params: { name, forWho: page('forWho') },
       actions: [
-        { label: 'Benefits', kind: 'send', message: `What are the benefits of ${info.name}?` },
+        { label: 'Benefits', kind: 'send', message: 'What are the benefits?' },
         { label: 'Start requirement flow', kind: 'flow-new' },
       ],
     };
   }
   if (has('right', 'for', 'me') || has('fit')) {
     return {
-      text: `${info.name} suits you if this sounds familiar: ${info.forWho} If you tell me about your project, I can confirm the fit and estimate the team.`,
+      key: 'guide.context.rightForMe',
+      params: { name, forWho: page('forWho') },
       actions: [
         { label: 'Tell you my requirement', kind: 'flow-new' },
         { label: 'Pros and cons', kind: 'send', message: 'What are the pros and cons?' },
@@ -161,7 +157,8 @@ function matchContextIntent(text: string, pathname: string): GuideReply | null {
   }
   if (has('benefit')) {
     return {
-      text: `Key benefits of ${info.name}: ${info.benefits.join('; ')}.`,
+      key: 'guide.context.benefits',
+      params: { name, benefits: pageList('benefits') },
       actions: [
         { label: 'Limitations', kind: 'send', message: 'What are the limitations?' },
         { label: 'Start requirement flow', kind: 'flow-new' },
@@ -170,7 +167,8 @@ function matchContextIntent(text: string, pathname: string): GuideReply | null {
   }
   if (has('limitation') || has('cons') || has('drawback')) {
     return {
-      text: `Honest limitations of ${info.name}: ${info.limitations.join('; ')}. Pros: ${info.benefits.join('; ')}.`,
+      key: 'guide.context.limitations',
+      params: { name, limitations: pageList('limitations'), benefits: pageList('benefits') },
       actions: [
         { label: 'Discuss my requirement', kind: 'flow-new' },
         { label: 'Talk to a human', kind: 'navigate', to: '/contact' },
@@ -193,7 +191,7 @@ export function routeMessage(text: string, pathname: string): GuideReply | null 
   for (const intent of GUIDE_INTENTS) {
     for (const group of intent.keywords) {
       if (group.every((w) => t.includes(w))) {
-        return { text: intent.response, actions: intent.actions };
+        return { key: intent.responseKey, actions: intent.actions };
       }
     }
   }
@@ -207,7 +205,7 @@ export function routeMessage(text: string, pathname: string): GuideReply | null 
             return { label: 'Analyze my existing project', kind: 'flow-existing' } as GuideAction;
           return toGuideAction(a);
         });
-        return { text: intent.response, actions };
+        return { key: `assistant.intents.${intent.id}`, actions };
       }
     }
   }
@@ -216,5 +214,5 @@ export function routeMessage(text: string, pathname: string): GuideReply | null 
 
 /** Clarification shown for unknown messages — never invents an answer. */
 export function clarifyReply(pathname: string): GuideReply {
-  return { text: CLARIFY_RESPONSE, actions: getRouteQuickActions(pathname).slice(0, 5) };
+  return { key: 'guide.clarify', actions: getRouteQuickActions(pathname).slice(0, 5) };
 }

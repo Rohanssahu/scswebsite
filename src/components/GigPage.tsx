@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { valueKey } from '@/i18n/languageConfig';
 import Header from './Header';
 import Footer from './Footer';
 import Reveal from './Reveal';
@@ -42,6 +44,8 @@ const GigPage: React.FC<GigPageProps> = ({
   testimonials,
   portfolio,
 }) => {
+  const { t } = useTranslation();
+  const serviceName = t(`services.names.${valueKey(title)}`, { defaultValue: title });
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
@@ -57,12 +61,12 @@ const GigPage: React.FC<GigPageProps> = ({
             <div className="text-center lg:text-left">
               <Reveal>
                 <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" /> Our services
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {t('gig.badge')}
                 </span>
               </Reveal>
               <Reveal delay={0.1}>
                 <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl">
-                  <span className="text-gradient-ai">{title}</span>
+                  <span className="text-gradient-ai">{serviceName}</span>
                 </h1>
               </Reveal>
               <Reveal delay={0.2}>
@@ -71,10 +75,10 @@ const GigPage: React.FC<GigPageProps> = ({
               <Reveal delay={0.3}>
                 <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
                   <Link to="/contact" className={primaryBtn}>
-                    Get Started <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    {t('gig.getStarted')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                   <Link to="/contact" className={secondaryBtn}>
-                    Get Quote
+                    {t('gig.getQuote')}
                   </Link>
                 </div>
               </Reveal>
@@ -83,7 +87,7 @@ const GigPage: React.FC<GigPageProps> = ({
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
                 <img
                   src={heroImage}
-                  alt={title}
+                  alt={serviceName}
                   loading="lazy"
                   className="h-64 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-80 lg:h-96"
                 />
@@ -97,8 +101,8 @@ const GigPage: React.FC<GigPageProps> = ({
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="What's included"
-            title={<>Why choose our <span className="text-gradient-ai">{title}</span> services?</>}
+            eyebrow={t('gig.includedEyebrow')}
+            title={t('gig.includedTitle', { service: serviceName })}
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, index) => (
@@ -116,7 +120,7 @@ const GigPage: React.FC<GigPageProps> = ({
       {/* ===== Technologies ===== */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Tech stack" title={<>Technologies we <span className="text-gradient-ai">use</span></>} />
+          <SectionHeading eyebrow={t('gig.techEyebrow')} title={<>{t('gig.techTitle1')} <span className="text-gradient-ai">{t('gig.techTitle2')}</span></>} />
           <Reveal>
             <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-3">
               {technologies.map((tech) => (
@@ -135,7 +139,7 @@ const GigPage: React.FC<GigPageProps> = ({
       {/* ===== Process ===== */}
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="How we work" title={<>Our <span className="text-gradient-ai">process</span></>} />
+          <SectionHeading eyebrow={t('gig.processEyebrow')} title={<>{t('gig.processTitle1')} <span className="text-gradient-ai">{t('gig.processTitle2')}</span></>} />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {process.map((step, index) => (
               <Reveal key={step.step} delay={index * 0.08}>
@@ -155,7 +159,7 @@ const GigPage: React.FC<GigPageProps> = ({
       {/* ===== Portfolio ===== */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Portfolio" title={<>Related <span className="text-gradient-ai">projects</span></>} />
+          <SectionHeading eyebrow={t('gig.portfolioEyebrow')} title={<>{t('gig.portfolioTitle1')} <span className="text-gradient-ai">{t('gig.portfolioTitle2')}</span></>} />
           <div className="grid gap-6 md:grid-cols-3">
             {portfolio.map((item, index) => (
               <Reveal key={item.title} delay={index * 0.08}>
@@ -182,12 +186,12 @@ const GigPage: React.FC<GigPageProps> = ({
       {/* ===== Testimonials ===== */}
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Testimonials" title="What our clients say" />
+          <SectionHeading eyebrow={t('gig.testimonialsEyebrow')} title={t('gig.testimonialsTitle')} />
           <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((testimonial, index) => (
               <Reveal key={testimonial.name} delay={index * 0.08}>
                 <figure className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-7">
-                  <div className="flex gap-1" aria-label="5 out of 5 stars">
+                  <div className="flex gap-1" aria-label={t('a11y.fiveStars')}>
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="h-4 w-4 fill-current text-amber-400" aria-hidden="true" />
                     ))}
@@ -213,16 +217,16 @@ const GigPage: React.FC<GigPageProps> = ({
       <section className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Project estimate"
-            title={<>Know your project cost <span className="text-gradient-ai">before you hire</span></>}
-            sub={`Share your ${title.toLowerCase()} idea and get an estimated team, development hours, cost and delivery timeline — free, no signup.`}
+            eyebrow={t('gig.estimateEyebrow')}
+            title={<>{t('gig.estimateTitle1')} <span className="text-gradient-ai">{t('gig.estimateTitle2')}</span></>}
+            sub={t('gig.estimateSub', { service: serviceName })}
           />
           <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4">
             {[
-              { icon: Users, label: 'Recommended team' },
-              { icon: Clock, label: 'Hours per role' },
-              { icon: DollarSign, label: 'Cost breakdown' },
-              { icon: CalendarRange, label: 'Delivery timeline' },
+              { icon: Users, label: t('gig.estimateTeam') },
+              { icon: Clock, label: t('gig.estimateHours') },
+              { icon: DollarSign, label: t('gig.estimateCost') },
+              { icon: CalendarRange, label: t('gig.estimateTimeline') },
             ].map((item, i) => (
               <Reveal key={item.label} delay={i * 0.05}>
                 <div className="flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center transition-colors hover:border-pink-300">
@@ -235,10 +239,10 @@ const GigPage: React.FC<GigPageProps> = ({
           <Reveal delay={0.2}>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/project-analysis" className={primaryBtn}>
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> Estimate My Project
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('gig.estimateCta')}
               </Link>
               <Link to="/project-analysis?method=manual" className={secondaryBtn}>
-                Start Manually
+                {t('common.startManually')}
               </Link>
             </div>
           </Reveal>
@@ -251,16 +255,16 @@ const GigPage: React.FC<GigPageProps> = ({
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
               <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
-              <h2 className="text-2xl font-bold sm:text-3xl">Ready to get started?</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{t('gig.ctaTitle')}</h2>
               <p className="max-w-xl text-gray-600">
-                Let's discuss your {title.toLowerCase()} project and how we can help you achieve your goals.
+                {t('gig.ctaText', { service: serviceName })}
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/contact" className={primaryBtn}>
-                  Start Your Project Today <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  {t('gig.ctaStart')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link to="/schedule-call" className={secondaryBtn}>
-                  Schedule a call
+                  {t('common.scheduleCall')}
                 </Link>
               </div>
             </div>

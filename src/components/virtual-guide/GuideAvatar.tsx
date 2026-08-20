@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { AvatarState } from '@/types/virtualGuide';
 
-// Avatar adapter for the Virtual Guide.
+// Avatar adapter for Buddy — Your SCS Guide.
 // This is a clean CSS/Framer Motion placeholder character. To use a Rive,
 // Lottie or video avatar later, replace this component's internals — the
 // props contract (state + size) stays the same.
@@ -15,6 +16,10 @@ export interface GuideAvatarProps {
 }
 
 const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProps) => {
+  const { t, i18n } = useTranslation();
+  // In RTL Buddy sits at the start (left) side, so the hand points toward the
+  // page content on its right; in LTR it points left toward the content.
+  const rtl = i18n.dir() === 'rtl';
   const animate = !reduceMotion;
   const speaking = state === 'speaking';
   const thinking = state === 'thinking';
@@ -28,7 +33,7 @@ const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProp
       className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 shadow-lg shadow-pink-400/30"
       style={{ width: size, height: size }}
       role="img"
-      aria-label={`SCS Virtual Guide avatar (${state})`}
+      aria-label={t('guide.avatarLabel', { state: t(`guide.states.${state}`) })}
     >
       {/* Listening pulse ring */}
       {listening && (
@@ -116,16 +121,16 @@ const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProp
         </motion.span>
       )}
 
-      {/* Pointing hand */}
+      {/* Pointing hand — gestures toward the page content from Buddy's dock side */}
       {pointing && (
         <motion.span
           className="absolute select-none"
-          style={{ right: '-12%', top: '30%', fontSize: size * 0.3 }}
-          animate={animate ? { x: [0, 5, 0] } : undefined}
+          style={rtl ? { right: '-12%', top: '30%', fontSize: size * 0.3 } : { left: '-12%', top: '30%', fontSize: size * 0.3 }}
+          animate={animate ? { x: rtl ? [0, 5, 0] : [0, -5, 0] } : undefined}
           transition={{ duration: 1.1, repeat: Infinity }}
           aria-hidden="true"
         >
-          👉
+          {rtl ? '👉' : '👈'}
         </motion.span>
       )}
 

@@ -1,26 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
 
 const services = [
-  { name: 'Web Development', path: '/gig/web-development' },
-  { name: 'Mobile App Development', path: '/gig/mobile-development' },
-  { name: 'Digital Marketing', path: '/gig/digital-marketing' },
-  { name: 'UI/UX Design', path: '/gig/ui-ux-design' },
-  { name: 'Cloud Solutions', path: '/gig/cloud-solutions' },
-  { name: 'DevOps Services', path: '/gig/devops-services' },
+  { nameKey: 'web-development', path: '/gig/web-development' },
+  { nameKey: 'mobile-app-development', path: '/gig/mobile-development' },
+  { nameKey: 'digital-marketing', path: '/gig/digital-marketing' },
+  { nameKey: 'ui-ux-design', path: '/gig/ui-ux-design' },
+  { nameKey: 'cloud-solutions', path: '/gig/cloud-solutions' },
+  { nameKey: 'devops-services', path: '/gig/devops-services' },
 ];
 
 const quickLinks = [
-  { name: 'Home', path: '/' },
-  { name: 'About Us', path: '/about' },
-  { name: 'Products', path: '/products' },
-  { name: 'Project Estimate', path: '/project-analysis' },
-  { name: 'Career', path: '/careers' },
-  { name: 'Contact', path: '/contact' },
-  { name: 'Privacy Policy', path: '/PrivacyPolicy' },
-  { name: 'Terms of Service', path: '/TermsAndConditions' },
+  { key: 'nav.home', path: '/' },
+  { key: 'nav.aboutUs', path: '/about' },
+  { key: 'nav.products', path: '/products' },
+  { key: 'nav.projectEstimate', path: '/project-analysis' },
+  { key: 'nav.career', path: '/careers' },
+  { key: 'nav.contact', path: '/contact' },
+  { key: 'nav.privacyPolicy', path: '/PrivacyPolicy' },
+  { key: 'nav.termsOfService', path: '/TermsAndConditions' },
 ];
 
 const socials = [
@@ -40,6 +41,7 @@ const footerLinkCls =
   'text-sm text-gray-400 transition-colors hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded';
 
 const Footer = () => {
+  const { t } = useTranslation();
   return (
     <footer className="bg-gray-950 text-white">
       {/* Brand gradient accent line */}
@@ -60,10 +62,7 @@ const Footer = () => {
                 Scs <span className="text-gradient-ai">Softwares</span>
               </span>
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-gray-400">
-              Leading software development company delivering innovative solutions for businesses worldwide. We
-              transform ideas into powerful digital experiences.
-            </p>
+            <p className="mt-4 text-sm leading-relaxed text-gray-400">{t('footer.tagline')}</p>
             <div className="mt-5 flex gap-3">
               {socials.map((social) => (
                 <a
@@ -82,12 +81,12 @@ const Footer = () => {
 
           {/* Services */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">Our Services</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.ourServices')}</h3>
             <ul className="mt-5 space-y-3">
               {services.map((service) => (
                 <li key={service.path}>
                   <Link to={service.path} className={footerLinkCls}>
-                    {service.name}
+                    {t(`services.names.${service.nameKey}`)}
                   </Link>
                 </li>
               ))}
@@ -96,12 +95,12 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">Quick Links</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.quickLinks')}</h3>
             <ul className="mt-5 space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.path}>
                   <Link to={link.path} className={footerLinkCls}>
-                    {link.name}
+                    {t(link.key)}
                   </Link>
                 </li>
               ))}
@@ -110,7 +109,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">Contact Info</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.contactInfo')}</h3>
             <div className="mt-5 space-y-4 text-sm text-gray-400">
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-pink-500" aria-hidden="true" />
@@ -145,9 +144,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-12 border-t border-gray-800 pt-8 text-center">
-          <p className="text-sm text-gray-500">
-            © 2022 Scs Softwares. All rights reserved. Built with passion and innovation.
-          </p>
+          <p className="text-sm text-gray-500">{t('footer.copyright')}</p>
         </div>
       </div>
     </footer>

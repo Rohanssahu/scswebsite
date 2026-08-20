@@ -1,6 +1,8 @@
-// Deterministic demo estimate engine for the SCS Virtual Guide.
+// Deterministic demo estimate engine for Buddy — Your SCS Guide.
 // Builds on the existing demoAnalysis rules and adds guide-specific extras:
 // recommended service, suggested tech, pros/cons/risks and alternatives.
+// All human-readable content is emitted as i18n keys (with params), so the
+// estimate re-renders correctly whenever the visitor changes language.
 // Dummy data only — no real code analysis happens anywhere in this module.
 
 import {
@@ -11,7 +13,7 @@ import {
   WEEKLY_CAPACITY_HOURS,
 } from '@/data/demoAnalysis';
 import { AnswerMap, ProjectMode } from '@/types/projectAnalysis';
-import { GuideEstimate } from '@/types/virtualGuide';
+import { GuideEstimate, LocalizedText } from '@/types/virtualGuide';
 
 /** Configurable weekly team capacity (working hours per week). */
 export const GUIDE_WEEKLY_CAPACITY_HOURS = WEEKLY_CAPACITY_HOURS;
@@ -19,17 +21,17 @@ export const GUIDE_WEEKLY_CAPACITY_HOURS = WEEKLY_CAPACITY_HOURS;
 /** Capacity used for the "faster alternative" comparison. */
 const BOOSTED_WEEKLY_CAPACITY_HOURS = 60;
 
-export const ESTIMATE_DISCLAIMER =
-  'This is a preliminary demo estimate. Final scope, cost and timeline will be confirmed after an SCS Softwares review.';
+/** i18n key of the estimate disclaimer shown with every result. */
+export const ESTIMATE_DISCLAIMER_KEY = 'guide.estimate.disclaimer';
 
-/** Simulated progress labels shown before the result. Clearly a demo. */
-export const DEMO_ANALYSIS_STEPS = [
-  'Understanding requirements',
-  'Selecting suitable services',
-  'Identifying required skills',
-  'Estimating development hours',
-  'Calculating preliminary budget',
-  'Preparing recommendations',
+/** Simulated progress labels (i18n keys) shown before the result. */
+export const DEMO_ANALYSIS_STEP_KEYS = [
+  'guide.analysis.steps.understanding',
+  'guide.analysis.steps.services',
+  'guide.analysis.steps.skills',
+  'guide.analysis.steps.hours',
+  'guide.analysis.steps.budget',
+  'guide.analysis.steps.recommendations',
 ];
 
 function asText(value: string | string[] | undefined): string {
@@ -64,26 +66,17 @@ function deriveService(mode: ProjectMode, answers: AnswerMap): { service: string
 }
 
 function derivePros(mode: ProjectMode): string[] {
-  const shared = [
-    'Transparent hourly pricing — you approve every hour',
-    'Full source-code ownership from day one',
-    'One team covers design, development and QA',
-  ];
-  return mode === 'new'
-    ? [...shared, 'MVP-first scoping gets you to launch faster']
-    : [...shared, 'Audit-first approach — no new code on shaky foundations'];
+  const shared = ['guide.estimate.prosList.hourly', 'guide.estimate.prosList.ownership', 'guide.estimate.prosList.one-team'];
+  return mode === 'new' ? [...shared, 'guide.estimate.prosList.mvp'] : [...shared, 'guide.estimate.prosList.audit'];
 }
 
 function deriveCons(mode: ProjectMode, answers: AnswerMap): string[] {
-  const cons = [
-    'Third-party costs (hosting, payment gateways, app stores) are separate',
-    'Final quote still needs a scoping call — this is a demo figure',
-  ];
+  const cons = ['guide.estimate.consList.third-party', 'guide.estimate.consList.final-quote'];
   if (mode === 'new' && asText(answers.platform).includes('Mobile')) {
-    cons.push('App-store review adds 1–2 weeks after development finishes');
+    cons.push('guide.estimate.consList.app-store');
   }
   if (mode === 'existing') {
-    cons.push('Unknown code quality can shift effort once the audit runs');
+    cons.push('guide.estimate.consList.unknown-code');
   }
   return cons;
 }
@@ -92,22 +85,47 @@ function deriveRisks(mode: ProjectMode, answers: AnswerMap): string[] {
   const risks: string[] = [];
   const budget = asText(answers.budget);
   if (!budget || budget === 'Not sure yet' || budget === '(skipped)') {
-    risks.push('Budget range undefined — scope may need trimming after the review call');
+    risks.push('guide.estimate.risksList.budget');
   }
   const timeline = asText(answers.timeline) + asText(answers.urgency);
   if (/ASAP|Critical/i.test(timeline)) {
-    risks.push('Tight timeline — parallel workstreams raise coordination overhead');
+    risks.push('guide.estimate.risksList.timeline');
   }
   if (asArray(answers.modules).includes('Online payments') || asArray(answers.newFeatures).includes('Payments')) {
-    risks.push('Payment integration adds gateway KYC, webhooks and compliance work');
+    risks.push('guide.estimate.risksList.payments');
   }
   if (mode === 'existing' && asArray(answers.technologies).includes('Not sure')) {
-    risks.push('Unconfirmed technology stack — the audit may adjust the estimate');
+    risks.push('guide.estimate.risksList.stack');
   }
   if (risks.length === 0) {
-    risks.push('Low risk profile — main variable is feedback turnaround during development');
+    risks.push('guide.estimate.risksList.low');
   }
   return risks;
+}
+
+/** Language-aware requirement summary: label keys + the visitor's own answers. */
+function buildSummaryItems(mode: ProjectMode, answers: AnswerMap): LocalizedText[] {
+  const item = (key: string, value: string): LocalizedText => ({
+    key: `guide.estimate.summaryItems.${key}`,
+    params: { value },
+  });
+  if (mode === 'new') {
+    return [
+      item('goal', asText(answers.idea) || '—'),
+      item('audience', asText(answers.audience) || '—'),
+      item('platform', asText(answers.platform) || 'Web only'),
+      item('features', asArray(answers.features).join(', ') || '—'),
+      item('modules', asArray(answers.modules).join(', ') || '—'),
+      item('timeline', asText(answers.timeline) || '—'),
+    ];
+  }
+  return [
+    item('projectType', asText(answers.projectType) || 'Web application'),
+    item('stack', asArray(answers.technologies).join(', ') || '—'),
+    item('additions', asArray(answers.newFeatures).join(', ') || '—'),
+    item('reference', asText(answers.projectLink) || '—'),
+    item('urgency', asText(answers.urgency) || '—'),
+  ];
 }
 
 /**
@@ -132,11 +150,20 @@ export function buildGuideEstimate(mode: ProjectMode, answers: AnswerMap): Guide
     pros: derivePros(mode),
     cons: deriveCons(mode, answers),
     risks: deriveRisks(mode, answers),
-    cheaperAlternative: `MVP-first build: launch with only the top 3 features first — roughly $${mvpCost.toLocaleString()} instead of $${cost.toLocaleString()}, then extend after real user feedback.`,
-    fasterAlternative: `Boosted team: raise weekly capacity from ${GUIDE_WEEKLY_CAPACITY_HOURS}h to ${BOOSTED_WEEKLY_CAPACITY_HOURS}h with an extra developer — about ${boostedWeeks} week${boostedWeeks > 1 ? 's' : ''} instead of ${weeks}, at the same total hours.`,
-    recommendedNextStep: /ASAP|Critical/i.test(urgency)
-      ? 'Book a review call this week so the team can start with the urgent items.'
-      : 'Schedule a free review call — an SCS consultant confirms scope, final cost and start date.',
+    summaryItems: buildSummaryItems(mode, answers),
+    cheaperAlternative: { key: 'guide.estimate.cheaper', params: { mvpCost, cost } },
+    fasterAlternative: {
+      key: 'guide.estimate.faster',
+      params: {
+        base: GUIDE_WEEKLY_CAPACITY_HOURS,
+        boosted: BOOSTED_WEEKLY_CAPACITY_HOURS,
+        boostedWeeks,
+        weeks,
+      },
+    },
+    recommendedNextStep: {
+      key: /ASAP|Critical/i.test(urgency) ? 'guide.estimate.nextUrgent' : 'guide.estimate.nextNormal',
+    },
     totalHours: hours,
     totalCost: cost,
     estimatedWeeks: weeks,

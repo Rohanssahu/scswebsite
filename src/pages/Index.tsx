@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Code,
   Smartphone,
@@ -31,41 +32,47 @@ import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 
 const DEMO_TEAM = [
-  { role: 'Requirement Analyst', rate: 5, blurb: 'Turns your idea into a build-ready specification' },
-  { role: 'UI/UX Designer', rate: 10, blurb: 'Wireframes and pixel-perfect screens' },
-  { role: 'Frontend Developer', rate: 15, blurb: 'React / mobile interfaces your users touch' },
-  { role: 'Backend Developer', rate: 20, blurb: 'APIs, databases, payments and security' },
-  { role: 'QA Tester', rate: 10, blurb: 'Catches bugs before your customers do' },
+  { slug: 'requirement-analyst', rate: 5 },
+  { slug: 'ui-ux-designer', rate: 10 },
+  { slug: 'frontend-developer', rate: 15 },
+  { slug: 'backend-developer', rate: 20 },
+  { slug: 'qa-tester', rate: 10 },
 ];
 
 const SERVICES = [
-  { icon: Code, title: 'Web Development', path: '/gig/web-development' },
-  { icon: Smartphone, title: 'Mobile Apps', path: '/gig/mobile-development' },
-  { icon: Palette, title: 'UI/UX Design', path: '/gig/ui-ux-design' },
-  { icon: Cloud, title: 'Cloud Solutions', path: '/gig/cloud-solutions' },
-  { icon: Settings, title: 'DevOps', path: '/gig/devops-services' },
-  { icon: TrendingUp, title: 'Digital Marketing', path: '/gig/digital-marketing' },
+  { icon: Code, nameKey: 'services.names.web-development', path: '/gig/web-development' },
+  { icon: Smartphone, nameKey: 'services.names.mobile-apps', path: '/gig/mobile-development' },
+  { icon: Palette, nameKey: 'services.names.ui-ux-design', path: '/gig/ui-ux-design' },
+  { icon: Cloud, nameKey: 'services.names.cloud-solutions', path: '/gig/cloud-solutions' },
+  { icon: Settings, nameKey: 'services.names.devops', path: '/gig/devops-services' },
+  { icon: TrendingUp, nameKey: 'services.names.digital-marketing', path: '/gig/digital-marketing' },
 ];
 
-const PORTFOLIO = [
+const PORTFOLIO: {
+  titleKey: string;
+  categoryKey?: string;
+  category?: string;
+  image: string;
+  descKey: string;
+}[] = [
   {
-    title: 'E-commerce Platform',
-    category: 'Web Development',
+    titleKey: 'home.portfolio.p1Title',
+    categoryKey: 'services.names.web-development',
     image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
-    description: 'A modern e-commerce platform with advanced features and a seamless checkout experience.',
+    descKey: 'home.portfolio.p1Desc',
   },
   {
-    title: 'Healthcare Mobile App',
+    titleKey: 'home.portfolio.p2Title',
     category: 'Mobile Development',
     image:
       'https://blog.elxoinc.com/hubfs/Website%20Images/Blogs/Modern%20Healthcare%20App%20Development%E2%80%99s%20Role%20in%20Staff%20%26%20IT%20Partnerships.jpg',
-    description: 'HIPAA-compliant mobile application for healthcare providers and patients.',
+    descKey: 'home.portfolio.p2Desc',
   },
   {
-    title: 'FinTech Dashboard',
-    category: 'Web Development',
+    titleKey: 'home.portfolio.p3Title',
+    categoryKey: 'services.names.web-development',
     image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop',
-    description: 'Real-time financial dashboard with advanced analytics and reporting.',
+    descKey: 'home.portfolio.p3Desc',
   },
 ];
 
@@ -73,19 +80,17 @@ const TESTIMONIALS = [
   {
     name: 'Sarah Johnson',
     company: 'TechStart Inc.',
-    quote:
-      'SCS Softwares delivered an exceptional web application that exceeded our expectations. Professional, responsive and highly skilled.',
+    quoteKey: 'home.testimonials.q1',
   },
   {
     name: 'Michael Chen',
     company: 'Digital Ventures',
-    quote:
-      'Working with SCS Softwares was a game-changer. They transformed our idea into a powerful mobile app our users love.',
+    quoteKey: 'home.testimonials.q2',
   },
   {
     name: 'Emily Rodriguez',
     company: 'Growth Marketing Co.',
-    quote: 'Their upfront estimate matched the final delivery almost exactly — no surprises, just steady weekly progress.',
+    quoteKey: 'home.testimonials.q3',
   },
 ];
 
@@ -103,6 +108,8 @@ const SectionHeading = ({ eyebrow, title, sub }: { eyebrow: string; title: React
 );
 
 const Index = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
@@ -116,41 +123,40 @@ const Index = () => {
         <div className="container relative mx-auto px-4 py-20 text-center sm:py-28">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> AI-style project estimator · Demo analysis
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {t('home.heroBadge')}
             </span>
           </Reveal>
           <Reveal delay={0.1}>
             <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              Know Your Project Cost <span className="text-gradient-ai">Before You Hire</span>
+              {t('home.heroTitle1')} <span className="text-gradient-ai">{t('home.heroTitle2')}</span>
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-              Share a new idea or upload an existing project. Get an estimated team, development hours, cost and
-              delivery timeline before hiring SCS Softwares.
+              {t('home.heroSub')}
             </p>
           </Reveal>
           <Reveal delay={0.3}>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/project-analysis" className={primaryBtn}>
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> Analyze My Project
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('common.analyzeMyProject')}
               </Link>
               <Link to="/project-analysis?method=manual" className={secondaryBtn}>
-                <ClipboardList className="h-4 w-4" aria-hidden="true" /> Start Manually
+                <ClipboardList className="h-4 w-4" aria-hidden="true" /> {t('common.startManually')}
               </Link>
             </div>
           </Reveal>
           <Reveal delay={0.4}>
             <div className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
               {[
-                { value: '500+', label: 'Happy clients' },
-                { value: '1000+', label: 'Projects delivered' },
-                { value: '10+', label: 'Years experience' },
-                { value: '98%', label: 'Client satisfaction' },
+                { value: '500+', labelKey: 'home.stats.clients' },
+                { value: '1000+', labelKey: 'home.stats.projects' },
+                { value: '10+', labelKey: 'home.stats.years' },
+                { value: '98%', labelKey: 'home.stats.satisfaction' },
               ].map((s) => (
-                <div key={s.label} className="rounded-2xl border border-gray-200 bg-white px-4 py-5">
+                <div key={s.labelKey} className="rounded-2xl border border-gray-200 bg-white px-4 py-5">
                   <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
+                  <p className="text-xs text-gray-500">{t(s.labelKey)}</p>
                 </div>
               ))}
             </div>
@@ -162,22 +168,22 @@ const Index = () => {
       <section data-guide-id="home-process" className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="How it works"
-            title={<>From idea to estimate in <span className="text-gradient-ai">minutes</span></>}
-            sub="No sales calls required to see the numbers. Answer a few questions and get a demo analysis instantly."
+            eyebrow={t('home.how.eyebrow')}
+            title={<>{t('home.how.title1')} <span className="text-gradient-ai">{t('home.how.title2')}</span></>}
+            sub={t('home.how.sub')}
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: FileSearch, title: '1. Describe your project', text: 'A new idea or an existing app that needs fixing — chat with the demo assistant or fill a short form.' },
-              { icon: Bot, title: '2. Demo analysis runs', text: 'Our estimator identifies scope, required skills and effort using transparent example logic.' },
-              { icon: Users, title: '3. See team & cost', text: 'Get a recommended team with hours per role, hourly rates, total cost and delivery timeline.' },
-              { icon: PhoneCall, title: '4. Confirm on a call', text: 'An SCS consultant reviews everything with you and confirms the final scope and quote.' },
+              { icon: FileSearch, titleKey: 'home.how.step1Title', textKey: 'home.how.step1Text' },
+              { icon: Bot, titleKey: 'home.how.step2Title', textKey: 'home.how.step2Text' },
+              { icon: Users, titleKey: 'home.how.step3Title', textKey: 'home.how.step3Text' },
+              { icon: PhoneCall, titleKey: 'home.how.step4Title', textKey: 'home.how.step4Text' },
             ].map((step, i) => (
-              <Reveal key={step.title} delay={i * 0.08}>
+              <Reveal key={step.titleKey} delay={i * 0.08}>
                 <div className="glow-card h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
                   <step.icon className="h-7 w-7 text-pink-600" aria-hidden="true" />
-                  <h3 className="mt-4 font-semibold text-gray-900">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{step.text}</p>
+                  <h3 className="mt-4 font-semibold text-gray-900">{t(step.titleKey)}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{t(step.textKey)}</p>
                 </div>
               </Reveal>
             ))}
@@ -189,9 +195,9 @@ const Index = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Two ways to start"
-            title="Guided by AI, or hands-on manual"
-            sub="Both paths ask the same questions and produce the same analysis — switch anytime without losing answers."
+            eyebrow={t('home.ways.eyebrow')}
+            title={t('home.ways.title')}
+            sub={t('home.ways.sub')}
           />
           <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
             <Reveal>
@@ -199,13 +205,12 @@ const Index = () => {
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600">
                   <Sparkles className="h-6 w-6 text-white" aria-hidden="true" />
                 </div>
-                <h3 className="mt-4 text-xl font-semibold text-gray-900">AI Assistant flow</h3>
+                <h3 className="mt-4 text-xl font-semibold text-gray-900">{t('home.ways.aiTitle')}</h3>
                 <p className="mt-2 text-sm text-gray-600">
-                  A friendly chat asks one question at a time with quick-reply chips, progress tracking and the option
-                  to edit any answer. <span className="text-amber-700">Demo assistant — scripted, no live AI.</span>
+                  {t('home.ways.aiText')} <span className="text-amber-700">{t('home.ways.aiNote')}</span>
                 </p>
                 <Link to="/project-analysis" className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-pink-600 hover:text-gray-900">
-                  Start with AI <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  {t('home.ways.aiCta')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
             </Reveal>
@@ -214,13 +219,12 @@ const Index = () => {
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
                   <ClipboardList className="h-6 w-6 text-white" aria-hidden="true" />
                 </div>
-                <h3 className="mt-4 text-xl font-semibold text-gray-900">Manual form flow</h3>
+                <h3 className="mt-4 text-xl font-semibold text-gray-900">{t('home.ways.manualTitle')}</h3>
                 <p className="mt-2 text-sm text-gray-600">
-                  A step-by-step form with validation, technology selectors, drag-and-drop references and automatic
-                  draft saving in your browser.
+                  {t('home.ways.manualText')}
                 </p>
                 <Link to="/project-analysis?method=manual" className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-pink-600 hover:text-gray-900">
-                  Fill the form <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  {t('home.ways.manualCta')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
             </Reveal>
@@ -232,8 +236,8 @@ const Index = () => {
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Start anywhere"
-            title="New build or project rescue — we do both"
+            eyebrow={t('home.modes.eyebrow')}
+            title={t('home.modes.title')}
           />
           <div className="grid gap-6 lg:grid-cols-2">
             <Reveal>
@@ -242,21 +246,20 @@ const Index = () => {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-pink-500">
                     <Rocket className="h-5 w-5 text-white" aria-hidden="true" />
                   </div>
-                  <h3 className="text-2xl font-semibold">New Project</h3>
+                  <h3 className="text-2xl font-semibold">{t('home.modes.newTitle')}</h3>
                 </div>
                 <p className="mt-4 text-gray-600">
-                  Have an idea for a web or mobile product? Describe what you want to build, who it's for and which
-                  features matter — the estimator maps it to a team and timeline.
+                  {t('home.modes.newText')}
                 </p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                  {['MVP-first scoping to launch faster', 'Web, mobile or both', 'Login, payments and admin panels covered'].map((f) => (
+                  {[t('home.modes.newF1'), t('home.modes.newF2'), t('home.modes.newF3')].map((f) => (
                     <li key={f} className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" /> {f}
                     </li>
                   ))}
                 </ul>
                 <Link to="/project-analysis?mode=new" className={`${primaryBtn} mt-7`}>
-                  Estimate a new project
+                  {t('home.modes.newCta')}
                 </Link>
               </div>
             </Reveal>
@@ -266,21 +269,20 @@ const Index = () => {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
                     <Wrench className="h-5 w-5 text-white" aria-hidden="true" />
                   </div>
-                  <h3 className="text-2xl font-semibold">Fix Existing Project</h3>
+                  <h3 className="text-2xl font-semibold">{t('home.modes.fixTitle')}</h3>
                 </div>
                 <p className="mt-4 text-gray-600">
-                  Stuck with a broken, slow or half-finished app? Tell us what works, what's broken and what's missing —
-                  get a demo health check and a rescue plan.
+                  {t('home.modes.fixText')}
                 </p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                  {['Code audit before any new work', 'Critical fixes first, features second', 'Works with React, Node, PHP, WordPress & more'].map((f) => (
+                  {[t('home.modes.fixF1'), t('home.modes.fixF2'), t('home.modes.fixF3')].map((f) => (
                     <li key={f} className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" /> {f}
                     </li>
                   ))}
                 </ul>
                 <Link to="/project-analysis?mode=existing" className={`${secondaryBtn} mt-7`}>
-                  Analyze my project
+                  {t('home.modes.fixCta')}
                 </Link>
               </div>
             </Reveal>
@@ -292,23 +294,23 @@ const Index = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Demo analysis"
-            title="What your analysis includes"
-            sub="Every demo report covers the numbers clients actually ask about."
+            eyebrow={t('home.includes.eyebrow')}
+            title={t('home.includes.title')}
+            sub={t('home.includes.sub')}
           />
           <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3">
             {[
-              { icon: Gauge, label: 'Project health score' },
-              { icon: ListChecks, label: 'Requirement summary' },
-              { icon: Users, label: 'Recommended team' },
-              { icon: Clock, label: 'Hours per role' },
-              { icon: DollarSign, label: 'Cost breakdown' },
-              { icon: CalendarRange, label: 'Delivery timeline' },
+              { icon: Gauge, labelKey: 'home.includes.health' },
+              { icon: ListChecks, labelKey: 'home.includes.summary' },
+              { icon: Users, labelKey: 'home.includes.team' },
+              { icon: Clock, labelKey: 'home.includes.hours' },
+              { icon: DollarSign, labelKey: 'home.includes.cost' },
+              { icon: CalendarRange, labelKey: 'home.includes.timeline' },
             ].map((item, i) => (
-              <Reveal key={item.label} delay={i * 0.05}>
+              <Reveal key={item.labelKey} delay={i * 0.05}>
                 <div className="flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center">
                   <item.icon className="h-6 w-6 text-pink-600" aria-hidden="true" />
-                  <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                  <span className="text-sm font-medium text-gray-700">{t(item.labelKey)}</span>
                 </div>
               </Reveal>
             ))}
@@ -320,50 +322,50 @@ const Index = () => {
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading
-            eyebrow="Transparent hourly pricing"
-            title={<>A full team, <span className="text-gradient-ai">priced openly</span></>}
-            sub="Example roles and demo rates — your analysis recommends the exact mix for your project."
+            eyebrow={t('home.pricing.eyebrow')}
+            title={<>{t('home.pricing.title1')} <span className="text-gradient-ai">{t('home.pricing.title2')}</span></>}
+            sub={t('home.pricing.sub')}
           />
           <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-gray-200">
             {DEMO_TEAM.map((m, i) => (
-              <Reveal key={m.role} delay={i * 0.05}>
+              <Reveal key={m.slug} delay={i * 0.05}>
                 <div
                   className={`flex flex-col gap-1 px-6 py-4 sm:flex-row sm:items-center sm:justify-between ${
                     i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                   }`}
                 >
                   <div>
-                    <p className="font-semibold text-gray-900">{m.role}</p>
-                    <p className="text-xs text-gray-500">{m.blurb}</p>
+                    <p className="font-semibold text-gray-900">{t(`roles.${m.slug}`)}</p>
+                    <p className="text-xs text-gray-500">{t(`home.pricing.blurbs.${m.slug}`)}</p>
                   </div>
                   <p className="text-lg font-bold text-pink-600">
                     ${m.rate}
-                    <span className="text-xs font-normal text-gray-500">/hour</span>
+                    <span className="text-xs font-normal text-gray-500">{t('common.perHour')}</span>
                   </p>
                 </div>
               </Reveal>
             ))}
           </div>
-          <p className="mt-4 text-center text-xs text-gray-400">Demo rates for illustration — confirmed in your final quote.</p>
+          <p className="mt-4 text-center text-xs text-gray-400">{t('home.pricing.note')}</p>
         </div>
       </section>
 
       {/* ===== Why Choose SCS ===== */}
       <section id="why-scs" data-guide-id="home-benefits" className="py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Why SCS Softwares" title="Built to be the safest way to hire developers" />
+          <SectionHeading eyebrow={t('home.why.eyebrow')} title={t('home.why.title')} />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: BadgeCheck, title: 'Estimate before commitment', text: 'See team, cost and timeline before you spend a rupee.' },
-              { icon: ShieldCheck, title: 'You own everything', text: 'Source code, designs and infrastructure are yours from day one.' },
-              { icon: Users, title: 'Dedicated team', text: 'A project manager plus named developers — not a rotating pool.' },
-              { icon: Clock, title: 'Weekly demos', text: 'Progress you can click every week, not status reports.' },
+              { icon: BadgeCheck, titleKey: 'home.why.estimateTitle', textKey: 'home.why.estimateText' },
+              { icon: ShieldCheck, titleKey: 'home.why.ownTitle', textKey: 'home.why.ownText' },
+              { icon: Users, titleKey: 'home.why.teamTitle', textKey: 'home.why.teamText' },
+              { icon: Clock, titleKey: 'home.why.demosTitle', textKey: 'home.why.demosText' },
             ].map((item, i) => (
-              <Reveal key={item.title} delay={i * 0.08}>
+              <Reveal key={item.titleKey} delay={i * 0.08}>
                 <div className="h-full rounded-2xl border border-gray-200 bg-white p-6">
                   <item.icon className="h-7 w-7 text-pink-600" aria-hidden="true" />
-                  <h3 className="mt-4 font-semibold text-gray-900">{item.title}</h3>
-                  <p className="mt-2 text-sm text-gray-600">{item.text}</p>
+                  <h3 className="mt-4 font-semibold text-gray-900">{t(item.titleKey)}</h3>
+                  <p className="mt-2 text-sm text-gray-600">{t(item.textKey)}</p>
                 </div>
               </Reveal>
             ))}
@@ -374,7 +376,7 @@ const Index = () => {
       {/* ===== Services ===== */}
       <section id="services" data-guide-id="home-services" className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Services" title="Everything under one roof" />
+          <SectionHeading eyebrow={t('home.servicesSection.eyebrow')} title={t('home.servicesSection.title')} />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {SERVICES.map((s, i) => (
               <Reveal key={s.path} delay={i * 0.05}>
@@ -383,7 +385,7 @@ const Index = () => {
                   className="group flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center transition-colors hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
                 >
                   <s.icon className="h-7 w-7 text-pink-600 transition-transform group-hover:scale-110" aria-hidden="true" />
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{s.title}</span>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{t(s.nameKey)}</span>
                 </Link>
               </Reveal>
             ))}
@@ -394,23 +396,25 @@ const Index = () => {
       {/* ===== Portfolio ===== */}
       <section data-guide-id="home-portfolio" className="py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Portfolio" title="Recent case studies" />
+          <SectionHeading eyebrow={t('home.portfolio.eyebrow')} title={t('home.portfolio.title')} />
           <div className="grid gap-6 md:grid-cols-3">
             {PORTFOLIO.map((item, i) => (
-              <Reveal key={item.title} delay={i * 0.08}>
+              <Reveal key={item.titleKey} delay={i * 0.08}>
                 <article className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white">
                   <div className="overflow-hidden">
                     <img
                       src={item.image}
-                      alt={item.title}
+                      alt={t(item.titleKey)}
                       loading="lazy"
                       className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
                   <div className="p-6">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">{item.category}</span>
-                    <h3 className="mt-1 text-lg font-bold text-gray-900">{item.title}</h3>
-                    <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">
+                      {item.categoryKey ? t(item.categoryKey) : item.category}
+                    </span>
+                    <h3 className="mt-1 text-lg font-bold text-gray-900">{t(item.titleKey)}</h3>
+                    <p className="mt-2 text-sm text-gray-600">{t(item.descKey)}</p>
                   </div>
                 </article>
               </Reveal>
@@ -422,20 +426,20 @@ const Index = () => {
       {/* ===== Testimonials ===== */}
       <section className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
-          <SectionHeading eyebrow="Testimonials" title="What our clients say" />
+          <SectionHeading eyebrow={t('home.testimonials.eyebrow')} title={t('home.testimonials.title')} />
           <div className="grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <Reveal key={t.name} delay={i * 0.08}>
+            {TESTIMONIALS.map((item, i) => (
+              <Reveal key={item.name} delay={i * 0.08}>
                 <figure className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-7">
-                  <div className="flex gap-1" aria-label="5 out of 5 stars">
+                  <div className="flex gap-1" aria-label={t('a11y.fiveStars')}>
                     {[...Array(5)].map((_, j) => (
                       <Star key={j} className="h-4 w-4 fill-current text-amber-400" aria-hidden="true" />
                     ))}
                   </div>
-                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-gray-700">“{t.quote}”</blockquote>
+                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-gray-700">“{t(item.quoteKey)}”</blockquote>
                   <figcaption className="mt-5">
-                    <p className="font-semibold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-500">{t.company}</p>
+                    <p className="font-semibold text-gray-900">{item.name}</p>
+                    <p className="text-xs text-gray-500">{item.company}</p>
                   </figcaption>
                 </figure>
               </Reveal>
@@ -450,13 +454,12 @@ const Index = () => {
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
               <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
-              <h2 className="text-2xl font-bold sm:text-3xl">Prefer to talk it through?</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{t('home.call.title')}</h2>
               <p className="max-w-xl text-gray-600">
-                Book a free 30-minute call. We'll review your idea or existing project, answer questions and confirm a
-                real quote — no obligation.
+                {t('home.call.text')}
               </p>
               <Link to="/schedule-call" className={primaryBtn}>
-                Schedule a Call <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {t('home.call.cta')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
           </Reveal>
@@ -469,17 +472,17 @@ const Index = () => {
         <div className="container relative mx-auto px-4 text-center">
           <Reveal>
             <h2 className="mx-auto max-w-3xl text-3xl font-bold sm:text-4xl">
-              Stop guessing. <span className="text-gradient-ai">See your project's numbers today.</span>
+              {t('home.finalCta.title1')} <span className="text-gradient-ai">{t('home.finalCta.title2')}</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-600">
-              Free demo analysis · no signup · results in under 3 minutes.
+              {t('home.finalCta.sub')}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/project-analysis" className={primaryBtn}>
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> Analyze My Project
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('common.analyzeMyProject')}
               </Link>
               <Link to="/project-analysis?method=manual" className={secondaryBtn}>
-                Start Manually
+                {t('common.startManually')}
               </Link>
             </div>
           </Reveal>

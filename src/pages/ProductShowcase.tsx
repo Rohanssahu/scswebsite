@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Smartphone,
   Code,
@@ -22,147 +23,126 @@ const secondaryBtn =
 
 interface Product {
   title: string;
-  subtitle: string;
-  description: string;
+  slug: string;
   image?: string;
   path: string;
   type: 'mobile' | 'web' | 'cloud' | 'marketing' | 'devops';
 }
 
+// Product titles are brand/product names and stay in English.
+// Subtitle/description come from translations via products.items.<slug>.
 const products: Product[] = [
   {
     title: 'RoomJi',
-    subtitle: 'Find & Book Rooms and Flats Online',
-    description: 'Search nearby rooms, flats, and all types of properties.',
+    slug: 'roomji',
     image: 'https://www.scssoftwares.com/images/roomji.png',
     path: '/ProductDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Smart Service Booking App',
-    subtitle: 'Book Local Services like Electricians, Plumbers, and More',
-    description: 'Scalable multi-vendor local services platform.',
+    slug: 'smart-service-booking-app',
     path: '/ServiceBookingDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Digital Business Card App',
-    subtitle: 'Modern Networking with QR & Analytics',
-    description: 'Create and share digital cards with QR codes and analytics.',
+    slug: 'digital-business-card-app',
     path: '/DigitalCardDetailsPage',
     type: 'web',
   },
   {
     title: 'Clinic/Doctor Appointment System',
-    subtitle: 'Online Booking + Patient Record',
-    description: 'Booking, reminders, and digital records.',
+    slug: 'clinic-doctor-appointment-system',
     path: '/DoctorAppDetailsPage',
     type: 'web',
   },
   {
     title: 'QR Menu App',
-    subtitle: 'Contactless Digital Menus',
-    description: 'Multi-vendor QR menu and ordering solution.',
+    slug: 'qr-menu-app',
     path: '/QRMenuDetailsPage',
     type: 'web',
   },
   {
     title: 'E-learning Platform',
-    subtitle: 'Online Courses with Quizzes',
-    description: 'Create courses like Udemy with quizzes & certificates.',
+    slug: 'e-learning-platform',
     path: '/ElearningPlatformDetailsPage',
     type: 'web',
   },
   {
     title: 'Real Estate Listing App',
-    subtitle: 'Buy, Sell, and Rent Properties Easily',
-    description: 'List properties with map, images, and contact.',
+    slug: 'real-estate-listing-app',
     path: '/RealEstateAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'HR Management System',
-    subtitle: 'Manage Employees & Payroll',
-    description: 'Web-based HRMS with attendance and payroll.',
+    slug: 'hr-management-system',
     path: '/HRMSDetailsPage',
     type: 'cloud',
   },
   {
     title: 'Inventory & Billing Software',
-    subtitle: 'POS & Inventory for Small Businesses',
-    description: 'Billing, stock, and GST-ready invoices.',
+    slug: 'inventory-billing-software',
     path: '/InventoryBillingDetailsPage',
     type: 'cloud',
   },
   {
     title: 'Gym Management System',
-    subtitle: 'Track Memberships, Fees & Workouts',
-    description: 'Mobile/web solution for gyms and trainers.',
+    slug: 'gym-management-system',
     path: '/GymAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Grocery Store',
-    subtitle: 'Daily Needs Delivered to Your Door',
-    description: 'eCommerce for grocery sellers with delivery slots.',
+    slug: 'online-grocery-store',
     path: '/GroceryAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Donation Platform',
-    subtitle: 'Crowdfunding for NGOs & Causes',
-    description: 'Campaigns, donations, and tracking.',
+    slug: 'online-donation-platform',
     path: '/DonationPlatformDetailsPage',
     type: 'web',
   },
   {
     title: 'Online Food Delivery App',
-    subtitle: 'Restaurant Listings, Orders & Delivery',
-    description: 'Zomato/Swiggy style ordering and delivery tracking.',
+    slug: 'online-food-delivery-app',
     path: '/FoodDeliveryDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Exam/Test Portal',
-    subtitle: 'Host Timed Tests with Auto Evaluation',
-    description: 'Timed exams with scoring and reports.',
+    slug: 'online-exam-test-portal',
     path: '/ExamPortalDetailsPage',
     type: 'cloud',
   },
   {
     title: 'SEO & Digital Marketing Tools',
-    subtitle: 'Boost Your Online Visibility',
-    description: 'Campaign tracking, keyword planner, SEO audit.',
+    slug: 'seo-digital-marketing-tools',
     path: '/MarketingToolsDetailsPage',
     type: 'marketing',
   },
   {
     title: 'DevOps Dashboard System',
-    subtitle: 'CI/CD & Infra Monitoring',
-    description: 'Manage builds, servers, and deployments.',
+    slug: 'devops-dashboard-system',
     path: '/DevOpsDetailsPage',
     type: 'devops',
   },
 ];
 
-const categories = [
-  { label: 'All', value: 'all' },
-  { label: 'Mobile Apps', value: 'mobile' },
-  { label: 'Web Apps', value: 'web' },
-  { label: 'Cloud Solutions', value: 'cloud' },
-  { label: 'Digital Marketing', value: 'marketing' },
-  { label: 'DevOps Tools', value: 'devops' },
-];
+const categories = ['all', 'mobile', 'web', 'cloud', 'marketing', 'devops'] as const;
 
-const TYPE_META: Record<Product['type'], { icon: React.ElementType; label: string; gradient: string }> = {
-  mobile: { icon: Smartphone, label: 'Mobile App', gradient: 'from-orange-400 to-pink-500' },
-  web: { icon: Code, label: 'Web App', gradient: 'from-pink-500 to-purple-600' },
-  cloud: { icon: Cloud, label: 'Cloud Solution', gradient: 'from-purple-500 to-pink-500' },
-  marketing: { icon: TrendingUp, label: 'Digital Marketing', gradient: 'from-orange-500 to-purple-500' },
-  devops: { icon: Settings, label: 'DevOps Tool', gradient: 'from-pink-400 to-purple-500' },
+const TYPE_META: Record<Product['type'], { icon: React.ElementType; gradient: string }> = {
+  mobile: { icon: Smartphone, gradient: 'from-orange-400 to-pink-500' },
+  web: { icon: Code, gradient: 'from-pink-500 to-purple-600' },
+  cloud: { icon: Cloud, gradient: 'from-purple-500 to-pink-500' },
+  marketing: { icon: TrendingUp, gradient: 'from-orange-500 to-purple-500' },
+  devops: { icon: Settings, gradient: 'from-pink-400 to-purple-500' },
 };
 
 const ProductShowcase = () => {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
 
   const filteredProducts = filter === 'all' ? products : products.filter((product) => product.type === filter);
@@ -180,18 +160,17 @@ const ProductShowcase = () => {
         <div className="container relative mx-auto px-4 py-20 text-center sm:py-24">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
-              <Package className="h-3.5 w-3.5" aria-hidden="true" /> Ready-made solutions
+              <Package className="h-3.5 w-3.5" aria-hidden="true" /> {t('products.badge')}
             </span>
           </Reveal>
           <Reveal delay={0.1}>
             <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              Our <span className="text-gradient-ai">Products</span>
+              {t('products.heroTitle1')} <span className="text-gradient-ai">{t('products.heroTitle2')}</span>
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-              Proven, customizable products for mobile, web, cloud, marketing and DevOps — ready to launch for your
-              business.
+              {t('products.heroSub')}
             </p>
           </Reveal>
         </div>
@@ -204,17 +183,17 @@ const ProductShowcase = () => {
             <div className="mb-12 flex flex-wrap justify-center gap-2.5">
               {categories.map((cat) => (
                 <button
-                  key={cat.value}
+                  key={cat}
                   type="button"
-                  onClick={() => setFilter(cat.value)}
-                  aria-pressed={filter === cat.value}
+                  onClick={() => setFilter(cat)}
+                  aria-pressed={filter === cat}
                   className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
-                    filter === cat.value
+                    filter === cat
                       ? 'bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white shadow-md shadow-pink-400/30'
                       : 'border border-gray-300 bg-white text-gray-700 hover:border-pink-400 hover:text-gray-900'
                   }`}
                 >
-                  {cat.label}
+                  {t(`products.categories.${cat}`)}
                 </button>
               ))}
             </div>
@@ -245,12 +224,12 @@ const ProductShowcase = () => {
                       </div>
                     )}
                     <div className="flex flex-1 flex-col p-6">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">{meta.label}</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">{t(`products.types.${product.type}`)}</span>
                       <h3 className="mt-1 text-lg font-bold text-gray-900">{product.title}</h3>
-                      <p className="mt-1 text-sm font-medium text-gray-700">{product.subtitle}</p>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">{product.description}</p>
+                      <p className="mt-1 text-sm font-medium text-gray-700">{t(`products.items.${product.slug}.subtitle`)}</p>
+                      <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">{t(`products.items.${product.slug}.description`)}</p>
                       <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-pink-600 group-hover:text-gray-900">
-                        View details <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                        {t('common.viewDetails')} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                       </span>
                     </div>
                   </Link>
@@ -267,17 +246,16 @@ const ProductShowcase = () => {
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
               <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
-              <h2 className="text-2xl font-bold sm:text-3xl">Need a custom version of a product?</h2>
+              <h2 className="text-2xl font-bold sm:text-3xl">{t('products.cta.title')}</h2>
               <p className="max-w-xl text-gray-600">
-                Every product can be tailored to your brand, features and workflow. Tell us what you need and we'll
-                make it yours.
+                {t('products.cta.text')}
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/contact" className={primaryBtn}>
-                  <Sparkles className="h-4 w-4" aria-hidden="true" /> Talk to us
+                  <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('products.cta.talk')}
                 </Link>
                 <Link to="/schedule-call" className={secondaryBtn}>
-                  Schedule a call
+                  {t('common.scheduleCall')}
                 </Link>
               </div>
             </div>

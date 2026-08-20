@@ -1,17 +1,14 @@
-// Static copy + route-aware quick actions for the SCS Virtual Guide — Demo.
-// All content is dummy frontend data; no live AI or backend is connected.
+// Static content wiring + route-aware quick actions for Buddy — Your SCS Guide.
+// All display text lives in src/i18n/locales/*.json; this module only carries
+// canonical action labels (translated at render time) and i18n key wiring.
+// Everything is dummy frontend data; no live AI or backend is connected.
 
 import { GuideAction } from '@/types/virtualGuide';
 
-export const GUIDE_NAME = 'SCS Virtual Guide';
-export const GUIDE_TAGLINE = 'Demo — scripted guide, no live person or AI';
-
 export const WHATSAPP_NUMBER = '917828690192';
 
-export const GUIDE_WELCOME =
-  "Hi, I'm your SCS Virtual Guide (demo). I can give you a website tour, explain our services and products, collect your project requirements and prepare a preliminary demo estimate. How can I help?";
-
-export const INVITE_TEXT = 'Hi, I’m your SCS Virtual Guide. Would you like a free tour?';
+/** i18n key of Buddy's welcome message. */
+export const GUIDE_WELCOME_KEY = 'guide.welcome';
 
 export const INVITE_ACTIONS: GuideAction[] = [
   { label: 'Guide me', kind: 'start-tour' },
@@ -26,79 +23,26 @@ export const WELCOME_ACTIONS: GuideAction[] = [
   { label: 'Explore services', kind: 'navigate', to: '/#services' },
 ];
 
-export const CLARIFY_RESPONSE =
-  "I'm a demo guide with a fixed set of topics, so I didn't quite catch that. Are you exploring SCS, starting a new project, or fixing an existing one? These might help:";
-
-/** Info blurbs used for contextual "explain this page" style questions. */
+/**
+ * Info wiring for contextual "explain this page" style questions.
+ * `nameKey` resolves in `services.names`, content keys in `guide.pages`.
+ */
 export interface PageInfo {
-  name: string;
-  blurb: string;
-  forWho: string;
-  benefits: string[];
-  limitations: string[];
+  /** Key under services.names for the display name. */
+  nameKey: string;
+  /** Key under guide.pages for blurb/forWho/benefits/limitations. */
+  pageKey: string;
 }
 
 export const PAGE_INFO: Record<string, PageInfo> = {
-  '/gig/web-development': {
-    name: 'Web Development',
-    blurb:
-      'Custom websites and web applications built with modern stacks like React and Node.js — from landing pages to full products with logins, payments and admin panels.',
-    forWho: 'Businesses and founders who need a fast, reliable web presence or a full web application.',
-    benefits: ['Responsive on every device', 'Scalable architecture from day one', 'You own the full source code'],
-    limitations: ['Complex platforms need a discovery phase first', 'Third-party costs (hosting, gateways) are separate'],
-  },
-  '/gig/mobile-development': {
-    name: 'Mobile App Development',
-    blurb:
-      'iOS and Android apps built with cross-platform technology (React Native / Flutter) so one codebase covers both stores.',
-    forWho: 'Products whose users live on their phones — booking, delivery, community and utility apps.',
-    benefits: ['One codebase, two app stores', 'Native-feeling performance', 'Push notifications and offline support'],
-    limitations: ['App-store review adds 1–2 weeks to launch', 'Very graphics-heavy apps may need native work'],
-  },
-  '/gig/ui-ux-design': {
-    name: 'UI/UX Design',
-    blurb: 'Wireframes, prototypes and pixel-perfect interfaces designed around your users before a line of code is written.',
-    forWho: 'Teams that want their product to look professional and convert visitors into customers.',
-    benefits: ['Fewer costly changes during development', 'Consistent design system', 'Clickable prototypes to test early'],
-    limitations: ['Design quality depends on clear requirements', 'Brand assets must be supplied or scoped separately'],
-  },
-  '/gig/cloud-solutions': {
-    name: 'Cloud Solutions',
-    blurb: 'Cloud architecture, migration and hosting setup on AWS, Azure or GCP with cost optimisation in mind.',
-    forWho: 'Products that need reliable hosting, scaling or a move away from legacy servers.',
-    benefits: ['Pay-for-what-you-use infrastructure', 'Automatic scaling and backups', 'Better uptime and security posture'],
-    limitations: ['Cloud provider fees are billed separately', 'Legacy systems may need refactoring before migration'],
-  },
-  '/gig/devops-services': {
-    name: 'DevOps Services',
-    blurb: 'CI/CD pipelines, automated testing, monitoring and deployment automation so releases become boring and safe.',
-    forWho: 'Teams shipping regularly who want fewer manual deploys and faster recovery from issues.',
-    benefits: ['Faster, safer releases', 'Automated rollbacks', 'Monitoring and alerting included'],
-    limitations: ['Needs access to your existing infrastructure', 'Biggest value shows on actively developed projects'],
-  },
-  '/gig/digital-marketing': {
-    name: 'Digital Marketing',
-    blurb: 'SEO groundwork, content, social campaigns and analytics to bring the right visitors to what we build.',
-    forWho: 'Businesses that have (or are building) a product and need qualified traffic and leads.',
-    benefits: ['Measurable campaigns with analytics', 'Organic and paid channels covered', 'Landing pages optimised to convert'],
-    limitations: ['Results build over weeks, not days', 'Ad budgets are separate from service fees'],
-  },
-  '/products': {
-    name: 'SCS Products',
-    blurb:
-      'Ready-made, customizable products across web, mobile, cloud, marketing and DevOps — proven bases you can launch quickly instead of building from zero.',
-    forWho: 'Businesses that want a faster, lower-risk start with a solution that already works.',
-    benefits: ['Much faster launch than custom builds', 'Lower cost than starting from scratch', 'Customisable to your brand and workflow'],
-    limitations: ['Deep custom workflows may still need custom development', 'Licensing and hosting scoped per product'],
-  },
-  '/ProductDetailsPage': {
-    name: 'this product',
-    blurb:
-      'This is one of our ready-made products — a proven base we customise to your brand, workflow and integrations instead of building from zero.',
-    forWho: 'Teams that want this capability live quickly, with SCS handling setup and customisation.',
-    benefits: ['Faster launch than a custom build', 'Battle-tested core features', 'Customisation and support from the SCS team'],
-    limitations: ['Very unusual workflows may need custom work on top', 'Final pricing depends on customisation scope'],
-  },
+  '/gig/web-development': { nameKey: 'web-development', pageKey: 'web-development' },
+  '/gig/mobile-development': { nameKey: 'mobile-app-development', pageKey: 'mobile-development' },
+  '/gig/ui-ux-design': { nameKey: 'ui-ux-design', pageKey: 'ui-ux-design' },
+  '/gig/cloud-solutions': { nameKey: 'cloud-solutions', pageKey: 'cloud-solutions' },
+  '/gig/devops-services': { nameKey: 'devops-services', pageKey: 'devops-services' },
+  '/gig/digital-marketing': { nameKey: 'digital-marketing', pageKey: 'digital-marketing' },
+  '/products': { nameKey: 'scs-products', pageKey: 'products' },
+  '/ProductDetailsPage': { nameKey: 'this-product', pageKey: 'product-details' },
 };
 
 /** Longest-prefix lookup so /gig/web-development matches its entry. */

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 // Slow continuous scroll speed while a button is held (px per frame ≈ 360px/s at 60fps).
@@ -26,6 +27,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
  * Fades when idle; wakes on scroll or hover.
  */
 const ScrollButtons = () => {
+  const { t } = useTranslation();
   const [atTop, setAtTop] = useState(true);
   const [atBottom, setAtBottom] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -105,12 +107,12 @@ const ScrollButtons = () => {
         idle ? 'opacity-30 hover:opacity-100' : 'opacity-100'
       }`}
       onPointerEnter={wake}
-      aria-label="Page scroll controls"
+      aria-label={t('a11y.pageScrollControls')}
     >
       {/* Scroll up — with reading-progress ring */}
       <button
         type="button"
-        aria-label="Scroll up"
+        aria-label={t('a11y.scrollUp')}
         className={btnCls(atTop)}
         onPointerDown={() => startHold(-1)}
         onPointerUp={() => endHold(-1)}
@@ -151,7 +153,7 @@ const ScrollButtons = () => {
       {/* Scroll down */}
       <button
         type="button"
-        aria-label="Scroll down"
+        aria-label={t('a11y.scrollDown')}
         className={btnCls(atBottom)}
         onPointerDown={() => startHold(1)}
         onPointerUp={() => endHold(1)}

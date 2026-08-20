@@ -1,32 +1,25 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { GripHorizontal, Play } from 'lucide-react';
-import { GUIDE_NAME, GUIDE_TAGLINE } from '@/data/guideContent';
+import { useTranslation } from 'react-i18next';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 import GuideAvatar from './GuideAvatar';
 import GuideChat from './GuideChat';
 import GuideControls from './GuideControls';
+import GuideSettings from './GuideSettings';
 
 // Compact video-call style window: avatar stage with live captions on top,
-// chat below. Draggable on desktop (header handle), bottom sheet on mobile.
+// chat below (or the settings view). Draggable on desktop (header handle),
+// bottom sheet with safe-area padding on mobile. Docks to the logical end
+// side — right in LTR, left in RTL.
 
 interface AvatarWindowProps {
   guide: VirtualGuideApi;
   isMobile: boolean;
 }
 
-const STATE_LABEL: Record<string, string> = {
-  idle: 'Online',
-  welcome: 'Saying hello',
-  speaking: 'Speaking',
-  listening: 'Listening',
-  thinking: 'Thinking',
-  pointing: 'Guiding',
-  success: 'Done!',
-  minimized: 'Online',
-};
-
 const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
+  const { t } = useTranslation();
   const constraintsRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -48,7 +41,7 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
       ref={panelRef}
       key="guide-panel"
       role="dialog"
-      aria-label="SCS Virtual Guide — Demo"
+      aria-label={t('guide.panelLabel')}
       tabIndex={-1}
       onKeyDown={onKeyDown}
       drag={!isMobile}
@@ -63,8 +56,8 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
       transition={{ duration: 0.2 }}
       className={
         isMobile
-          ? 'pointer-events-auto fixed inset-x-0 bottom-0 z-[80] flex h-[80vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border border-gray-300 bg-white shadow-2xl shadow-gray-500/40 outline-none'
-          : 'pointer-events-auto fixed bottom-5 right-5 z-[80] flex h-[600px] max-h-[85vh] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-2xl shadow-gray-500/40 outline-none'
+          ? 'pointer-events-auto fixed inset-x-0 bottom-0 z-[80] flex h-[80vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border border-gray-300 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl shadow-gray-500/40 outline-none'
+          : 'pointer-events-auto fixed bottom-5 end-5 z-[80] flex h-[600px] max-h-[85vh] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-2xl shadow-gray-500/40 outline-none'
       }
     >
       {/* Header / drag handle */}
@@ -82,9 +75,9 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
           {!isMobile && <GripHorizontal className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
-              {GUIDE_NAME} <span className="font-normal text-white/80">— Demo</span>
+              {t('guide.fullName')} <span className="font-normal text-white/80">— {t('common.demoBadge')}</span>
             </p>
-            <p className="truncate text-[10px] text-white/75">{GUIDE_TAGLINE}</p>
+            <p className="truncate text-[10px] text-white/75">{t('guide.tagline')}</p>
           </div>
         </div>
         <GuideControls guide={guide} />
@@ -103,12 +96,12 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
               )}
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
             </span>
-            <p className="text-[11px] font-medium text-emerald-300">{STATE_LABEL[guide.avatarState]}</p>
-            {guide.paused && <span className="rounded bg-amber-400/20 px-1.5 text-[10px] text-amber-300">Paused</span>}
+            <p className="text-[11px] font-medium text-emerald-300">{t(`guide.states.${guide.avatarState}`)}</p>
+            {guide.paused && <span className="rounded bg-amber-400/20 px-1.5 text-[10px] text-amber-300">{t('guide.paused')}</span>}
           </div>
-          {/* Captions for every spoken/shown message */}
-          <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-gray-200" aria-live="polite" aria-label="Guide captions">
-            {guide.caption || 'Captions appear here while I speak.'}
+          {/* Captions for every spoken/shown message — always available */}
+          <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-gray-200" aria-live="polite" aria-label={t('guide.captionsLabel')}>
+            {guide.caption ? t(guide.caption.key, guide.caption.params) : t('guide.captionsPlaceholder')}
           </p>
           {guide.tour.active && guide.tour.paused && (
             <button
@@ -116,13 +109,13 @@ const AvatarWindow = ({ guide, isMobile }: AvatarWindowProps) => {
               onClick={guide.tourResume}
               className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <Play className="h-3 w-3" aria-hidden="true" /> Resume tour
+              <Play className="h-3 w-3 rtl:-scale-x-100" aria-hidden="true" /> {t('guide.resumeTour')}
             </button>
           )}
         </div>
       </div>
 
-      <GuideChat guide={guide} />
+      {guide.settingsMode ? <GuideSettings guide={guide} /> : <GuideChat guide={guide} />}
     </motion.div>
   );
 

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import i18n from '@/i18n/config';
+import { getLocaleConfig } from '@/i18n/languageConfig';
 
 // Optional browser speech-to-text via the (webkit)SpeechRecognition API.
 // The microphone is only requested when start() is called from an explicit
@@ -34,6 +36,7 @@ function getRecognitionCtor(): RecognitionCtor | null {
 export function useSpeechRecognition(onResult: (transcript: string) => void) {
   const [supported] = useState(() => getRecognitionCtor() !== null);
   const [listening, setListening] = useState(false);
+  /** i18n key of the current error, rendered with t() by the caller. */
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const onResultRef = useRef(onResult);
@@ -47,12 +50,13 @@ export function useSpeechRecognition(onResult: (transcript: string) => void) {
   const start = useCallback(() => {
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
-      setError('Speech recognition is not supported in this browser — please type instead.');
+      setError('guide.chat.micUnsupported');
       return;
     }
     try {
       const recognition = new Ctor();
-      recognition.lang = 'en-US';
+      // Listen in the selected website language.
+      recognition.lang = getLocaleConfig(i18n.language).locale;
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognition.continuous = false;
@@ -67,11 +71,7 @@ export function useSpeechRecognition(onResult: (transcript: string) => void) {
       recognition.onerror = (event) => {
         recognitionRef.current = null;
         setListening(false);
-        setError(
-          event.error === 'not-allowed'
-            ? 'Microphone permission was denied — you can keep typing instead.'
-            : 'Voice input failed — please type your message instead.',
-        );
+        setError(event.error === 'not-allowed' ? 'guide.chat.micDenied' : 'guide.chat.micFailed');
       };
       recognitionRef.current = recognition;
       setError(null);
@@ -79,7 +79,7 @@ export function useSpeechRecognition(onResult: (transcript: string) => void) {
       recognition.start();
     } catch {
       setListening(false);
-      setError('Voice input failed to start — please type your message instead.');
+      setError('guide.chat.micFailed');
     }
   }, []);
 

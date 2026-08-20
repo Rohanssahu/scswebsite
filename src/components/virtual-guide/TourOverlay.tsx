@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, MessageCircleQuestion, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { TOUR_STEPS, TOUR_TARGET_TIMEOUT_MS } from '@/data/guideTour';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 import AnimatedPointer from './AnimatedPointer';
 
 // Spotlight overlay for the guided tour. Targets are found by their stable
 // data-guide-id attribute; a target that never renders is skipped gracefully.
+// All step copy renders through i18n, so a language change mid-tour updates
+// the card and captions immediately.
 
 interface TourOverlayProps {
   guide: VirtualGuideApi;
@@ -20,6 +23,7 @@ interface Rect {
 }
 
 const TourOverlay = ({ guide }: TourOverlayProps) => {
+  const { t } = useTranslation();
   const step = guide.currentTourStep;
   const paused = guide.tour.paused;
   const [rect, setRect] = useState<Rect | null>(null);
@@ -74,6 +78,9 @@ const TourOverlay = ({ guide }: TourOverlayProps) => {
   const pointerX = rect ? Math.min(Math.max(rect.left + rect.width / 2, 24), window.innerWidth - 24) : 0;
   const pointerY = rect ? (pointerBelow ? rect.top + rect.height + 6 : Math.max(rect.top - 48, 8)) : 0;
 
+  const stepTitle = t(step.titleKey);
+  const isLast = guide.tour.index === TOUR_STEPS.length - 1;
+
   return (
     <>
       {/* Spotlight: a transparent window over the target, dimming everything else */}
@@ -108,50 +115,50 @@ const TourOverlay = ({ guide }: TourOverlayProps) => {
       {/* Step card with captions + controls */}
       <div
         role="region"
-        aria-label={`Tour step ${guide.tour.index + 1} of ${TOUR_STEPS.length}: ${step.title}`}
+        aria-label={t('guide.tour.stepLabel', { current: guide.tour.index + 1, total: TOUR_STEPS.length, title: stepTitle })}
         className="fixed inset-x-3 bottom-24 z-[76] mx-auto max-w-md rounded-2xl border border-gray-300 bg-white p-4 shadow-2xl shadow-gray-600/30 sm:inset-x-auto sm:left-1/2 sm:bottom-6 sm:w-[26rem] sm:-translate-x-1/2"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-pink-600">
-              SCS Virtual Guide — Demo · Step {guide.tour.index + 1}/{TOUR_STEPS.length}
+              {t('guide.tour.stepCounter', { current: guide.tour.index + 1, total: TOUR_STEPS.length })}
             </p>
-            <h3 className="mt-0.5 text-sm font-bold text-gray-900">{step.title}</h3>
+            <h3 className="mt-0.5 text-sm font-bold text-gray-900">{stepTitle}</h3>
           </div>
           <button
             type="button"
             onClick={guide.tourSkip}
-            aria-label="Skip tour"
+            aria-label={t('guide.tour.skipTour')}
             className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
         <p className="mt-1.5 text-sm leading-relaxed text-gray-600" aria-live="polite">
-          {rect ? step.text : 'Taking you there…'}
+          {rect ? t(step.textKey) : t('guide.tour.takingYouThere')}
         </p>
         <div className="mt-3 flex items-center justify-between">
           <button
             type="button"
             onClick={guide.tourBack}
             disabled={guide.tour.index === 0}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-pink-400 disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-pink-400 disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back
+            <ArrowLeft className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden="true" /> {t('guide.tour.back')}
           </button>
           <button
             type="button"
             onClick={guide.tourAsk}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
           >
-            <MessageCircleQuestion className="h-3.5 w-3.5" aria-hidden="true" /> Ask
+            <MessageCircleQuestion className="h-3.5 w-3.5" aria-hidden="true" /> {t('guide.tour.ask')}
           </button>
           <button
             type="button"
             onClick={guide.tourNext}
-            className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-3.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-3.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
           >
-            {guide.tour.index === TOUR_STEPS.length - 1 ? 'Finish' : 'Next'} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            {isLast ? t('guide.tour.finish') : t('guide.tour.next')} <ArrowRight className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden="true" />
           </button>
         </div>
       </div>

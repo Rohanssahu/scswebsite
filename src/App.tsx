@@ -1,5 +1,8 @@
 import { lazy, Suspense, useEffect } from "react";
+import "@/i18n/config"; // initialize i18next before any component renders
+import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/toaster";
+import LanguageAnnouncer from "@/components/LanguageAnnouncer";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -50,6 +53,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <LanguageAnnouncer />
           <RoutesComponent />
           <VirtualGuide />
           <ScrollButtons />
@@ -60,6 +64,7 @@ const App = () => {
 };
 
 const RoutesComponent = () => {
+  const { t } = useTranslation();
   return (
     <Routes>
       <Route path="/" element={<Index />} />
@@ -84,7 +89,7 @@ const RoutesComponent = () => {
         path="/project-analysis/result"
         element={
           <Suspense
-            fallback={<div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">Loading analysis…</div>}
+            fallback={<div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">{t('common.loading')}</div>}
           >
             <ProjectAnalysisResult />
           </Suspense>
