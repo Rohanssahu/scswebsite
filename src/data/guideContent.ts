@@ -17,6 +17,7 @@ export const INVITE_ACTIONS: GuideAction[] = [
 ];
 
 export const WELCOME_ACTIONS: GuideAction[] = [
+  { label: 'Talk to Buddy', kind: 'open-voice' },
   { label: 'Start website tour', kind: 'start-tour' },
   { label: 'I have a new project', kind: 'flow-new' },
   { label: 'Fix an existing project', kind: 'flow-existing' },

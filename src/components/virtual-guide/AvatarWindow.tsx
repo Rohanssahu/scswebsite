@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { GripHorizontal, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,9 @@ import GuideAvatar from './GuideAvatar';
 import GuideChat from './GuideChat';
 import GuideControls from './GuideControls';
 import GuideSettings from './GuideSettings';
+
+// Lazy: keeps livekit-client out of the main bundle until voice mode opens.
+const VoicePanel = lazy(() => import('./VoicePanel'));
 
 // Compact video-call style window: avatar stage with live captions on top,
 // chat below (or the settings view). Draggable on desktop (header handle),
@@ -88,7 +91,7 @@ const AvatarWindow = ({ guide, buddy, isMobile }: AvatarWindowProps) => {
       {/* Avatar stage with live captions */}
       <div className="relative flex shrink-0 items-center gap-3 bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900 px-4 py-3">
         <div className="shrink-0">
-          <GuideAvatar state={guide.avatarState} size={isMobile ? 64 : 80} reduceMotion={guide.reduceMotion} />
+          <GuideAvatar state={guide.avatarState} size={isMobile ? 64 : 80} reduceMotion={guide.reduceMotion} level={guide.voiceLevel} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -117,7 +120,15 @@ const AvatarWindow = ({ guide, buddy, isMobile }: AvatarWindowProps) => {
         </div>
       </div>
 
-      {guide.settingsMode ? <GuideSettings guide={guide} buddy={buddy} /> : <GuideChat guide={guide} />}
+      {guide.settingsMode === 'settings' ? (
+        <GuideSettings guide={guide} buddy={buddy} />
+      ) : guide.settingsMode === 'voice' ? (
+        <Suspense fallback={<div className="flex flex-1 items-center justify-center text-xs text-gray-500">{t('common.loading')}</div>}>
+          <VoicePanel guide={guide} />
+        </Suspense>
+      ) : (
+        <GuideChat guide={guide} />
+      )}
     </motion.div>
   );
 

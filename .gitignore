@@ -12,6 +12,9 @@ node_modules
 dist-ssr
 *.local
 
+# Buddy agent worker build output
+agent/dist/
+
 # Environment files — never commit real values (.env.example stays committed)
 .env
 .env.*

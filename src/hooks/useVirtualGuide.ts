@@ -61,7 +61,7 @@ export interface CaptionState {
 }
 
 /** Which auxiliary view fills the panel body. */
-export type GuideSettingsMode = 'settings' | null;
+export type GuideSettingsMode = 'settings' | 'voice' | null;
 
 let messageCounter = 0;
 function nextId(): string {
@@ -631,6 +631,29 @@ export function useVirtualGuide() {
     setSettingsMode((m) => (m === 'settings' ? null : m));
   }, []);
 
+  // ---------- voice mode (real-time Buddy voice session) ----------
+  const [voiceAvatar, setVoiceAvatarState] = useState<AvatarState | null>(null);
+  const [voiceLevel, setVoiceLevel] = useState(0);
+
+  const openVoice = useCallback(() => {
+    stopSpeaking();
+    setSettingsMode('voice');
+    setOpen(true);
+    setMinimized(false);
+  }, [stopSpeaking]);
+
+  const closeVoice = useCallback(() => {
+    setSettingsMode((m) => (m === 'voice' ? null : m));
+    setVoiceAvatarState(null);
+    setVoiceLevel(0);
+  }, []);
+
+  /** Called by VoicePanel to mirror the live session onto the avatar. */
+  const setVoiceAvatar = useCallback((state: AvatarState | null, level: number) => {
+    setVoiceAvatarState(state);
+    setVoiceLevel(level);
+  }, []);
+
   const setSpeechSpeed = useCallback((speed: SpeechSpeed) => {
     setPrefs((p) => ({ ...p, speechSpeed: speed }));
   }, []);
@@ -732,9 +755,12 @@ export function useVirtualGuide() {
           startFlow(mode);
           break;
         }
+        case 'open-voice':
+          openVoice();
+          break;
       }
     },
-    [addTimer, contactHandoff, navigate, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
+    [addTimer, contactHandoff, navigate, openVoice, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
   );
 
   const restartConversation = useCallback(() => {
@@ -819,6 +845,7 @@ export function useVirtualGuide() {
 
   // ---------- derived ----------
   const avatarState: AvatarState = useMemo(() => {
+    if (settingsMode === 'voice' && voiceAvatar) return voiceAvatar;
     if (recognition.listening) return 'listening';
     if (tts.speaking) return 'speaking';
     if (typing || flow?.status === 'analyzing') return 'thinking';
@@ -827,7 +854,7 @@ export function useVirtualGuide() {
     if (waving) return 'welcome';
     if (minimized) return 'minimized';
     return 'idle';
-  }, [recognition.listening, tts.speaking, typing, flow?.status, tour.active, tour.paused, celebrating, waving, minimized]);
+  }, [settingsMode, voiceAvatar, recognition.listening, tts.speaking, typing, flow?.status, tour.active, tour.paused, celebrating, waving, minimized]);
 
   const quickActions = useMemo(() => getRouteQuickActions(location.pathname), [location.pathname]);
 
@@ -879,6 +906,11 @@ export function useVirtualGuide() {
     chooseLanguage,
     openSettings,
     closeSettings,
+    // voice mode
+    openVoice,
+    closeVoice,
+    setVoiceAvatar,
+    voiceLevel,
     // flow
     flow,
     currentQuestion,

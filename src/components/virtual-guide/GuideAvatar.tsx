@@ -16,6 +16,8 @@ export interface GuideAvatarProps {
   /** Pixel size of the square avatar stage. */
   size?: number;
   reduceMotion?: boolean;
+  /** Live voice-session audio level (0–1); scales the pulse ring. */
+  level?: number;
 }
 
 const STATE_MAP: Record<Exclude<AvatarState, 'pointing'>, BuddyAnimationState> = {
@@ -35,7 +37,7 @@ const EMOTION_MAP: Partial<Record<AvatarState, BuddyEmotion>> = {
   pointing: 'smiling',
 };
 
-const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProps) => {
+const GuideAvatar = ({ state, size = 96, reduceMotion = false, level = 0 }: GuideAvatarProps) => {
   const { t, i18n } = useTranslation();
   // In RTL Buddy sits at the start (left) side, so it points toward the page
   // content on its right; in LTR it points left toward the content.
@@ -46,6 +48,8 @@ const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProp
   const characterState = reaction ? reaction.state : base;
   const emotion: BuddyEmotion = reaction ? reaction.emotion : (EMOTION_MAP[state] ?? 'neutral');
   const listening = state === 'listening';
+  // Live audio level (voice sessions) scales the ring in real time.
+  const levelScale = 1 + Math.min(0.12, level * 0.12);
 
   return (
     <div
@@ -60,6 +64,16 @@ const GuideAvatar = ({ state, size = 96, reduceMotion = false }: GuideAvatarProp
           className="absolute inset-[-5px] rounded-2xl border-2 border-emerald-400"
           animate={{ scale: [1, 1.06, 1], opacity: [0.9, 0.3, 0.9] }}
           transition={{ duration: 1.4, repeat: Infinity }}
+          aria-hidden="true"
+        />
+      )}
+      {/* Live audio-level ring (voice sessions): tracks who is talking */}
+      {level > 0.02 && !reduceMotion && (
+        <span
+          className={`absolute inset-[-8px] rounded-2xl border-2 transition-transform duration-100 ${
+            state === 'speaking' ? 'border-pink-400/80' : 'border-emerald-400/80'
+          }`}
+          style={{ transform: `scale(${levelScale})`, opacity: 0.4 + level * 0.6 }}
           aria-hidden="true"
         />
       )}

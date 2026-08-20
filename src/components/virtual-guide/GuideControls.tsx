@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Map,
   Pause,
+  Phone,
   Play,
   Volume2,
   VolumeX,
@@ -31,6 +32,17 @@ const GuideControls = ({ guide }: GuideControlsProps) => {
   const tourActive = guide.tour.active;
   return (
     <div className="flex items-center gap-0.5" role="toolbar" aria-label={t('guide.controls.toolbar')}>
+      <button
+        type="button"
+        className={`${btn} ${guide.settingsMode === 'voice' ? 'bg-white/15' : ''}`}
+        aria-label={t('voice.talkButton')}
+        aria-pressed={guide.settingsMode === 'voice'}
+        title={t('voice.talkButton')}
+        onClick={guide.settingsMode === 'voice' ? guide.closeVoice : guide.openVoice}
+      >
+        <Phone className="h-4 w-4" aria-hidden="true" />
+      </button>
+
       {!tourActive ? (
         <button type="button" className={btn} aria-label={t('guide.controls.startTour')} title={t('guide.controls.startTour')} onClick={guide.startTour}>
           <Map className="h-4 w-4" aria-hidden="true" />

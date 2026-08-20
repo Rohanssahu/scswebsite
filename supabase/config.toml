@@ -10,3 +10,18 @@ project_id = "scswebsite"
 # strict validation, rate limiting and a body-size cap.
 [functions.submit-lead]
 verify_jwt = false
+
+# livekit-token is a deliberately public endpoint like submit-lead: browsers
+# call it with the sb_publishable_* key. Its access control lives in the
+# function itself: origin allowlist, server-side Turnstile verification,
+# strict validation, per-IP rate limiting, a body-size cap and a global
+# VOICE_AGENT_ENABLED kill switch.
+[functions.livekit-token]
+verify_jwt = false
+
+# voice-lead is server-to-server ONLY (Buddy agent worker → Supabase). It is
+# not called from any browser: no CORS, and every request must present the
+# VOICE_AGENT_SECRET shared key. JWT verification is off because the worker
+# authenticates with that shared secret instead of a Supabase JWT.
+[functions.voice-lead]
+verify_jwt = false

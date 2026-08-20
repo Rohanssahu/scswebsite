@@ -26,7 +26,8 @@ export type GuideActionKind =
   | 'contact-handoff' // prefill the contact form and navigate there
   | 'schedule-handoff' // navigate to the schedule-call page
   | 'run-analysis' // start the simulated demo analysis
-  | 'flow-edit'; // reopen the requirement flow at the review step
+  | 'flow-edit' // reopen the requirement flow at the review step
+  | 'open-voice'; // open the real-time voice session panel
 
 export interface GuideAction {
   /**

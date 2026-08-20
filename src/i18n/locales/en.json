@@ -395,22 +395,70 @@
       "talk": "Talk to us"
     },
     "items": {
-      "roomji": { "subtitle": "Find & Book Rooms and Flats Online", "description": "Search nearby rooms, flats, and all types of properties." },
-      "smart-service-booking-app": { "subtitle": "Book Local Services like Electricians, Plumbers, and More", "description": "Scalable multi-vendor local services platform." },
-      "digital-business-card-app": { "subtitle": "Modern Networking with QR & Analytics", "description": "Create and share digital cards with QR codes and analytics." },
-      "clinic-doctor-appointment-system": { "subtitle": "Online Booking + Patient Record", "description": "Booking, reminders, and digital records." },
-      "qr-menu-app": { "subtitle": "Contactless Digital Menus", "description": "Multi-vendor QR menu and ordering solution." },
-      "e-learning-platform": { "subtitle": "Online Courses with Quizzes", "description": "Create courses like Udemy with quizzes & certificates." },
-      "real-estate-listing-app": { "subtitle": "Buy, Sell, and Rent Properties Easily", "description": "List properties with map, images, and contact." },
-      "hr-management-system": { "subtitle": "Manage Employees & Payroll", "description": "Web-based HRMS with attendance and payroll." },
-      "inventory-billing-software": { "subtitle": "POS & Inventory for Small Businesses", "description": "Billing, stock, and GST-ready invoices." },
-      "gym-management-system": { "subtitle": "Track Memberships, Fees & Workouts", "description": "Mobile/web solution for gyms and trainers." },
-      "online-grocery-store": { "subtitle": "Daily Needs Delivered to Your Door", "description": "eCommerce for grocery sellers with delivery slots." },
-      "online-donation-platform": { "subtitle": "Crowdfunding for NGOs & Causes", "description": "Campaigns, donations, and tracking." },
-      "online-food-delivery-app": { "subtitle": "Restaurant Listings, Orders & Delivery", "description": "Zomato/Swiggy style ordering and delivery tracking." },
-      "online-exam-test-portal": { "subtitle": "Host Timed Tests with Auto Evaluation", "description": "Timed exams with scoring and reports." },
-      "seo-digital-marketing-tools": { "subtitle": "Boost Your Online Visibility", "description": "Campaign tracking, keyword planner, SEO audit." },
-      "devops-dashboard-system": { "subtitle": "CI/CD & Infra Monitoring", "description": "Manage builds, servers, and deployments." }
+      "roomji": {
+        "subtitle": "Find & Book Rooms and Flats Online",
+        "description": "Search nearby rooms, flats, and all types of properties."
+      },
+      "smart-service-booking-app": {
+        "subtitle": "Book Local Services like Electricians, Plumbers, and More",
+        "description": "Scalable multi-vendor local services platform."
+      },
+      "digital-business-card-app": {
+        "subtitle": "Modern Networking with QR & Analytics",
+        "description": "Create and share digital cards with QR codes and analytics."
+      },
+      "clinic-doctor-appointment-system": {
+        "subtitle": "Online Booking + Patient Record",
+        "description": "Booking, reminders, and digital records."
+      },
+      "qr-menu-app": {
+        "subtitle": "Contactless Digital Menus",
+        "description": "Multi-vendor QR menu and ordering solution."
+      },
+      "e-learning-platform": {
+        "subtitle": "Online Courses with Quizzes",
+        "description": "Create courses like Udemy with quizzes & certificates."
+      },
+      "real-estate-listing-app": {
+        "subtitle": "Buy, Sell, and Rent Properties Easily",
+        "description": "List properties with map, images, and contact."
+      },
+      "hr-management-system": {
+        "subtitle": "Manage Employees & Payroll",
+        "description": "Web-based HRMS with attendance and payroll."
+      },
+      "inventory-billing-software": {
+        "subtitle": "POS & Inventory for Small Businesses",
+        "description": "Billing, stock, and GST-ready invoices."
+      },
+      "gym-management-system": {
+        "subtitle": "Track Memberships, Fees & Workouts",
+        "description": "Mobile/web solution for gyms and trainers."
+      },
+      "online-grocery-store": {
+        "subtitle": "Daily Needs Delivered to Your Door",
+        "description": "eCommerce for grocery sellers with delivery slots."
+      },
+      "online-donation-platform": {
+        "subtitle": "Crowdfunding for NGOs & Causes",
+        "description": "Campaigns, donations, and tracking."
+      },
+      "online-food-delivery-app": {
+        "subtitle": "Restaurant Listings, Orders & Delivery",
+        "description": "Zomato/Swiggy style ordering and delivery tracking."
+      },
+      "online-exam-test-portal": {
+        "subtitle": "Host Timed Tests with Auto Evaluation",
+        "description": "Timed exams with scoring and reports."
+      },
+      "seo-digital-marketing-tools": {
+        "subtitle": "Boost Your Online Visibility",
+        "description": "Campaign tracking, keyword planner, SEO audit."
+      },
+      "devops-dashboard-system": {
+        "subtitle": "CI/CD & Infra Monitoring",
+        "description": "Manage builds, servers, and deployments."
+      }
     }
   },
   "blog": {
@@ -589,23 +637,73 @@
   "questions": {
     "optionalSuffix": " (Optional — you can skip.)",
     "new": {
-      "idea": { "prompt": "What do you want to build? Describe your idea in a sentence or two.", "label": "Your idea", "placeholder": "e.g. A marketplace where local tutors can list classes and students can book them…" },
-      "audience": { "prompt": "Who will use it? Tell me about your target users.", "label": "Target users", "placeholder": "e.g. Students and independent tutors in India" },
-      "features": { "prompt": "What are the main features you have in mind? Pick everything that applies.", "label": "Main features" },
-      "platform": { "prompt": "Do you need a web app, a mobile app, or both?", "label": "Platform" },
-      "modules": { "prompt": "Do you need login, payments or an admin panel?", "label": "Core modules" },
-      "timeline": { "prompt": "What is your preferred timeline?", "label": "Timeline" },
-      "budget": { "prompt": "And roughly, what budget do you have in mind? (You can skip this.)", "label": "Approximate budget" }
+      "idea": {
+        "prompt": "What do you want to build? Describe your idea in a sentence or two.",
+        "label": "Your idea",
+        "placeholder": "e.g. A marketplace where local tutors can list classes and students can book them…"
+      },
+      "audience": {
+        "prompt": "Who will use it? Tell me about your target users.",
+        "label": "Target users",
+        "placeholder": "e.g. Students and independent tutors in India"
+      },
+      "features": {
+        "prompt": "What are the main features you have in mind? Pick everything that applies.",
+        "label": "Main features"
+      },
+      "platform": {
+        "prompt": "Do you need a web app, a mobile app, or both?",
+        "label": "Platform"
+      },
+      "modules": {
+        "prompt": "Do you need login, payments or an admin panel?",
+        "label": "Core modules"
+      },
+      "timeline": {
+        "prompt": "What is your preferred timeline?",
+        "label": "Timeline"
+      },
+      "budget": {
+        "prompt": "And roughly, what budget do you have in mind? (You can skip this.)",
+        "label": "Approximate budget"
+      }
     },
     "existing": {
-      "projectType": { "prompt": "What type of project is it?", "label": "Project type" },
-      "technologies": { "prompt": "Which technologies are used? Select all that apply.", "label": "Technologies used" },
-      "working": { "prompt": "What is currently working well in the project?", "label": "What currently works", "placeholder": "e.g. Login and product listing work, the UI is mostly done…" },
-      "broken": { "prompt": "What is broken or incomplete right now?", "label": "Broken / incomplete parts", "placeholder": "e.g. Checkout crashes, admin panel was never finished, site is slow on mobile…" },
-      "newFeatures": { "prompt": "Which new features do you need added?", "label": "New features required" },
-      "projectLink": { "prompt": "Do you have a live URL or a code repository link? (Optional — you can skip.)", "label": "Live URL / repository", "placeholder": "e.g. https://myapp.com or github.com/me/myapp" },
-      "urgency": { "prompt": "How urgent is this for you?", "label": "Urgency" },
-      "budget": { "prompt": "And what budget are you working with? (You can skip this.)", "label": "Approximate budget" }
+      "projectType": {
+        "prompt": "What type of project is it?",
+        "label": "Project type"
+      },
+      "technologies": {
+        "prompt": "Which technologies are used? Select all that apply.",
+        "label": "Technologies used"
+      },
+      "working": {
+        "prompt": "What is currently working well in the project?",
+        "label": "What currently works",
+        "placeholder": "e.g. Login and product listing work, the UI is mostly done…"
+      },
+      "broken": {
+        "prompt": "What is broken or incomplete right now?",
+        "label": "Broken / incomplete parts",
+        "placeholder": "e.g. Checkout crashes, admin panel was never finished, site is slow on mobile…"
+      },
+      "newFeatures": {
+        "prompt": "Which new features do you need added?",
+        "label": "New features required"
+      },
+      "projectLink": {
+        "prompt": "Do you have a live URL or a code repository link? (Optional — you can skip.)",
+        "label": "Live URL / repository",
+        "placeholder": "e.g. https://myapp.com or github.com/me/myapp"
+      },
+      "urgency": {
+        "prompt": "How urgent is this for you?",
+        "label": "Urgency"
+      },
+      "budget": {
+        "prompt": "And what budget are you working with? (You can skip this.)",
+        "label": "Approximate budget"
+      }
     }
   },
   "options": {
@@ -723,7 +821,8 @@
     "see-services": "See services",
     "web-development": "Web development",
     "mobile-development": "Mobile development",
-    "all-services": "All services"
+    "all-services": "All services",
+    "talk-to-buddy": "Talk to Buddy"
   },
   "guide": {
     "name": "Buddy",
@@ -864,15 +963,42 @@
       "finish": "Finish",
       "skipTour": "Skip tour",
       "steps": {
-        "home-hero": { "title": "Welcome to SCS Softwares", "text": "This is where every project starts — describe a new idea or an existing app and see an estimated team, cost and timeline before you hire anyone." },
-        "home-services": { "title": "Our services", "text": "SCS covers web development, mobile apps, UI/UX design, cloud, DevOps and digital marketing — everything under one roof, so you never juggle vendors." },
-        "home-process": { "title": "How it works", "text": "Four simple steps: describe your project, a demo analysis runs, you see the recommended team and cost, then a consultant confirms everything on a free call." },
-        "home-benefits": { "title": "Why choose SCS", "text": "You see the numbers before committing, you own all source code from day one, and you get a dedicated team with clickable weekly demos — not status reports." },
-        "home-portfolio": { "title": "Recent case studies", "text": "A few examples of what we have shipped — e-commerce platforms, healthcare mobile apps and real-time fintech dashboards." },
-        "products": { "title": "Ready-made products", "text": "Beyond custom builds, SCS offers proven, customizable products. If one is close to what you need, launching from it is faster and cheaper than starting from zero." },
-        "about": { "title": "About SCS Softwares", "text": "A team of developers, designers and strategists focused on transparent pricing, code ownership and long-term partnerships." },
-        "contact": { "title": "Get in touch", "text": "When you are ready, this form reaches the team directly — or use WhatsApp for a quicker chat. I can pre-fill your requirement summary here after the estimate flow." },
-        "schedule": { "title": "Schedule a free call", "text": "Pick a date and time slot and an SCS consultant will review your project and confirm a real quote. That completes the tour — want me to collect your requirements now?" }
+        "home-hero": {
+          "title": "Welcome to SCS Softwares",
+          "text": "This is where every project starts — describe a new idea or an existing app and see an estimated team, cost and timeline before you hire anyone."
+        },
+        "home-services": {
+          "title": "Our services",
+          "text": "SCS covers web development, mobile apps, UI/UX design, cloud, DevOps and digital marketing — everything under one roof, so you never juggle vendors."
+        },
+        "home-process": {
+          "title": "How it works",
+          "text": "Four simple steps: describe your project, a demo analysis runs, you see the recommended team and cost, then a consultant confirms everything on a free call."
+        },
+        "home-benefits": {
+          "title": "Why choose SCS",
+          "text": "You see the numbers before committing, you own all source code from day one, and you get a dedicated team with clickable weekly demos — not status reports."
+        },
+        "home-portfolio": {
+          "title": "Recent case studies",
+          "text": "A few examples of what we have shipped — e-commerce platforms, healthcare mobile apps and real-time fintech dashboards."
+        },
+        "products": {
+          "title": "Ready-made products",
+          "text": "Beyond custom builds, SCS offers proven, customizable products. If one is close to what you need, launching from it is faster and cheaper than starting from zero."
+        },
+        "about": {
+          "title": "About SCS Softwares",
+          "text": "A team of developers, designers and strategists focused on transparent pricing, code ownership and long-term partnerships."
+        },
+        "contact": {
+          "title": "Get in touch",
+          "text": "When you are ready, this form reaches the team directly — or use WhatsApp for a quicker chat. I can pre-fill your requirement summary here after the estimate flow."
+        },
+        "schedule": {
+          "title": "Schedule a free call",
+          "text": "Pick a date and time slot and an SCS consultant will review your project and confirm a real quote. That completes the tour — want me to collect your requirements now?"
+        }
       }
     },
     "analysis": {
@@ -977,50 +1103,106 @@
       "web-development": {
         "blurb": "Custom websites and web applications built with modern stacks like React and Node.js — from landing pages to full products with logins, payments and admin panels.",
         "forWho": "Businesses and founders who need a fast, reliable web presence or a full web application.",
-        "benefits": ["Responsive on every device", "Scalable architecture from day one", "You own the full source code"],
-        "limitations": ["Complex platforms need a discovery phase first", "Third-party costs (hosting, gateways) are separate"]
+        "benefits": [
+          "Responsive on every device",
+          "Scalable architecture from day one",
+          "You own the full source code"
+        ],
+        "limitations": [
+          "Complex platforms need a discovery phase first",
+          "Third-party costs (hosting, gateways) are separate"
+        ]
       },
       "mobile-development": {
         "blurb": "iOS and Android apps built with cross-platform technology (React Native / Flutter) so one codebase covers both stores.",
         "forWho": "Products whose users live on their phones — booking, delivery, community and utility apps.",
-        "benefits": ["One codebase, two app stores", "Native-feeling performance", "Push notifications and offline support"],
-        "limitations": ["App-store review adds 1–2 weeks to launch", "Very graphics-heavy apps may need native work"]
+        "benefits": [
+          "One codebase, two app stores",
+          "Native-feeling performance",
+          "Push notifications and offline support"
+        ],
+        "limitations": [
+          "App-store review adds 1–2 weeks to launch",
+          "Very graphics-heavy apps may need native work"
+        ]
       },
       "ui-ux-design": {
         "blurb": "Wireframes, prototypes and pixel-perfect interfaces designed around your users before a line of code is written.",
         "forWho": "Teams that want their product to look professional and convert visitors into customers.",
-        "benefits": ["Fewer costly changes during development", "Consistent design system", "Clickable prototypes to test early"],
-        "limitations": ["Design quality depends on clear requirements", "Brand assets must be supplied or scoped separately"]
+        "benefits": [
+          "Fewer costly changes during development",
+          "Consistent design system",
+          "Clickable prototypes to test early"
+        ],
+        "limitations": [
+          "Design quality depends on clear requirements",
+          "Brand assets must be supplied or scoped separately"
+        ]
       },
       "cloud-solutions": {
         "blurb": "Cloud architecture, migration and hosting setup on AWS, Azure or GCP with cost optimisation in mind.",
         "forWho": "Products that need reliable hosting, scaling or a move away from legacy servers.",
-        "benefits": ["Pay-for-what-you-use infrastructure", "Automatic scaling and backups", "Better uptime and security posture"],
-        "limitations": ["Cloud provider fees are billed separately", "Legacy systems may need refactoring before migration"]
+        "benefits": [
+          "Pay-for-what-you-use infrastructure",
+          "Automatic scaling and backups",
+          "Better uptime and security posture"
+        ],
+        "limitations": [
+          "Cloud provider fees are billed separately",
+          "Legacy systems may need refactoring before migration"
+        ]
       },
       "devops-services": {
         "blurb": "CI/CD pipelines, automated testing, monitoring and deployment automation so releases become boring and safe.",
         "forWho": "Teams shipping regularly who want fewer manual deploys and faster recovery from issues.",
-        "benefits": ["Faster, safer releases", "Automated rollbacks", "Monitoring and alerting included"],
-        "limitations": ["Needs access to your existing infrastructure", "Biggest value shows on actively developed projects"]
+        "benefits": [
+          "Faster, safer releases",
+          "Automated rollbacks",
+          "Monitoring and alerting included"
+        ],
+        "limitations": [
+          "Needs access to your existing infrastructure",
+          "Biggest value shows on actively developed projects"
+        ]
       },
       "digital-marketing": {
         "blurb": "SEO groundwork, content, social campaigns and analytics to bring the right visitors to what we build.",
         "forWho": "Businesses that have (or are building) a product and need qualified traffic and leads.",
-        "benefits": ["Measurable campaigns with analytics", "Organic and paid channels covered", "Landing pages optimised to convert"],
-        "limitations": ["Results build over weeks, not days", "Ad budgets are separate from service fees"]
+        "benefits": [
+          "Measurable campaigns with analytics",
+          "Organic and paid channels covered",
+          "Landing pages optimised to convert"
+        ],
+        "limitations": [
+          "Results build over weeks, not days",
+          "Ad budgets are separate from service fees"
+        ]
       },
       "products": {
         "blurb": "Ready-made, customizable products across web, mobile, cloud, marketing and DevOps — proven bases you can launch quickly instead of building from zero.",
         "forWho": "Businesses that want a faster, lower-risk start with a solution that already works.",
-        "benefits": ["Much faster launch than custom builds", "Lower cost than starting from scratch", "Customisable to your brand and workflow"],
-        "limitations": ["Deep custom workflows may still need custom development", "Licensing and hosting scoped per product"]
+        "benefits": [
+          "Much faster launch than custom builds",
+          "Lower cost than starting from scratch",
+          "Customisable to your brand and workflow"
+        ],
+        "limitations": [
+          "Deep custom workflows may still need custom development",
+          "Licensing and hosting scoped per product"
+        ]
       },
       "product-details": {
         "blurb": "This is one of our ready-made products — a proven base we customise to your brand, workflow and integrations instead of building from zero.",
         "forWho": "Teams that want this capability live quickly, with SCS handling setup and customisation.",
-        "benefits": ["Faster launch than a custom build", "Battle-tested core features", "Customisation and support from the SCS team"],
-        "limitations": ["Very unusual workflows may need custom work on top", "Final pricing depends on customisation scope"]
+        "benefits": [
+          "Faster launch than a custom build",
+          "Battle-tested core features",
+          "Customisation and support from the SCS team"
+        ],
+        "limitations": [
+          "Very unusual workflows may need custom work on top",
+          "Final pricing depends on customisation scope"
+        ]
       }
     }
   },
@@ -1036,6 +1218,72 @@
       "human": "Of course — you can reach the SCS Softwares team directly through the contact page, or book a call at a time that works for you.",
       "estimate-explain": "The demo estimate multiplies each recommended role's hours by its hourly rate and sums them, then divides total hours by a 40-hour weekly capacity to project the delivery duration. It is a preliminary figure — a review call confirms the final scope and quote.",
       "careers": "We are always looking for talented people! Check our current openings on the careers page."
+    }
+  },
+  "voice": {
+    "title": "Talk to Buddy — live voice consultation",
+    "intro": "Have a real conversation with Buddy, our AI IT Manager. Buddy asks about your project step by step, prepares a preliminary hour and cost estimate, and an SCS consultant reviews everything before any final quote.",
+    "languagesHint": "You can speak English, Hindi or Hinglish — Buddy asks your preference first.",
+    "talkButton": "Talk to Buddy",
+    "retry": "Try again",
+    "completedTitle": "Conversation ended",
+    "completedText": "Thank you for talking with Buddy. If you submitted your details, you will receive an email summary and a consultant will follow up. This was a preliminary estimate, not a final quotation.",
+    "reference": "Your reference code: {{code}}",
+    "consent": {
+      "title": "Before we start",
+      "mic": "Buddy needs your microphone for a live voice conversation.",
+      "data": "Your speech is processed in real time by our AI voice providers to answer you and prepare your estimate. A short summary of your requirements is stored only if you choose to submit them.",
+      "noAudio": "No audio recording is stored. The conversation transcript is not stored unless you explicitly agree at the end.",
+      "agree": "I agree — start talking",
+      "cancel": "Cancel"
+    },
+    "states": {
+      "connecting": "Connecting to Buddy…",
+      "listening": "Buddy is listening",
+      "thinking": "Buddy is thinking…",
+      "speaking": "Buddy is speaking",
+      "paused": "Microphone muted"
+    },
+    "controls": {
+      "mute": "Mute microphone",
+      "unmute": "Unmute microphone",
+      "end": "End conversation",
+      "textPlaceholder": "Or type instead of speaking…",
+      "textLabel": "Type a message to Buddy",
+      "sendText": "Send text message"
+    },
+    "transcript": {
+      "title": "Live transcript",
+      "you": "You",
+      "buddy": "Buddy",
+      "empty": "The live transcript will appear here."
+    },
+    "progress": {
+      "title": "Requirement progress"
+    },
+    "estimate": {
+      "title": "Preliminary estimate",
+      "hours": "Effort: {{min}}–{{max}} hours",
+      "cost": "Cost range: ${{min}}–${{max}} USD",
+      "duration": "Duration: {{min}}–{{max}} weeks at {{capacity}} hrs/week",
+      "confidence": "Confidence: {{level}}",
+      "preliminary": "Preliminary only — an SCS consultant confirms the final quote."
+    },
+    "errors": {
+      "mic_denied": "Microphone access was denied. You can still use Buddy in text mode or the guided form below.",
+      "voice_disabled": "Voice conversations are currently unavailable. Please use the guided form or text chat instead.",
+      "turnstile_failed": "Human verification failed. Please try the check again.",
+      "rate_limited": "Too many voice sessions from your network. Please try again later or use the form below.",
+      "connect_failed": "Could not connect to the voice service. Please try again or use the form below.",
+      "disconnected": "The connection was lost. You can reconnect or continue in text mode.",
+      "expired": "The session expired. Please start a new conversation.",
+      "unknown": "Something went wrong. Please try again or use the form below."
+    },
+    "fallback": {
+      "title": "Prefer another way?",
+      "new": "Guided form — new project",
+      "existing": "Guided form — existing project",
+      "text": "Back to text chat"
     }
   }
 }

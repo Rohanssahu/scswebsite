@@ -1,0 +1,58 @@
+{
+  "$comment": "Version-controlled SCS Softwares knowledge base for Buddy. Every statement here is sourced from existing, published website content (src/i18n/locales/en.json, src/data/demoAnalysis.ts, service pages). Buddy may only state what is in this file. Do NOT add clients, certifications, team sizes, guarantees, delivery promises, testimonials or fixed prices — none of those are confirmed business content. The five-hour minimum rule was NOT found in existing business content and is therefore intentionally absent.",
+  "version": "1.0.0",
+  "company": {
+    "name": "SCS Softwares",
+    "positioning": "Software agency offering transparent, hourly-billed development with an AI-assisted preliminary estimate before any commitment."
+  },
+  "services": [
+    { "id": "web-development", "name": "Web Development", "summary": "Websites and web applications, typically React frontends with Node.js APIs and PostgreSQL." },
+    { "id": "mobile-development", "name": "Mobile App Development", "summary": "Cross-platform mobile apps, typically React Native with a Node.js API backend." },
+    { "id": "ui-ux-design", "name": "UI/UX Design", "summary": "Wireframes, UI screens and design systems ahead of development." },
+    { "id": "cloud-solutions", "name": "Cloud Solutions", "summary": "Cloud architecture, hosting and scaling for web and mobile products." },
+    { "id": "devops-services", "name": "DevOps Services", "summary": "CI/CD pipelines, deployment automation and infrastructure operations." },
+    { "id": "digital-marketing", "name": "Digital Marketing", "summary": "Marketing services for launched digital products." },
+    { "id": "project-rescue", "name": "Project Rescue & Completion", "summary": "Audit, stabilisation and completion of broken or unfinished projects, starting with a short code audit." }
+  ],
+  "engagementProcess": [
+    "Share your requirement with Buddy or the project-analysis form.",
+    "Receive a preliminary estimate with roles, hours and a cost range.",
+    "A consultant reviews the requirement on a free review call.",
+    "You receive a confirmed quote and sprint plan within 2 business days of the review call.",
+    "Development runs in weekly cycles with demo builds every week."
+  ],
+  "supportedTechnologies": [
+    "React", "React Native", "Node.js", "PostgreSQL", "Tailwind CSS", "TypeScript"
+  ],
+  "benefits": [
+    "Transparent hourly pricing — you approve every hour before work starts",
+    "You see an estimated team, cost and timeline before committing",
+    "Dedicated project manager and weekly demo calls",
+    "NDA and full source-code ownership from day one",
+    "Post-launch support window included in every engagement"
+  ],
+  "hourlyEngagementModel": {
+    "description": "Work is billed by the hour per role at transparent rates. Example published rates: UI/UX design from $10/hr, frontend from $15/hr, backend from $20/hr. Final rates are confirmed on the review call.",
+    "minimumEngagementHours": null,
+    "minimumEngagementNote": "No minimum-hours rule is published; do not claim one."
+  },
+  "weeklyCapacity": {
+    "hoursPerWeek": 40,
+    "explanation": "Delivery duration is projected by dividing total estimated hours by a standard 40-hour weekly team capacity. Faster delivery may be possible with a larger team, confirmed during review."
+  },
+  "humanReviewProcess": "Every preliminary estimate is reviewed by an SCS Softwares consultant before any final quotation. Visitors can request a human review of their estimate at any time; a consultant then confirms scope, cost and timeline — a preliminary estimate is never a final quote.",
+  "contactOptions": [
+    { "id": "schedule-call", "label": "Schedule a free review call", "path": "/schedule-call" },
+    { "id": "contact-form", "label": "Contact form", "path": "/contact" },
+    { "id": "whatsapp", "label": "WhatsApp chat", "path": null },
+    { "id": "consultation-form", "label": "Consultation request form", "path": "/consultation-form" }
+  ],
+  "prohibitedClaims": [
+    "That a preliminary estimate is a final quotation",
+    "That a developer has been assigned",
+    "That payment has been received",
+    "That the project has been approved",
+    "That SCS guarantees any particular business result",
+    "Any client names, testimonials, certifications, team size or delivery-date guarantees"
+  ]
+}
