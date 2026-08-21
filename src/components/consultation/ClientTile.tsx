@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MicOff, VideoOff } from 'lucide-react';
+import TileFrame from './TileFrame';
 
 interface ClientTileProps {
   name: string;
   cameraStream: MediaStream | null;
   micMuted: boolean;
   cameraEnabled: boolean;
+  /** LiveKit active-speaker state for the local participant. */
   speaking: boolean;
-  /** Picture-in-picture style on small screens. */
-  pip?: boolean;
+  reduceMotion?: boolean;
+  /** Layout classes supplied by the meeting stage. */
+  className?: string;
 }
 
 const initialsOf = (name: string): string =>
@@ -22,7 +25,15 @@ const initialsOf = (name: string): string =>
 
 /** The client's own tile: camera feed or initials fallback, active-speaker
  * border, mic-muted and camera-off indicators. */
-const ClientTile: React.FC<ClientTileProps> = ({ name, cameraStream, micMuted, cameraEnabled, speaking, pip = false }) => {
+const ClientTile: React.FC<ClientTileProps> = ({
+  name,
+  cameraStream,
+  micMuted,
+  cameraEnabled,
+  speaking,
+  reduceMotion = false,
+  className = '',
+}) => {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -34,13 +45,16 @@ const ClientTile: React.FC<ClientTileProps> = ({ name, cameraStream, micMuted, c
   }, [cameraStream]);
 
   const showVideo = cameraEnabled && cameraStream;
+  // A muted microphone can never be an active speaker — never imply speech.
+  const active = speaking && !micMuted;
 
   return (
-    <div
-      data-active-speaker={speaking}
-      className={`relative flex items-center justify-center overflow-hidden rounded-2xl bg-navy-800 transition-shadow ${
-        pip ? 'h-32 w-24 sm:h-36 sm:w-28' : 'h-full min-h-[10rem] w-full'
-      } ${speaking && !micMuted ? 'ring-4 ring-emerald-400/80' : 'ring-1 ring-white/10'}`}
+    <TileFrame
+      accent="client"
+      active={active}
+      reduceMotion={reduceMotion}
+      className={className}
+      innerClassName="bg-gradient-to-br from-navy-800 via-navy-900 to-navy-800"
     >
       {showVideo ? (
         <video
@@ -53,30 +67,37 @@ const ClientTile: React.FC<ClientTileProps> = ({ name, cameraStream, micMuted, c
           aria-label={t('meeting.lobby.cameraPreview')}
         />
       ) : (
-        <div className="flex flex-col items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={`flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 font-bold text-white ${
-              pip ? 'h-12 w-12 text-base' : 'h-20 w-20 text-2xl'
-            }`}
-          >
-            {initialsOf(name)}
+        <div className="flex flex-col items-center gap-2 px-4 text-center">
+          <span className="relative">
+            {active && (
+              <span
+                aria-hidden="true"
+                className={`absolute inset-0 -m-1.5 rounded-full bg-emerald-400/40 ${
+                  reduceMotion ? '' : 'animate-audio-pulse'
+                }`}
+              />
+            )}
+            <span
+              aria-hidden="true"
+              className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-2xl font-bold text-white sm:h-24 sm:w-24 sm:text-3xl"
+            >
+              {initialsOf(name)}
+            </span>
           </span>
-          {!pip && <VideoOff className="h-4 w-4 text-white/50" aria-hidden="true" />}
         </div>
       )}
 
       {/* name + indicators */}
-      <div className="absolute bottom-1.5 start-1.5 flex max-w-[85%] items-center gap-1.5 rounded-full bg-black/40 px-2 py-0.5">
-        <span className={`truncate text-white ${pip ? 'text-[10px]' : 'text-xs'}`}>
-          {name || t('meeting.you')}
-        </span>
-        {micMuted && <MicOff className="h-3.5 w-3.5 shrink-0 text-rose-400" aria-label={t('meeting.controls.unmute')} />}
-        {!cameraEnabled && !pip && (
+      <div className="absolute bottom-2.5 start-2.5 flex max-w-[calc(100%-1.25rem)] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 backdrop-blur-sm">
+        <span className="truncate text-xs font-medium text-white">{name || t('meeting.you')}</span>
+        {micMuted && (
+          <MicOff className="h-3.5 w-3.5 shrink-0 text-rose-400" aria-label={t('meeting.controls.unmute')} />
+        )}
+        {!cameraEnabled && (
           <VideoOff className="h-3.5 w-3.5 shrink-0 text-white/60" aria-label={t('meeting.controls.cameraOn')} />
         )}
       </div>
-    </div>
+    </TileFrame>
   );
 };
 

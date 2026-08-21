@@ -1269,7 +1269,20 @@
       "waiting": "بڈی کا انتظار",
       "listening": "بڈی سن رہا ہے",
       "thinking": "بڈی سوچ رہا ہے…",
-      "speaking": "بڈی بول رہا ہے"
+      "speaking": "بڈی بول رہا ہے",
+      "buddyMuted": "بڈی کی آواز بند"
+    },
+    "header": {
+      "secure": "محفوظ",
+      "duration": "میٹنگ کا دورانیہ"
+    },
+    "connection": {
+      "idle": "منقطع",
+      "connecting": "رابطہ ہو رہا ہے…",
+      "live": "لائیو",
+      "reconnecting": "دوبارہ رابطہ ہو رہا ہے…",
+      "ended": "ختم",
+      "error": "رابطے کا مسئلہ"
     },
     "quality": {
       "excellent": "کنکشن کوالٹی: بہترین",

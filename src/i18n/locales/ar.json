@@ -1273,7 +1273,20 @@
       "waiting": "في انتظار بادي",
       "listening": "بادي يستمع",
       "thinking": "بادي يفكّر…",
-      "speaking": "بادي يتحدث"
+      "speaking": "بادي يتحدث",
+      "buddyMuted": "صوت بادي مكتوم"
+    },
+    "header": {
+      "secure": "مشفّر",
+      "duration": "مدة الاجتماع"
+    },
+    "connection": {
+      "idle": "غير متصل",
+      "connecting": "جارٍ الاتصال…",
+      "live": "مباشر",
+      "reconnecting": "جارٍ إعادة الاتصال…",
+      "ended": "انتهى",
+      "error": "مشكلة في الاتصال"
     },
     "quality": {
       "excellent": "جودة الاتصال: ممتازة",

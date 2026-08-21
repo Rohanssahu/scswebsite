@@ -1318,7 +1318,20 @@
       "waiting": "Waiting for Buddy",
       "listening": "Buddy is listening",
       "thinking": "Buddy is thinking…",
-      "speaking": "Buddy is speaking"
+      "speaking": "Buddy is speaking",
+      "buddyMuted": "Buddy muted"
+    },
+    "header": {
+      "secure": "Encrypted",
+      "duration": "Meeting duration"
+    },
+    "connection": {
+      "idle": "Not connected",
+      "connecting": "Connecting…",
+      "live": "Live",
+      "reconnecting": "Reconnecting…",
+      "ended": "Ended",
+      "error": "Connection problem"
     },
     "quality": {
       "excellent": "Connection quality: excellent",

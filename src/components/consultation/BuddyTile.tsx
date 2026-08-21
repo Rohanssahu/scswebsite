@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, SignalHigh, SignalLow, SignalMedium, WifiOff } from 'lucide-react';
+import { Loader2, SignalHigh, SignalLow, SignalMedium, VolumeX, WifiOff } from 'lucide-react';
 import { BUDDY_AVATAR_URL } from './buddyAvatar';
+import TileFrame from './TileFrame';
 import type { BuddyActivity, ConnectionQuality } from '@/services/consultationCore';
 
 interface BuddyTileProps {
@@ -11,7 +12,11 @@ interface BuddyTileProps {
   quality: ConnectionQuality;
   /** 0..1 remote audio level — drives the speaking pulse. */
   audioLevel: number;
+  /** Buddy's audio is muted locally (speaker toggle). */
+  speakerMuted?: boolean;
   reduceMotion?: boolean;
+  /** Layout classes supplied by the meeting stage. */
+  className?: string;
 }
 
 const QualityIcon = ({ quality }: { quality: ConnectionQuality }) => {
@@ -31,7 +36,7 @@ const QualityIcon = ({ quality }: { quality: ConnectionQuality }) => {
 };
 
 /**
- * Buddy's participant tile. The speaking ring / pulse animates ONLY while
+ * Buddy's participant tile. The speaking border / pulse animates ONLY while
  * Buddy audio is actually active; Listening/Thinking are shown only once the
  * agent participant has joined (enforced upstream by deriveBuddyActivity).
  * No fake lip-sync — a subtle audio-driven pulse instead.
@@ -42,77 +47,98 @@ const BuddyTile: React.FC<BuddyTileProps> = ({
   reconnecting,
   quality,
   audioLevel,
+  speakerMuted = false,
   reduceMotion = false,
+  className = '',
 }) => {
   const { t } = useTranslation();
-  const speaking = activity === 'speaking';
+  const speaking = activity === 'speaking' && !reconnecting;
+  const thinking = activity === 'thinking' && agentPresent && !reconnecting;
   const stateLabel = reconnecting
     ? t('meeting.states.reconnecting')
     : agentPresent
       ? t(`meeting.states.${activity}`)
       : t('meeting.states.connecting');
 
-  const ringScale = speaking && !reduceMotion ? 1 + Math.min(0.12, audioLevel * 0.3) : 1;
+  // Real remote audio level (LiveKit) drives the pulse — never synthesized.
+  const ringScale = speaking && !reduceMotion ? 1 + Math.min(0.1, audioLevel * 0.28) : 1;
 
   return (
-    <div
-      data-active-speaker={speaking}
-      className={`relative flex h-full min-h-[16rem] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-navy-900 via-navy-800 to-purple-950 p-6 transition-shadow ${
-        speaking ? 'ring-4 ring-pink-500/80 shadow-[0_0_40px_-8px_rgba(236,72,153,0.6)]' : 'ring-1 ring-white/10'
-      }`}
+    <TileFrame
+      accent="buddy"
+      active={speaking}
+      reduceMotion={reduceMotion}
+      className={className}
+      innerClassName="bg-gradient-to-br from-navy-900 via-navy-800 to-purple-950"
     >
-      {/* speaking ring */}
-      <div className="relative" aria-hidden="true">
-        <div
-          className={`absolute inset-0 -m-3 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 blur-md transition-opacity duration-200 ${
-            speaking ? 'opacity-80' : 'opacity-0'
-          } ${speaking && !reduceMotion ? 'animate-pulse' : ''}`}
-          style={{ transform: `scale(${ringScale})` }}
-        />
-        <div
-          className={`relative rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 p-1 transition-transform duration-150`}
-          style={{ transform: `scale(${ringScale})` }}
-        >
-          <img
-            src={BUDDY_AVATAR_URL}
-            alt=""
-            className="h-32 w-32 rounded-full bg-white object-cover sm:h-40 sm:w-40"
-            draggable={false}
-          />
+      <div className="flex min-h-0 flex-col items-center justify-center gap-2 px-4 py-3 text-center">
+        {/* avatar + audio pulse */}
+        <div className="relative shrink-0" aria-hidden="true">
+          {speaking && (
+            <span
+              className={`absolute inset-0 -m-2 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 blur-md ${
+                reduceMotion ? 'opacity-40' : 'animate-audio-pulse'
+              }`}
+            />
+          )}
+          <div
+            className="relative rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 p-[3px] transition-transform duration-150"
+            style={{ transform: `scale(${ringScale})` }}
+          >
+            <img
+              src={BUDDY_AVATAR_URL}
+              alt=""
+              className="h-[clamp(4.5rem,14vh,8rem)] w-[clamp(4.5rem,14vh,8rem)] rounded-full bg-white object-cover"
+              draggable={false}
+            />
+          </div>
+          {!agentPresent && !reconnecting && (
+            <span className="absolute -bottom-1 start-1/2 -translate-x-1/2 rounded-full bg-navy-900/90 p-1.5">
+              <Loader2 className={`h-4 w-4 text-pink-400 ${reduceMotion ? '' : 'animate-spin'}`} aria-hidden="true" />
+            </span>
+          )}
         </div>
-        {/* subtle mouth/pulse dot while speaking (no fake lip-sync) */}
-        {speaking && !reduceMotion && (
-          <span className="absolute bottom-2 start-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-white/90 animate-ping" />
-        )}
-        {!agentPresent && (
-          <span className="absolute -bottom-1 start-1/2 -translate-x-1/2 rounded-full bg-navy-900/90 p-1.5">
-            <Loader2 className={`h-5 w-5 text-pink-400 ${reduceMotion ? '' : 'animate-spin'}`} aria-hidden="true" />
-          </span>
-        )}
+
+        <div className="min-w-0">
+          <p className="text-base font-semibold leading-tight text-white sm:text-lg">{t('meeting.buddyName')}</p>
+          <p className="text-xs leading-tight text-pink-200 sm:text-sm">{t('meeting.buddyRole')}</p>
+        </div>
+
+        {/* live state, announced to screen readers */}
+        <p
+          aria-live="polite"
+          className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            speaking ? 'bg-pink-500/25 text-pink-50' : 'bg-white/10 text-white'
+          }`}
+        >
+          {thinking && <Loader2 className={`h-3.5 w-3.5 shrink-0 ${reduceMotion ? '' : 'animate-spin'}`} aria-hidden="true" />}
+          {speaking && (
+            <span
+              aria-hidden="true"
+              className={`h-1.5 w-1.5 shrink-0 rounded-full bg-pink-300 ${reduceMotion ? '' : 'animate-pulse'}`}
+            />
+          )}
+          <span className="truncate">{stateLabel}</span>
+        </p>
+
+        {/* AI disclosure — always visible */}
+        <p className="max-w-[95%] text-[11px] leading-tight text-white/55">{t('meeting.aiBadge')}</p>
       </div>
 
-      <p className="mt-4 text-lg font-semibold text-white">{t('meeting.buddyName')}</p>
-      <p className="text-sm text-pink-200">{t('meeting.buddyRole')}</p>
-
-      {/* live state, announced to screen readers */}
-      <p aria-live="polite" className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
-        {activity === 'thinking' && agentPresent && !reduceMotion && (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-        )}
-        {stateLabel}
-      </p>
-
       {/* connection quality */}
-      <div className="absolute end-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/30 px-2 py-1">
+      <div className="absolute end-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 backdrop-blur-sm">
         <QualityIcon quality={quality} />
         <span className="sr-only">{t(`meeting.quality.${quality}`)}</span>
       </div>
 
-      {/* AI disclosure — always visible */}
-      <p className="absolute bottom-2 start-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-full bg-black/30 px-3 py-1 text-center text-[11px] text-white/80">
-        {t('meeting.aiBadge')}
-      </p>
-    </div>
+      {/* locally muted indicator */}
+      {speakerMuted && (
+        <div className="absolute bottom-2.5 start-2.5 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 backdrop-blur-sm">
+          <VolumeX className="h-3.5 w-3.5 shrink-0 text-rose-400" aria-hidden="true" />
+          <span className="text-xs font-medium text-white">{t('meeting.states.buddyMuted')}</span>
+        </div>
+      )}
+    </TileFrame>
   );
 };
 

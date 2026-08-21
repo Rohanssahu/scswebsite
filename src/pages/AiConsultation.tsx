@@ -33,6 +33,7 @@ import TurnstileWidget, { type TurnstileWidgetHandle } from '@/components/forms/
 import BuddyTile from '@/components/consultation/BuddyTile';
 import ClientTile from '@/components/consultation/ClientTile';
 import MeetingControls from '@/components/consultation/MeetingControls';
+import MeetingHeader from '@/components/consultation/MeetingHeader';
 import MeetingChat from '@/components/consultation/MeetingChat';
 import ProjectDetailsPanel from '@/components/consultation/ProjectDetailsPanel';
 import FilesLinksPanel from '@/components/consultation/FilesLinksPanel';
@@ -78,6 +79,8 @@ const AiConsultation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  /** Epoch ms the live stage was entered — drives the header duration only. */
+  const [liveSince, setLiveSince] = useState<number | null>(null);
 
   // lobby device state
   const [lobbyCamera, setLobbyCamera] = useState(false);
@@ -103,6 +106,7 @@ const AiConsultation: React.FC = () => {
   );
 
   const supported = useMemo(isSupportedBrowser, []);
+  const isDesktop = useIsDesktop();
   const proposal = meeting.buddyState?.proposal ?? null;
   const finalized = meeting.buddyState?.finalized ?? view?.finalized ?? false;
   const finalReference = meeting.buddyState?.referenceCode ?? view?.finalizedReference ?? null;
@@ -236,6 +240,7 @@ const AiConsultation: React.FC = () => {
       lobbyAudioCtx.current = null;
       if (joinResponse.meeting) setView(joinResponse.meeting);
       await meeting.connect(joinResponse, { camera: lobbyCamera, micMuted: lobbyMicMuted });
+      setLiveSince(Date.now());
       setPhase('live');
       trackConsultation('consultation_joined', { kind: view?.meetingKind ?? 'instant' });
     } catch (err) {
@@ -377,6 +382,7 @@ const AiConsultation: React.FC = () => {
 
   const leave = async () => {
     await meeting.leave();
+    setLiveSince(null);
     setPhase('ended');
   };
 
@@ -750,23 +756,69 @@ const AiConsultation: React.FC = () => {
     </>
   );
 
+  const clientActive = meeting.clientSpeaking && meeting.micEnabled;
+  const buddyActive = meeting.activity === 'speaking' && meeting.connection !== 'reconnecting';
+
+  const failureBanner = (agentTimedOut || error) && (
+    <div className="shrink-0 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+      <p className="flex gap-2">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        {error ?? t('meeting.errors.agent_unavailable')}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setAgentTimedOut(false);
+            setLiveSince(null);
+            setPhase('lobby');
+          }}
+          className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
+        >
+          {t('meeting.fallback.retry')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPanelOpen(true);
+            setPanelTab('chat');
+          }}
+          className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
+        >
+          {t('meeting.fallback.useChat')}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleRequestReview()}
+          className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
+        >
+          {t('meeting.fallback.humanReview')}
+        </button>
+        <Link
+          to="/project-analysis"
+          className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
+        >
+          {t('meeting.fallback.manualFlow')}
+        </Link>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-screen flex-col bg-navy-950 text-white">
-      {/* meeting header */}
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-5">
-        <div>
-          <h1 className="text-sm font-semibold sm:text-base">{t('meeting.title')}</h1>
-          <p className="text-xs text-white/60">
-            SCS Softwares · <span className="font-mono">{meetingReference}</span>
-          </p>
-        </div>
-        {finalized && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300">
-            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-            {finalReference ? t('meeting.ended.reference', { code: finalReference }) : t('meeting.ended.title')}
-          </span>
-        )}
-      </header>
+    <div className="flex h-[100dvh] min-h-[30rem] flex-col overflow-hidden bg-navy-950 text-white">
+      <MeetingHeader
+        reference={meetingReference}
+        connection={meeting.connection}
+        startedAt={liveSince}
+        finalizedLabel={
+          finalized
+            ? finalReference
+              ? t('meeting.ended.reference', { code: finalReference })
+              : t('meeting.ended.title')
+            : null
+        }
+      />
 
       {/* screen-reader announcements for participant/connection changes */}
       <p aria-live="polite" className="sr-only">
@@ -774,144 +826,140 @@ const AiConsultation: React.FC = () => {
         {meeting.connection === 'reconnecting' ? ` ${t('meeting.states.reconnecting')}` : ''}
       </p>
 
-      <main className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 sm:px-5 lg:flex-row">
-        {/* stage */}
-        <div className="relative flex min-h-0 flex-1 flex-col gap-3">
-          <div className="relative min-h-0 flex-1">
-            <BuddyTile
-              activity={meeting.activity}
-              agentPresent={meeting.agentPresent}
-              reconnecting={meeting.connection === 'reconnecting'}
-              quality={meeting.quality}
-              audioLevel={meeting.audioLevel}
-              reduceMotion={reduceMotion}
-            />
-            {/* client tile: PiP on small screens */}
-            <div className="absolute bottom-3 end-3 lg:hidden">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
+        {/* meeting stage: client left, Buddy right */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-3 pb-2 sm:px-4">
+          <div className="flex min-h-0 flex-1 overflow-y-auto">
+            <div className="m-auto flex h-full max-h-full w-full min-h-0 max-w-[1600px] flex-col gap-2 sm:gap-3 md:grid md:auto-rows-fr md:grid-cols-2 lg:aspect-[16/7] lg:h-auto lg:min-h-[15rem]">
               <ClientTile
-                pip
                 name={view?.name ?? ''}
                 cameraStream={meeting.cameraStream}
                 micMuted={!meeting.micEnabled}
                 cameraEnabled={meeting.cameraEnabled}
                 speaking={meeting.clientSpeaking}
+                reduceMotion={reduceMotion}
+                className={`min-h-[9rem] transition-[flex-grow] duration-300 ${clientActive ? 'flex-[1.35]' : 'flex-1'}`}
+              />
+              <BuddyTile
+                activity={meeting.activity}
+                agentPresent={meeting.agentPresent}
+                reconnecting={meeting.connection === 'reconnecting'}
+                quality={meeting.quality}
+                audioLevel={meeting.audioLevel}
+                speakerMuted={!meeting.speakerEnabled}
+                reduceMotion={reduceMotion}
+                className={`min-h-[12.5rem] transition-[flex-grow] duration-300 ${buddyActive ? 'flex-[1.35]' : 'flex-1'}`}
               />
             </div>
           </div>
 
-          {/* client tile: side-by-side row on desktop */}
-          <div className="hidden h-40 lg:block">
-            <ClientTile
-              name={view?.name ?? ''}
-              cameraStream={meeting.cameraStream}
-              micMuted={!meeting.micEnabled}
-              cameraEnabled={meeting.cameraEnabled}
-              speaking={meeting.clientSpeaking}
-            />
-          </div>
-
           {/* failure / fallback banners */}
-          {(agentTimedOut || error) && (
-            <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-              <p className="flex gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                {error ?? t('meeting.errors.agent_unavailable')}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setAgentTimedOut(false);
-                    setPhase('lobby');
-                  }}
-                  className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
-                >
-                  {t('meeting.fallback.retry')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPanelOpen(true);
-                    setPanelTab('chat');
-                  }}
-                  className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
-                >
-                  {t('meeting.fallback.useChat')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleRequestReview()}
-                  className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
-                >
-                  {t('meeting.fallback.humanReview')}
-                </button>
-                <Link
-                  to="/project-analysis"
-                  className="min-h-11 rounded-xl bg-white/15 px-3 py-2 text-xs font-medium hover:bg-white/25"
-                >
-                  {t('meeting.fallback.manualFlow')}
-                </Link>
-              </div>
-            </div>
-          )}
-
-          <MeetingControls
-            micEnabled={meeting.micEnabled}
-            cameraEnabled={meeting.cameraEnabled}
-            speakerEnabled={meeting.speakerEnabled}
-            panelOpen={panelOpen}
-            canSubmit={Boolean(proposal) && !finalized}
-            submitting={false}
-            onToggleMic={meeting.toggleMic}
-            onToggleCamera={meeting.toggleCamera}
-            onToggleSpeaker={meeting.toggleSpeaker}
-            onToggleChat={() => {
-              setPanelOpen((o) => !o || panelTab !== 'chat');
-              setPanelTab('chat');
-            }}
-            onToggleContext={() => {
-              setPanelOpen(true);
-              setPanelTab('details');
-            }}
-            onLeave={() => void leave()}
-            onEndAndSubmit={() => {
-              // Submission itself is finalized by Buddy after explicit
-              // confirmation — this prompts the client to say so out loud
-              // (or type it), it never submits on the client's behalf.
-              setPanelOpen(true);
-              setPanelTab('proposal');
-              meeting.addSystemMessage(t('meeting.system.askToSubmit'));
-              meeting.sendChat(t('meeting.system.submitPhrase'));
-            }}
-          />
+          {failureBanner}
         </div>
 
-        {/* right panel (desktop) / bottom sheet (mobile) */}
-        {panelOpen && (
-          <>
-            <aside className="hidden w-full max-w-sm shrink-0 flex-col overflow-hidden rounded-2xl bg-white text-gray-900 lg:flex">
-              {panelBody}
-            </aside>
-            <div className="fixed inset-x-0 bottom-0 z-40 flex max-h-[80vh] flex-col overflow-hidden rounded-t-2xl bg-white text-gray-900 pb-[env(safe-area-inset-bottom)] shadow-2xl lg:hidden">
-              <button
-                type="button"
-                onClick={() => setPanelOpen(false)}
-                aria-label={t('meeting.panel.close')}
-                className="absolute end-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+        {/* right-side drawer (desktop): the stage resizes instead of being hidden */}
+        <aside
+          aria-hidden={!panelOpen}
+          className={`hidden min-h-0 shrink-0 overflow-hidden pb-2 pe-4 transition-[width,opacity] duration-300 ease-out lg:block ${
+            panelOpen ? 'w-[23rem] opacity-100 xl:w-[25rem]' : 'w-0 opacity-0'
+          }`}
+        >
+          {panelOpen && isDesktop && (
+            <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white text-gray-900 shadow-2xl">
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {t('meeting.panel.label')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPanelOpen(false)}
+                  aria-label={t('meeting.panel.close')}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
               {panelBody}
             </div>
-          </>
-        )}
+          )}
+        </aside>
       </main>
+
+      <MeetingControls
+        micEnabled={meeting.micEnabled}
+        cameraEnabled={meeting.cameraEnabled}
+        speakerEnabled={meeting.speakerEnabled}
+        panelOpen={panelOpen}
+        canSubmit={Boolean(proposal) && !finalized}
+        submitting={false}
+        onToggleMic={meeting.toggleMic}
+        onToggleCamera={meeting.toggleCamera}
+        onToggleSpeaker={meeting.toggleSpeaker}
+        onToggleChat={() => {
+          setPanelOpen((o) => !o || panelTab !== 'chat');
+          setPanelTab('chat');
+        }}
+        onToggleContext={() => {
+          setPanelOpen(true);
+          setPanelTab('details');
+        }}
+        onLeave={() => void leave()}
+        onEndAndSubmit={() => {
+          // Submission itself is finalized by Buddy after explicit
+          // confirmation — this prompts the client to say so out loud
+          // (or type it), it never submits on the client's behalf.
+          setPanelOpen(true);
+          setPanelTab('proposal');
+          meeting.addSystemMessage(t('meeting.system.askToSubmit'));
+          meeting.sendChat(t('meeting.system.submitPhrase'));
+        }}
+      />
+
+      {/* tablet / mobile: full-height overlay with a clear close button */}
+      {panelOpen && !isDesktop && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('meeting.panel.label')}
+          className="fixed inset-0 z-50 flex flex-col bg-white text-gray-900 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+        >
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+            <p className="text-sm font-semibold text-gray-900">{t('meeting.panel.label')}</p>
+            <button
+              type="button"
+              onClick={() => setPanelOpen(false)}
+              aria-label={t('meeting.panel.close')}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+          {panelBody}
+        </div>
+      )}
     </div>
   );
 };
 
 // --- small building blocks ---------------------------------------------------
+
+/** True at the desktop breakpoint (>=1024px). Decides whether the side panel
+ * renders as the right-side drawer or the full-height overlay, so the panel
+ * exists exactly once in the DOM. */
+const useIsDesktop = (): boolean => {
+  const [isDesktop, setIsDesktop] = useState<boolean>(
+    () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px)').matches === true,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia?.('(min-width: 1024px)');
+    if (!mql) return;
+    const onChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    setIsDesktop(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+};
 
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="min-h-screen bg-gray-50 text-gray-900">
