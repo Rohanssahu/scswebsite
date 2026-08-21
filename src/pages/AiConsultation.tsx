@@ -290,6 +290,15 @@ const AiConsultation: React.FC = () => {
     }
   }, [micPublication, phase, addSystemMessage, t]);
 
+  // Device notices: the client is told BEFORE the meeting falls back to
+  // another input device, and told when no input device exists at all.
+  const { micNotice, clearMicNotice } = meeting;
+  useEffect(() => {
+    if (!micNotice) return;
+    addSystemMessage(t(`meeting.audioRecovery.notice.${micNotice}`));
+    clearMicNotice();
+  }, [micNotice, clearMicNotice, addSystemMessage, t]);
+
   // Agent-dispatch timeout: if Buddy never arrives, offer clear fallbacks.
   const [agentTimedOut, setAgentTimedOut] = useState(false);
   useEffect(() => {
@@ -578,9 +587,11 @@ const AiConsultation: React.FC = () => {
                 </button>
                 {/* why the button is disabled, announced as it changes */}
                 <p id="join-hint" aria-live="polite" className="mt-2 text-center text-xs text-gray-600">
-                  {blockReason
-                    ? t(`meeting.setup.blocked.${blockReason}`)
-                    : t('meeting.setup.readyToJoin')}
+                  {joining && meeting.joinStage !== 'idle'
+                    ? t(`meeting.joinStage.${meeting.joinStage}`)
+                    : blockReason
+                      ? t(`meeting.setup.blocked.${blockReason}`)
+                      : t('meeting.setup.readyToJoin')}
                 </p>
                 <p className="mt-1 text-center text-xs text-gray-500">{t('meeting.lobby.privacyNote')}</p>
               </div>
@@ -691,7 +702,10 @@ const AiConsultation: React.FC = () => {
     </>
   );
 
-  const clientActive = meeting.clientSpeaking && meeting.micEnabled;
+  // Emphasis follows the REAL publication: a client whose microphone is not
+  // being sent must never be drawn as the active speaker.
+  const micLive = meeting.micState === 'unmuted';
+  const clientActive = meeting.clientSpeaking && micLive;
   const buddyActive = meeting.activity === 'speaking' && meeting.connection !== 'reconnecting';
 
   const failureBanner = (agentTimedOut || error) && (
@@ -757,9 +771,19 @@ const AiConsultation: React.FC = () => {
 
       {/* screen-reader announcements for participant/connection changes */}
       <p aria-live="polite" className="sr-only">
-        {meeting.agentPresent ? t('meeting.system.buddyJoined') : t('meeting.states.connecting')}
+        {t(`meeting.joinStage.${meeting.joinStage}`)}
         {meeting.connection === 'reconnecting' ? ` ${t('meeting.states.reconnecting')}` : ''}
       </p>
+
+      {/* Staged join progress. "Connected" appears only once the room, the
+          local participant, the microphone publication and Buddy are all real
+          (deriveJoinStage) — never before. */}
+      {meeting.joinStage !== 'connected' && meeting.joinStage !== 'no_microphone' && (
+        <p className="shrink-0 px-3 pb-1 text-center text-xs text-white/70 sm:px-4">
+          <Loader2 className="me-1.5 inline h-3 w-3 animate-spin" aria-hidden="true" />
+          {t(`meeting.joinStage.${meeting.joinStage}`)}
+        </p>
+      )}
 
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {/* meeting stage: client left, Buddy right */}
@@ -769,7 +793,7 @@ const AiConsultation: React.FC = () => {
               <ClientTile
                 name={view?.name ?? ''}
                 cameraStream={meeting.cameraStream}
-                micMuted={!meeting.micEnabled}
+                micMuted={!micLive}
                 cameraEnabled={meeting.cameraEnabled}
                 speaking={meeting.clientSpeaking}
                 reduceMotion={reduceMotion}
@@ -793,7 +817,10 @@ const AiConsultation: React.FC = () => {
             <AudioRecoveryBanner
               status={micPublication}
               retrying={meeting.retryingMic}
+              microphones={meeting.microphones}
               onRetry={() => void meeting.retryMicrophone()}
+              onSelectMicrophone={(deviceId) => void meeting.switchMicrophone(deviceId)}
+              onRefreshMicrophones={() => void meeting.refreshMicrophones()}
               onOpenChat={() => {
                 setPanelOpen(true);
                 setPanelTab('chat');
@@ -834,7 +861,7 @@ const AiConsultation: React.FC = () => {
       </main>
 
       <MeetingControls
-        micEnabled={meeting.micEnabled}
+        micState={meeting.micState}
         cameraEnabled={meeting.cameraEnabled}
         speakerEnabled={meeting.speakerEnabled}
         panelOpen={panelOpen}

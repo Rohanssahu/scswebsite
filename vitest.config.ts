@@ -4,7 +4,12 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}', 'supabase/functions/**/*.test.ts', 'agent/src/**/*.test.ts'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'supabase/functions/**/*.test.ts',
+      'supabase/tests/**/*.test.ts',
+      'agent/src/**/*.test.ts',
+    ],
   },
   resolve: {
     alias: {

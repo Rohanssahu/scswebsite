@@ -14,12 +14,16 @@ import {
   type ConnectionQuality,
   type MeetingConnectionState,
   type MeetingJoinResponse,
+  type MeetingJoinStage,
+  type MicControlState,
+  type MicPublicationStatus,
 } from '@/services/consultationCore';
 import {
   MeetingSession,
   type MeetingConnectOptions,
-  type MicPublicationStatus,
+  type MicNotice,
 } from '@/services/meetingSession';
+import type { DeviceOption } from '@/services/deviceCheck';
 import type { BuddyStateView } from '@/services/voiceSessionCore';
 
 export interface ConsultationMeetingApi {
@@ -39,6 +43,14 @@ export interface ConsultationMeetingApi {
   cameraStream: MediaStream | null;
   /** Whether the local microphone track is really published (not assumed). */
   micPublication: MicPublicationStatus;
+  /** What the mic button shows — derived from the real publication/track. */
+  micState: MicControlState;
+  /** Staged join progress; only 'connected' means two-way voice. */
+  joinStage: MeetingJoinStage;
+  /** Latest non-identifying device notice ('device_changed' | 'no_device'). */
+  micNotice: MicNotice | null;
+  /** Input devices offered by "Choose another microphone" (memory only). */
+  microphones: DeviceOption[];
   retryingMic: boolean;
   connect: (join: MeetingJoinResponse, options: MeetingConnectOptions) => Promise<void>;
   toggleMic: () => void;
@@ -48,6 +60,11 @@ export interface ConsultationMeetingApi {
   addSystemMessage: (text: string) => void;
   /** Republishes the tested microphone after a publication failure. */
   retryMicrophone: () => Promise<MicPublicationStatus>;
+  /** Publishes from a different input device, in the same room. */
+  switchMicrophone: (deviceId: string | null) => Promise<MicPublicationStatus>;
+  /** Re-enumerates input devices for the picker. */
+  refreshMicrophones: () => Promise<void>;
+  clearMicNotice: () => void;
   leave: () => Promise<void>;
 }
 
@@ -70,6 +87,10 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
   const [buddySpeaking, setBuddySpeaking] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [micPublication, setMicPublication] = useState<MicPublicationStatus>('unknown');
+  const [micState, setMicState] = useState<MicControlState>('idle');
+  const [joinStage, setJoinStage] = useState<MeetingJoinStage>('idle');
+  const [micNotice, setMicNotice] = useState<MicNotice | null>(null);
+  const [microphones, setMicrophones] = useState<DeviceOption[]>([]);
   const [retryingMic, setRetryingMic] = useState(false);
 
   const addSystemMessage = useCallback((text: string) => {
@@ -103,6 +124,14 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
       onClientSpeaking: setClientSpeaking,
       onBuddySpeaking: setBuddySpeaking,
       onMicPublication: setMicPublication,
+      // The microphone button follows LiveKit's real publication state, so it
+      // can never show "unmuted" while nothing is actually being published.
+      onMicState: (state) => {
+        setMicState(state);
+        setMicEnabled(state === 'unmuted' || state === 'publishing');
+      },
+      onJoinStage: setJoinStage,
+      onMicNotice: setMicNotice,
     });
     sessionRef.current = session;
     return session;
@@ -118,10 +147,17 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     [ensureSession],
   );
 
+  /**
+   * Mute/unmute the REAL publication. The optimistic flip keeps the button
+   * responsive, but onMicState (fed by LiveKit) is the authority and corrects
+   * it — including "unmute recreated a publication that had gone away".
+   */
   const toggleMic = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session) return;
     setMicEnabled((prev) => {
       const next = !prev;
-      void sessionRef.current?.setMicEnabled(next);
+      void session.setMicEnabled(next);
       return next;
     });
   }, []);
@@ -158,12 +194,33 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     setRetryingMic(true);
     try {
       const status = await session.retryMicrophone();
-      if (status === 'published') setMicEnabled(true);
+      setMicrophones(session.microphoneOptions);
       return status;
     } finally {
       setRetryingMic(false);
     }
   }, []);
+
+  /** Same room, same Buddy job — only the input device changes. */
+  const switchMicrophone = useCallback(async (deviceId: string | null): Promise<MicPublicationStatus> => {
+    const session = sessionRef.current;
+    if (!session) return 'failed';
+    setRetryingMic(true);
+    try {
+      setMicNotice(null);
+      return await session.switchMicrophone(deviceId);
+    } finally {
+      setRetryingMic(false);
+    }
+  }, []);
+
+  const refreshMicrophones = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session) return;
+    setMicrophones(await session.refreshMicrophones());
+  }, []);
+
+  const clearMicNotice = useCallback(() => setMicNotice(null), []);
 
   const leave = useCallback(async () => {
     await sessionRef.current?.end();
@@ -193,6 +250,10 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     buddySpeaking,
     cameraStream,
     micPublication,
+    micState,
+    joinStage,
+    micNotice,
+    microphones,
     retryingMic,
     connect,
     toggleMic,
@@ -201,6 +262,9 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     sendChat,
     addSystemMessage,
     retryMicrophone,
+    switchMicrophone,
+    refreshMicrophones,
+    clearMicNotice,
     leave,
   };
 }

@@ -1353,7 +1353,10 @@
       "share": "Share screen",
       "comingSoon": "Share (soon)",
       "leave": "Leave",
-      "endSubmit": "End & submit"
+      "endSubmit": "End & submit",
+      "micPublishing": "Connecting your microphone…",
+      "micFailed": "Your microphone is not being sent — retry it",
+      "micDisconnected": "Your microphone was disconnected — reconnect it"
     },
     "panel": {
       "label": "Meeting side panel",
@@ -1575,7 +1578,16 @@
       "retryMic": "Retry microphone",
       "audioSettings": "Open audio settings",
       "systemNotice": "Your microphone is not being sent. You can retry it, or type instead — Buddy reads text chat.",
-      "restored": "Your microphone is live again."
+      "restored": "Your microphone is live again.",
+      "chooseMic": "Choose another microphone",
+      "micPickerLabel": "Microphone",
+      "micPickerPlaceholder": "Select a microphone",
+      "noDevices": "No microphone could be listed. Reconnect your device, then retry.",
+      "notice": {
+        "device_changed": "The microphone you tested is no longer available, so the meeting is using your default microphone instead.",
+        "device_missing": "The microphone you tested is no longer available.",
+        "no_device": "No microphone was found. You can keep going in text chat — Buddy reads every message."
+      }
     },
     "access": {
       "title": "Open your consultation",
@@ -1681,6 +1693,15 @@
       "stepMode": "Meeting type",
       "tabAiDesc": "Buddy joins instantly — no waiting for a callback.",
       "tabHumanDesc": "Pick a slot and an SCS consultant calls you back."
+    },
+    "joinStage": {
+      "idle": "Not connected",
+      "connecting_room": "Connecting to the meeting room…",
+      "preparing_microphone": "Preparing your microphone…",
+      "publishing_microphone": "Publishing your microphone…",
+      "no_microphone": "Your microphone is not connected to the meeting",
+      "waiting_for_buddy": "Waiting for Buddy to join…",
+      "connected": "Connected"
     }
   }
 }

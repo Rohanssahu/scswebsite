@@ -131,6 +131,132 @@ export function deriveBuddyActivity(input: ActivityInput): BuddyActivity {
 
 export type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'lost' | 'unknown';
 
+// --- microphone publication + staged join ------------------------------------------------
+
+/**
+ * Real state of the LOCAL MICROPHONE PUBLICATION on the room. Every value is
+ * read back from LiveKit (`getTrackPublication(Track.Source.Microphone)`),
+ * never inferred from a React boolean.
+ *
+ *   'unknown'    — nothing published yet, or the client chose to join muted
+ *   'publishing' — an enable/publish attempt is in flight
+ *   'published'  — a live local audio track exists on the room (muted or not)
+ *   'failed'     — the attempt finished without producing a live track
+ *   'lost'       — it was published, then the device or track went away
+ */
+export type MicPublicationStatus = 'unknown' | 'publishing' | 'published' | 'failed' | 'lost';
+
+/** Publication states that mean the client is NOT being heard. */
+export type MicFailureStatus = Extract<MicPublicationStatus, 'failed' | 'lost'>;
+
+export const isMicPublicationFailure = (status: MicPublicationStatus): status is MicFailureStatus =>
+  status === 'failed' || status === 'lost';
+
+/**
+ * What the microphone button shows. Derived from the publication plus the
+ * publication's OWN mute flag — a React boolean alone can (and did) claim
+ * "unmuted" while nothing was ever published.
+ */
+export type MicControlState = 'idle' | 'publishing' | 'unmuted' | 'muted' | 'failed' | 'disconnected';
+
+export interface MicStateInput {
+  publication: MicPublicationStatus;
+  /** LiveKit's own mute flag for the publication, not the button's state. */
+  muted: boolean;
+}
+
+export function deriveMicControlState(input: MicStateInput): MicControlState {
+  switch (input.publication) {
+    case 'publishing':
+      return 'publishing';
+    case 'failed':
+      return 'failed';
+    case 'lost':
+      return 'disconnected';
+    case 'published':
+      return input.muted ? 'muted' : 'unmuted';
+    default:
+      return input.muted ? 'muted' : 'idle';
+  }
+}
+
+/**
+ * Staged join progress. 'connected' is the ONLY stage that claims two-way
+ * voice, and it requires all four facts below to be true at once.
+ */
+export type MeetingJoinStage =
+  | 'idle'
+  | 'connecting_room'
+  | 'preparing_microphone'
+  | 'publishing_microphone'
+  | 'no_microphone'
+  | 'waiting_for_buddy'
+  | 'connected';
+
+export interface JoinStageInput {
+  /** room.connect() resolved. */
+  roomConnected: boolean;
+  /** room.localParticipant exists. */
+  localParticipant: boolean;
+  micPublication: MicPublicationStatus;
+  /** The client explicitly chose to join muted. */
+  micIntentMuted: boolean;
+  /** Buddy's remote participant is in the room. */
+  agentPresent: boolean;
+}
+
+/**
+ * THE join gate for the live meeting. "Connected" is never shown while the
+ * microphone is still being prepared, has failed, or Buddy has not joined —
+ * the failure mode this exists to prevent is a meeting that looks connected
+ * while the client publishes nothing and is never heard.
+ */
+export function deriveJoinStage(input: JoinStageInput): MeetingJoinStage {
+  if (!input.roomConnected || !input.localParticipant) return 'connecting_room';
+  if (input.micPublication === 'publishing') return 'publishing_microphone';
+  if (isMicPublicationFailure(input.micPublication)) return 'no_microphone';
+  // 'unknown' is only acceptable when muting was the client's own decision.
+  if (input.micPublication === 'unknown' && !input.micIntentMuted) return 'preparing_microphone';
+  if (!input.agentPresent) return 'waiting_for_buddy';
+  return 'connected';
+}
+
+// --- microphone diagnostics --------------------------------------------------------------
+
+export interface MicDiagnosticInput {
+  event: string;
+  roomConnected: boolean;
+  publication: MicPublicationStatus;
+  trackSource?: string | null;
+  trackKind?: string | null;
+  muted?: boolean | null;
+  ended?: boolean | null;
+  publicationSid?: string | null;
+}
+
+/** LiveKit track SIDs are opaque server ids ("TR_..."). Anything else — a
+ * label, a device id, a token — must never reach a log line. */
+const SAFE_SID = /^TR_[A-Za-z0-9]{1,40}$/;
+
+/**
+ * Builds the ONLY shape a microphone diagnostic may take: an allowlist of
+ * booleans and fixed enums. Device labels, device ids, tokens, participant
+ * details and audio are structurally impossible to pass through it.
+ */
+export function buildMicDiagnostic(input: MicDiagnosticInput): Record<string, string | boolean> {
+  const payload: Record<string, string | boolean> = {
+    event: input.event.slice(0, 40),
+    roomConnected: input.roomConnected,
+    micPublication: input.publication,
+  };
+  if (input.trackSource) payload.trackSource = String(input.trackSource).slice(0, 20);
+  if (input.trackKind) payload.trackKind = String(input.trackKind).slice(0, 20);
+  if (typeof input.muted === 'boolean') payload.muted = input.muted;
+  if (typeof input.ended === 'boolean') payload.trackEnded = input.ended;
+  if (input.publicationSid && SAFE_SID.test(input.publicationSid)) payload.publicationSid = input.publicationSid;
+  return payload;
+}
+
 // --- chat model -------------------------------------------------------------------------
 
 export type ChatSender = 'client' | 'buddy' | 'system';

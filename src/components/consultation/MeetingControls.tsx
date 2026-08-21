@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Mic,
   MicOff,
+  Loader2,
   MonitorUp,
   Send,
   Video,
@@ -14,9 +15,15 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { MicControlState } from '@/services/consultationCore';
 
 interface MeetingControlsProps {
-  micEnabled: boolean;
+  /**
+   * The microphone's REAL state, derived from the LiveKit publication and its
+   * own mute flag — not a local React boolean. 'failed'/'disconnected' means
+   * nothing is being sent, and the button must not pretend otherwise.
+   */
+  micState: MicControlState;
   cameraEnabled: boolean;
   speakerEnabled: boolean;
   panelOpen: boolean;
@@ -37,8 +44,21 @@ const baseBtn =
 const onCls = `${baseBtn} bg-white/10 text-white hover:bg-white/20`;
 /** destructive / "off" state (mic muted, camera off, Buddy muted) */
 const offCls = `${baseBtn} bg-rose-500/90 text-white hover:bg-rose-500`;
+/** an operation is in flight (microphone publishing) */
+const pendingCls = `${baseBtn} bg-amber-500/25 text-amber-50 ring-1 ring-inset ring-amber-400/60`;
 /** active toggle (panel open) */
 const activeCls = `${baseBtn} bg-pink-500/25 text-pink-50 ring-1 ring-inset ring-pink-400/60 hover:bg-pink-500/35`;
+
+/** One label per REAL microphone state — "Publishing", "Muted", "Not being
+ * sent" and "Microphone disconnected" are distinct things to a client. */
+const MIC_LABEL_KEY: Record<MicControlState, string> = {
+  idle: 'meeting.controls.unmute',
+  publishing: 'meeting.controls.micPublishing',
+  unmuted: 'meeting.controls.mute',
+  muted: 'meeting.controls.unmute',
+  failed: 'meeting.controls.micFailed',
+  disconnected: 'meeting.controls.micDisconnected',
+};
 
 /** One icon control with an accessible label and a tooltip. */
 const ControlButton: React.FC<{
@@ -69,7 +89,7 @@ const ControlButton: React.FC<{
 /** Bottom meeting control dock. Screen share is a disabled placeholder: it is
  * intentionally not wired up in this step. */
 const MeetingControls: React.FC<MeetingControlsProps> = ({
-  micEnabled,
+  micState,
   cameraEnabled,
   speakerEnabled,
   panelOpen,
@@ -84,6 +104,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
   onEndAndSubmit,
 }) => {
   const { t } = useTranslation();
+  const micClass = micState === 'unmuted' ? onCls : micState === 'publishing' ? pendingCls : offCls;
 
   return (
     <div
@@ -94,12 +115,19 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({
       {/* main controls — centered on desktop, horizontally scrollable on mobile */}
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center">
         <ControlButton
-          label={micEnabled ? t('meeting.controls.mute') : t('meeting.controls.unmute')}
-          className={micEnabled ? onCls : offCls}
+          label={MIC_LABEL_KEY[micState] ? t(MIC_LABEL_KEY[micState]) : t('meeting.controls.mute')}
+          className={micClass}
           onClick={onToggleMic}
-          pressed={!micEnabled}
+          disabled={micState === 'publishing'}
+          pressed={micState !== 'unmuted'}
         >
-          {micEnabled ? <Mic className="h-5 w-5" aria-hidden="true" /> : <MicOff className="h-5 w-5" aria-hidden="true" />}
+          {micState === 'publishing' ? (
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          ) : micState === 'unmuted' ? (
+            <Mic className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <MicOff className="h-5 w-5" aria-hidden="true" />
+          )}
         </ControlButton>
 
         <ControlButton

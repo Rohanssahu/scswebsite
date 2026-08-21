@@ -13,8 +13,9 @@ Browser (GitHub Pages, Vite/React)
   │ 2. WebRTC ↔ LiveKit Cloud room
   ▼
 LiveKit Cloud ── dispatches ──► agent/ worker (Node, LiveKit Agents)
-                                 │ Silero VAD → OpenAI STT (only remaining
-                                 │ OpenAI dependency) → Gemini LLM → ElevenLabs TTS
+                                 │ Silero VAD → LiveKit Inference STT
+                                 │ (deepgram/flux-general-en) → Gemini LLM
+                                 │ → ElevenLabs TTS
                                  │ strict tools + deterministic estimate engine
                                  ▼
                      voice-lead (Supabase Edge Function, shared secret)
@@ -35,7 +36,7 @@ Secret placement (never violate):
 | `VOICE_AGENT_SECRET` | Supabase function secrets **and** agent worker env (same value) | browser |
 | `RESEND_API_KEY`, `LEAD_ADMIN_EMAIL`, `EMAIL_FROM_ADDRESS`, `PUBLIC_SITE_URL` | Supabase function secrets | browser |
 | `GOOGLE_API_KEY` (LLM reasoning) | Agent worker env / LiveKit Cloud agent secrets **and** the `ai-estimate` Supabase function secret | browser |
-| `OPENAI_API_KEY` (STT only — see §14) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
+| `OPENAI_API_KEY` (optional — only if `BUDDY_STT_PROVIDER=openai` or `BUDDY_LLM_PROVIDER=openai`; see §1b) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
 | `ELEVENLABS_API_KEY` (+ voice id, model, limits) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
 
 ## 1a. Google Gemini API key (LLM reasoning — Buddy + Project Analysis)
@@ -58,16 +59,44 @@ reviewed for your business, since paid-tier usage is not used for model
 training by default. Set the same `GOOGLE_API_KEY` either way — only the
 underlying account's billing/tier changes.
 
-## 1b. OpenAI API key (STT only — Buddy's voice pipeline)
+## 1b. Speech-to-text — LiveKit Inference (no extra key)
 
-Buddy's LLM reasoning runs on Gemini (§1a). OpenAI remains **only** as the
-speech-to-text provider for live microphone conversations — see §14 for why
-a Gemini-only STT replacement isn't safe today. Buddy's text-chat mode and
-Project Analysis need no OpenAI key at all.
+Buddy's LLM reasoning runs on Gemini (§1a); speech-to-text runs on **LiveKit
+Inference**, which is billed through your LiveKit project. There is **no third
+speech vendor and no extra API key**: the `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET`
+pair from §2 is what authenticates it.
+
+```
+BUDDY_STT_PROVIDER=livekit                 # default
+BUDDY_STT_MODEL=deepgram/flux-general-en   # optional; this is the default
+```
+
+- Model `deepgram/flux-general-en` — Deepgram Flux, the English conversational
+  model, running server-side in LiveKit Cloud. Language is pinned to `en`
+  (Buddy's voice is English-only), so accented English is never transcribed as
+  another language.
+- Flux reports **end-of-turn server-side**, which complements the existing
+  Silero VAD and turn detector (the §10 pacing values are unchanged).
+- Accepted `BUDDY_STT_MODEL` values: `deepgram/flux-general-en` (default),
+  `deepgram/flux-general`, `deepgram/flux-general-multi`. Any other value — or
+  any other `BUDDY_STT_PROVIDER` — fails at startup rather than quietly
+  transcribing with something you did not choose.
+- Enable **Inference** for your project in LiveKit Cloud (Settings → Inference)
+  and set a spend limit there for cost control.
+
+**Optional OpenAI fallback.** If you have OpenAI API billing and prefer it:
 
 1. Create a key at <https://platform.openai.com/api-keys> (scope: default).
 2. Set a monthly budget limit in the OpenAI billing settings (cost control).
-3. Put it ONLY in the agent worker environment as `OPENAI_API_KEY`.
+3. Put it ONLY in the agent worker environment as `OPENAI_API_KEY`, and set
+   `BUDDY_STT_PROVIDER=openai`.
+
+It is never selected automatically — an exhausted OpenAI quota can therefore
+never silently take Buddy's voice down.
+
+**`BUDDY_STT_PROVIDER=gemini` is rejected** at startup with an explanatory
+error: a Gemini API key is not a speech credential (see §14). `GOOGLE_API_KEY`
+is still required for the Gemini LLM.
 
 ## 2. LiveKit Cloud project
 
@@ -236,8 +265,9 @@ Ensure the GitHub Pages origin (e.g. `https://rohanssahu.github.io`) is in
 | Usage logging | `voice_session_events` type `usage` (token counts only, no prompt content) | on |
 
 Also set provider-side budgets: Gemini usage/billing alerts (AI Studio /
-Cloud Console), OpenAI monthly limit (STT only), ElevenLabs character quota,
-LiveKit Cloud concurrency limits.
+Cloud Console), LiveKit Cloud Inference spend limit (STT) and concurrency
+limits, ElevenLabs character quota, and an OpenAI monthly limit only if you
+opted into `BUDDY_STT_PROVIDER=openai`.
 
 ## 12. Key rotation
 
@@ -250,8 +280,9 @@ Rotate one key at a time; nothing else needs a rebuild:
 - **Gemini**: create a new `GOOGLE_API_KEY` in AI Studio → update the agent
   worker env/secrets AND the `ai-estimate` Supabase secret → redeploy the
   agent and `ai-estimate` → revoke the old key.
-- **OpenAI (STT) / ElevenLabs**: create new key → update agent secrets →
-  redeploy agent → revoke old key.
+- **ElevenLabs (and OpenAI, if you opted into it)**: create new key → update
+  agent secrets → redeploy agent → revoke old key. Rotating the LiveKit pair
+  above also rotates what STT authenticates with.
 - **VOICE_AGENT_SECRET**: generate new value → set in BOTH Supabase secrets
   and agent secrets → redeploy `voice-lead` and the agent together.
 - **Resend / Turnstile**: update the Supabase secret → redeploy the affected
@@ -265,7 +296,8 @@ The voice feature is additive; the previous site behaviour is fully preserved.
   `supabase secrets set VOICE_AGENT_ENABLED=false` — the button reports
   “unavailable” and Buddy falls back to the existing manual analysis flow.
 - **Stop spend immediately:** also pause/delete the LiveKit Cloud agent
-  (`lk agent delete`) and revoke the OpenAI/ElevenLabs keys.
+  (`lk agent delete`) — that stops LiveKit Inference STT spend with it — and
+  revoke the ElevenLabs key (plus OpenAI, if you opted into it).
 - **Frontend rollback:** `git revert` the voice commits and `npm run deploy`;
   the manual flow and all existing pages are untouched by the feature.
 - **Database:** migrations are additive (new tables + one new function).
@@ -277,11 +309,14 @@ The voice feature is additive; the previous site behaviour is fully preserved.
 
 ## 14. Known limitations (MVP)
 
-- **OpenAI is not fully removed.** Gemini is the active LLM for both Buddy's
-  reasoning and Project Analysis (`ai-estimate`). OpenAI remains **only** as
-  Buddy's speech-to-text provider for live microphone conversations
-  (`gpt-4o-transcribe` via `@livekit/agents-plugin-openai`, see
-  `agent/src/providers/stt.ts`). This was investigated, not assumed:
+- **Speech-to-text needs no third-party key.** Gemini is the active LLM for
+  both Buddy's reasoning and Project Analysis (`ai-estimate`); STT is LiveKit
+  Inference (`deepgram/flux-general-en`), billed through the LiveKit project and
+  authenticated with the worker's own `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`
+  (see `agent/src/providers/stt.ts`). OpenAI STT remains only as an explicit
+  opt-in for owners with OpenAI billing, so an exhausted OpenAI quota cannot
+  take the voice down. **Gemini is not a valid STT provider** — investigated,
+  not assumed:
   - The LiveKit Google plugin's STT class is backed by Google Cloud
     Speech-to-Text, which needs `GOOGLE_APPLICATION_CREDENTIALS` (a GCP
     service account) — not the Gemini Developer API key used everywhere
@@ -293,11 +328,11 @@ The voice feature is additive; the previous site behaviour is fully preserved.
     tool-calling on realtime models. Buddy depends on strict multi-step
     tool calling, so this is not a safe drop-in today.
   - Buddy's **text-chat mode** and **Project Analysis** work fully on
-    Gemini with no OpenAI key required. Only the **microphone/voice**
-    conversation still needs `OPENAI_API_KEY`.
-  - `BUDDY_STT_PROVIDER` exists as a configuration seam for a future
-    Gemini STT integration, but setting it to `gemini` today fails clearly
-    rather than silently using a broken or insecure path.
+    Gemini with no OpenAI key required, and so does the **microphone/voice**
+    conversation now that STT runs on LiveKit Inference.
+  - `BUDDY_STT_PROVIDER=gemini` therefore fails at startup with that
+    explanation, rather than silently using a broken or insecure path.
+    `GOOGLE_API_KEY` stays required for the Gemini LLM.
 - Emails are plain text (no HTML template) by design for deliverability.
 - The estimate is intentionally range-based and always requires human review;
   there is no final-quotation path in this phase.

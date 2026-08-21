@@ -149,6 +149,17 @@ Agent worker env (LiveKit Cloud agent secrets / `agent/.env`):
 |---|---|
 | `BUDDY_CONSULTATION_URL` | `https://<ref>.supabase.co/functions/v1/consultation-agent` |
 | `VOICE_AGENT_SECRET` | same value as the Supabase secret |
+| `BUDDY_STT_PROVIDER` | `livekit` (default) — LiveKit Inference STT; needs no speech key beyond `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET` |
+| `BUDDY_STT_MODEL` | optional; `deepgram/flux-general-en` (default, English conversational) |
+
+Speech-to-text runs on **LiveKit Inference** and is billed through the LiveKit
+project — there is no Deepgram, OpenAI or Google Cloud speech credential to set.
+`BUDDY_STT_PROVIDER=openai` stays available as an explicit opt-in for owners with
+OpenAI API billing; `gemini` is rejected at startup (a Gemini API key is not a
+speech credential). Enable **Inference** in LiveKit Cloud (Settings → Inference)
+and set a spend limit there. Consultation meetings and the general website voice
+flow use the identical STT configuration. See
+`docs/BUDDY_VOICE_AGENT_SETUP.md` §1b.
 
 Frontend: **no new variables.** It reuses `VITE_SUPABASE_URL`,
 `VITE_SUPABASE_ANON_KEY` and `VITE_TURNSTILE_SITE_KEY`.
@@ -171,7 +182,12 @@ npx supabase functions deploy consultation-meeting --no-verify-jwt
 npx supabase functions deploy consultation-agent  --no-verify-jwt
 
 # 4) Agent worker (adds consultation mode; the existing voice flow is unchanged)
-cd agent && npm run build && npm start        # or redeploy on LiveKit Cloud
+#    STT is LiveKit Inference: put BUDDY_STT_PROVIDER=livekit (and optionally
+#    BUDDY_STT_MODEL=deepgram/flux-general-en) in agent/.env, then push the
+#    secrets and redeploy — no speech-provider key is involved.
+cd agent && npm run build && npm start                # local run
+lk agent update-secrets --secrets-file .env           # LiveKit Cloud secrets
+lk agent deploy                                       # LiveKit Cloud deploy
 
 # 5) Frontend
 npm run build

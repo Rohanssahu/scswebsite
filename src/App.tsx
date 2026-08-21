@@ -32,8 +32,17 @@ import ScheduleCall from "./pages/ScheduleCall";
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
 // Lazy-loaded: keeps livekit-client out of the main bundle.
 const AiConsultation = lazy(() => import("./pages/AiConsultation"));
+// Lazy-loaded: the owner dashboard is staff-only, so no visitor downloads its
+// screens. The tiny boundary/guard stay eager because the boundary is what
+// provides the Suspense the lazy screens resolve inside.
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
 import VirtualGuide from "./components/virtual-guide/VirtualGuide";
 import ScrollButtons from "./components/ScrollButtons";
+import AdminBoundary from "./components/admin/AdminBoundary";
+import AdminGuard from "./components/admin/AdminGuard";
+import { isAdminPath } from "./components/admin/adminSeo";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +63,16 @@ const isConsultationPath = (pathname: string) =>
 const GlobalVirtualGuide = () => {
   const { pathname } = useLocation();
   if (isConsultationPath(pathname)) return null;
+  // The owner dashboard is an internal tool: no public Buddy widget there.
+  if (isAdminPath(pathname)) return null;
   return <VirtualGuide />;
+};
+
+// Floating page controls (scroll + WhatsApp) are public-site chrome too.
+const GlobalScrollButtons = () => {
+  const { pathname } = useLocation();
+  if (isAdminPath(pathname)) return null;
+  return <ScrollButtons />;
 };
 
 const App = () => {
@@ -68,7 +86,7 @@ const App = () => {
           <LanguageAnnouncer />
           <RoutesComponent />
           <GlobalVirtualGuide />
-          <ScrollButtons />
+          <GlobalScrollButtons />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
@@ -119,6 +137,28 @@ const RoutesComponent = () => {
           </Suspense>
         }
       />
+      {/* Owner dashboard. One layout route keeps a single session check alive
+          across /admin navigation; AdminGuard renders children only once the
+          session AND the admin_users membership check have both passed. */}
+      <Route path="/admin" element={<AdminBoundary />}>
+        <Route
+          index
+          element={
+            <AdminGuard>
+              <AdminDashboard />
+            </AdminGuard>
+          }
+        />
+        <Route path="login" element={<AdminLogin />} />
+        <Route
+          path="leads/:id"
+          element={
+            <AdminGuard>
+              <AdminLeadDetail />
+            </AdminGuard>
+          }
+        />
+      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
