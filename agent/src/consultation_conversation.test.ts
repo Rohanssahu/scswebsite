@@ -16,6 +16,7 @@ import {
   CONSULTATION_ENDPOINTING_MIN_DELAY_LOW_MS,
   CONSULTATION_LANGUAGE,
   CONSULTATION_SILENCE_REMINDER_MS,
+  LLM_MAX_RETRY,
   CONSULTATION_VAD_MIN_SILENCE_HIGH_MS,
   CONSULTATION_VAD_MIN_SILENCE_LOW_MS,
   VAD_ACTIVATION_THRESHOLD,
@@ -24,32 +25,58 @@ import {
   VAD_MIN_SPEECH_MS,
   loadConsultationTurnTaking,
   loadConsultationVoiceSettings,
+  loadLlmConnOptions,
 } from './config.js';
 import { createGreetingGate } from './greeting.js';
 import { loadKnowledge } from './knowledge.js';
-import { OPENING_REPLY_EXISTING, OPENING_REPLY_NEW, OPENING_REPLY_UNCLEAR } from './opening.js';
 import {
-  CONSULTATION_GREETING,
-  CONSULTATION_GREETING_SENTENCES,
-  CONSULTATION_GREETING_SPOKEN,
+  OPENING_PURPOSE,
+  OPENING_REPLY_EXISTING,
+  OPENING_REPLY_NEW,
+  OPENING_REPLY_UNCLEAR,
+  PROJECT_TYPE_QUESTION,
+  WELLBEING_ACK_NEGATIVE,
+  WELLBEING_ACK_NEUTRAL,
+  WELLBEING_ACK_POSITIVE,
+  WELLBEING_ACK_RECIPROCAL,
+} from './opening.js';
+import {
+  LLM_RECOVERY_TEXT,
+  LLM_UNAVAILABLE_TEXT,
+  STT_UNAVAILABLE_TEXT,
   buildConsultationPrompt,
+  clientFirstName,
+  consultationGreeting,
+  consultationGreetingSentences,
+  consultationGreetingSpoken,
 } from './prompts.js';
 import { SILENCE_REMINDER_TEXT } from './silence.js';
 import { canSpeak, type SessionStateView } from './session_lifecycle.js';
 
 const EXPECTED_GREETING =
-  'Hello, welcome to SCS Softwares. I’m Buddy, your AI project consultant. ' +
-  'I’m here to understand your requirements and help you plan the right solution. ' +
-  'Are you looking to build a new project, or do you already have an existing project ' +
-  'that needs improvement or fixing?';
+  'Hello Kunal, welcome to SCS Softwares. I’m Buddy, your AI project consultant. ' +
+  'How are you today?';
+
+const EXPECTED_GREETING_NO_NAME =
+  'Hello, welcome to SCS Softwares. I’m Buddy, your AI project consultant. How are you today?';
 
 /** Everything Buddy can utter in a consultation before the LLM takes over. */
 const SCRIPTED_LINES = [
-  CONSULTATION_GREETING,
+  consultationGreeting('Kunal'),
+  consultationGreeting(''),
+  WELLBEING_ACK_POSITIVE,
+  WELLBEING_ACK_NEGATIVE,
+  WELLBEING_ACK_NEUTRAL,
+  WELLBEING_ACK_RECIPROCAL,
+  OPENING_PURPOSE,
+  PROJECT_TYPE_QUESTION,
   OPENING_REPLY_NEW,
   OPENING_REPLY_EXISTING,
   OPENING_REPLY_UNCLEAR,
   SILENCE_REMINDER_TEXT,
+  LLM_RECOVERY_TEXT,
+  LLM_UNAVAILABLE_TEXT,
+  STT_UNAVAILABLE_TEXT,
 ];
 
 const fakeSession = (over: Partial<{ started: boolean; closing: boolean; paused: boolean }> = {}): SessionStateView => ({
@@ -63,37 +90,63 @@ const fakeSession = (over: Partial<{ started: boolean; closing: boolean; paused:
 // ---------------------------------------------------------------------------
 
 describe('consultation greeting', () => {
-  it('is exactly the approved opening text', () => {
-    expect(CONSULTATION_GREETING).toBe(EXPECTED_GREETING);
+  it('is exactly the approved opening text, and greets the client by name', () => {
+    expect(consultationGreeting('Kunal')).toBe(EXPECTED_GREETING);
+    expect(consultationGreeting('Kunal Sharma')).toBe(EXPECTED_GREETING);
+  });
+
+  it('falls back to a nameless welcome rather than saying anything odd', () => {
+    for (const name of ['', '   ', undefined, null, '!!', 'A', '7', '\u0645\u062d\u0645\u062f']) {
+      expect(consultationGreeting(name), JSON.stringify(name)).toBe(EXPECTED_GREETING_NO_NAME);
+    }
+  });
+
+  it('sanitizes the stored name instead of speaking it verbatim', () => {
+    expect(clientFirstName('kunal')).toBe('Kunal');
+    expect(clientFirstName('  josé  ')).toBe('Jose');
+    expect(clientFirstName("O'Brien family")).toBe("O'Brien");
+    expect(clientFirstName('Kunal <script>alert(1)</script>')).toBe('Kunal');
+    expect(clientFirstName('Averyveryverylongsinglenamethatkeepsgoing')).toHaveLength(24);
+    expect(clientFirstName('123')).toBe('');
   });
 
   it('introduces Buddy as an AI consultant, not a human employee', () => {
-    expect(CONSULTATION_GREETING).toContain('AI project consultant');
+    expect(consultationGreeting('Kunal')).toContain('AI project consultant');
   });
 
-  it('asks new project versus existing project as its one question', () => {
-    expect(CONSULTATION_GREETING).toMatch(/build a new project/i);
-    expect(CONSULTATION_GREETING).toMatch(/existing project that needs improvement or fixing/i);
+  it('asks how the client is as its ONE question, and nothing else', () => {
+    const greeting = consultationGreeting('Kunal');
+    expect(greeting).toMatch(/How are you today\?/);
     // Exactly one question mark: one question, then silence.
-    expect(CONSULTATION_GREETING.match(/\?/g)).toHaveLength(1);
+    expect(greeting.match(/\?/g)).toHaveLength(1);
+    // The project question belongs to stage two, after the client has answered.
+    expect(greeting).not.toMatch(/new project|existing project/i);
+  });
+
+  it('leaves the new-versus-existing question to the opening router', () => {
+    expect(PROJECT_TYPE_QUESTION).toMatch(/build a new project/i);
+    expect(PROJECT_TYPE_QUESTION).toMatch(/existing project that needs improvement or fixing/i);
+    expect(PROJECT_TYPE_QUESTION.match(/\?/g)).toHaveLength(1);
   });
 
   it('never asks the client to choose a language', () => {
-    expect(CONSULTATION_GREETING.toLowerCase()).not.toMatch(
+    expect(consultationGreeting('Kunal').toLowerCase()).not.toMatch(
       /language|english|hindi|hinglish|marathi|urdu|arabic|prefer.*speak/,
     );
   });
 
   it('is spoken in English', () => {
     // Latin letters, digits and ordinary punctuation only — no other script.
-    expect(CONSULTATION_GREETING).toMatch(/^[\x20-\x7E‘’“”—]+$/);
+    expect(consultationGreeting('Kunal')).toMatch(/^[\x20-\x7E\u2018\u2019\u201c\u201d\u2014]+$/);
   });
 
   it('paces itself with a paragraph break after every sentence, same words', () => {
-    expect(CONSULTATION_GREETING_SENTENCES).toHaveLength(4);
-    expect(CONSULTATION_GREETING_SPOKEN.split('\n\n')).toEqual([...CONSULTATION_GREETING_SENTENCES]);
-    expect(CONSULTATION_GREETING_SPOKEN.replace(/\n\n/g, ' ')).toBe(CONSULTATION_GREETING);
-    for (const sentence of CONSULTATION_GREETING_SENTENCES) {
+    expect(consultationGreetingSentences('Kunal')).toHaveLength(3);
+    expect(consultationGreetingSpoken('Kunal').split('\n\n')).toEqual([
+      ...consultationGreetingSentences('Kunal'),
+    ]);
+    expect(consultationGreetingSpoken('Kunal').replace(/\n\n/g, ' ')).toBe(consultationGreeting('Kunal'));
+    for (const sentence of consultationGreetingSentences('Kunal')) {
       expect(sentence).toMatch(/[.?]$/);
     }
   });
@@ -102,7 +155,7 @@ describe('consultation greeting', () => {
     const spoken: string[] = [];
     let finished = false;
     const gate = createGreetingGate({
-      text: () => CONSULTATION_GREETING_SPOKEN,
+      text: () => consultationGreetingSpoken('Kunal'),
       canSpeak: () => true,
       clientPresent: () => true,
       say: async (text) => {
@@ -115,13 +168,13 @@ describe('consultation greeting', () => {
     const outcome = await gate.speak();
     expect(outcome).toBe('spoken');
     expect(finished).toBe(true);
-    expect(spoken).toEqual([CONSULTATION_GREETING_SPOKEN]);
+    expect(spoken).toEqual([consultationGreetingSpoken('Kunal')]);
   });
 
   it('is never repeated after a reconnect, a retried join or an agent re-entry', async () => {
     const say = vi.fn(async () => undefined);
     const gate = createGreetingGate({
-      text: () => CONSULTATION_GREETING_SPOKEN,
+      text: () => consultationGreetingSpoken('Kunal'),
       canSpeak: () => true,
       clientPresent: () => true,
       say,
@@ -137,7 +190,7 @@ describe('consultation greeting', () => {
     for (const session of [fakeSession({ closing: true }), fakeSession({ paused: true })]) {
       const say = vi.fn(async () => undefined);
       const gate = createGreetingGate({
-        text: () => CONSULTATION_GREETING_SPOKEN,
+        text: () => consultationGreetingSpoken('Kunal'),
         canSpeak: () => canSpeak(session),
         clientPresent: () => true,
         say,
@@ -165,6 +218,50 @@ describe('consultation scripted lines', () => {
   });
 });
 
+describe('a failed LLM turn is never silence', () => {
+  it('has one short spoken recovery line that leaks no internal detail', () => {
+    expect(LLM_RECOVERY_TEXT).toBe('Sorry, I lost that for a moment. Could you say it once more?');
+    expect(LLM_RECOVERY_TEXT.match(/\?/g)).toHaveLength(1);
+    expect(LLM_RECOVERY_TEXT.toLowerCase()).not.toMatch(/error|api|token|gemini|openai|timeout|provider|400|503/);
+  });
+
+  it('tells the client to type when speech recognition itself is down', () => {
+    // No transcript means no turn completes at all: without this line the
+    // client talks into a dead line. Typed chat reaches the same conversation.
+    expect(STT_UNAVAILABLE_TEXT).toMatch(/cannot hear you/);
+    expect(STT_UNAVAILABLE_TEXT).toMatch(/meeting chat/);
+    expect(STT_UNAVAILABLE_TEXT.toLowerCase()).not.toMatch(/error|api|quota|whisper|openai|429/);
+  });
+
+  it('stops asking the client to repeat once the provider is clearly down', () => {
+    // A dead key or an exhausted quota fails every request; the closing line
+    // points somewhere useful and never blames the client or names a provider.
+    expect(LLM_UNAVAILABLE_TEXT).toMatch(/rejoin from the same link/);
+    expect(LLM_UNAVAILABLE_TEXT).toMatch(/contact form/);
+    expect(LLM_UNAVAILABLE_TEXT).toMatch(/progress is saved/);
+    expect(LLM_UNAVAILABLE_TEXT.toLowerCase()).not.toMatch(/error|api|quota|token|gemini|openai|429/);
+  });
+
+  it('gives an LLM turn more than the framework\u2019s silent 10 s default', () => {
+    const conn = loadLlmConnOptions();
+    // A timed-out attempt produces no chunks and no exception, so this window
+    // is the difference between a slow reply and no reply at all.
+    expect(conn.timeoutMs).toBeGreaterThan(10000);
+    expect(conn.timeoutMs).toBeLessThanOrEqual(60000);
+    // Retries are dead air in a live call: few, and quick.
+    expect(conn.maxRetry).toBe(LLM_MAX_RETRY);
+    expect(conn.retryIntervalMs).toBeLessThan(1000);
+  });
+
+  it('accepts an in-band timeout override and ignores an out-of-band one', () => {
+    process.env.BUDDY_PROVIDER_TIMEOUT_MS = '30000';
+    expect(loadLlmConnOptions().timeoutMs).toBe(30000);
+    process.env.BUDDY_PROVIDER_TIMEOUT_MS = '250';
+    expect(loadLlmConnOptions().timeoutMs).toBe(15000);
+    delete process.env.BUDDY_PROVIDER_TIMEOUT_MS;
+  });
+});
+
 describe('buildConsultationPrompt', () => {
   const prompt = (over: Partial<Parameters<typeof buildConsultationPrompt>[1]> = {}) =>
     buildConsultationPrompt(loadKnowledge(), {
@@ -188,11 +285,12 @@ describe('buildConsultationPrompt', () => {
     expect(text).not.toMatch(/which language would you like/i);
   });
 
-  it('tells the model the greeting and the new-vs-existing answer are already handled', () => {
+  it('tells the model the greeting, the how-are-you and the new-vs-existing answer are handled', () => {
     const text = prompt();
     expect(text).toMatch(/greeting has ALREADY been spoken/);
     expect(text).toMatch(/Do NOT greet again/);
-    expect(text).toMatch(/do NOT ask again whether the project is new or existing/);
+    expect(text).toMatch(/do NOT ask again how they are/);
+    expect(text).toMatch(/Do NOT ask again whether the project is new or existing/);
   });
 
   it('keeps Buddy short, one question at a time, and confirming what he heard', () => {

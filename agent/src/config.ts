@@ -260,6 +260,41 @@ export function loadConsultationTurnTaking(): ConsultationTurnTaking {
   };
 }
 
+// --- LLM request budget (per voice turn) ---------------------------------------
+//
+// @livekit/agents defaults every provider call to 10 s with 3 retries 2 s
+// apart, and a timed-out LLM attempt is SILENT: the stream closes with no
+// chunks instead of throwing, so the voice session produces no reply at all —
+// Buddy sits on "thinking" and the client's turn goes unanswered.
+//
+// A consultation turn is the expensive kind: a ~10 kB system prompt, eight tool
+// schemas and a thinking model. Measured gemini-3.6-flash latency for exactly
+// that request ranges from ~5 s to ~19 s, with occasional fast 503 "high
+// demand" replies — so the window has to cover a slow turn, while the retries
+// stay quick because every one of them is dead air in a live call.
+
+/** Per-attempt LLM timeout. Env: BUDDY_PROVIDER_TIMEOUT_MS. */
+export const LLM_TIMEOUT_MS = 15000;
+/** Attempts after the first. A 503 comes back fast; a timeout does not. */
+export const LLM_MAX_RETRY = 2;
+/** Gap between attempts — kept short: the client is listening to silence. */
+export const LLM_RETRY_INTERVAL_MS = 500;
+
+/** Exactly the shape `new AgentSession({ connOptions: { llmConnOptions } })` takes. */
+export interface LlmConnOptions {
+  timeoutMs: number;
+  maxRetry: number;
+  retryIntervalMs: number;
+}
+
+export function loadLlmConnOptions(): LlmConnOptions {
+  return {
+    timeoutMs: intEnv('BUDDY_PROVIDER_TIMEOUT_MS', LLM_TIMEOUT_MS, 5000, 60000),
+    maxRetry: LLM_MAX_RETRY,
+    retryIntervalMs: LLM_RETRY_INTERVAL_MS,
+  };
+}
+
 // --- session / cost limits (env-overridable, safe defaults) --------------------------
 
 export interface SessionLimits {

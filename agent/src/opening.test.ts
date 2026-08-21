@@ -1,13 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   MAX_OPENING_CLARIFICATIONS,
+  OPENING_PURPOSE,
   OPENING_REPLY_EXISTING,
   OPENING_REPLY_NEW,
   OPENING_REPLY_UNCLEAR,
+  PROJECT_TYPE_QUESTION,
+  WELLBEING_ACK_NEGATIVE,
+  WELLBEING_ACK_NEUTRAL,
+  WELLBEING_ACK_POSITIVE,
+  WELLBEING_ACK_RECIPROCAL,
+  asksBuddyBack,
   classifyOpeningChoice,
+  classifyWellbeing,
   createOpeningRouter,
   intentForChoice,
   openingReply,
+  scriptedReply,
+  wellbeingReply,
   type OpeningRouterDeps,
 } from './opening.js';
 
@@ -84,6 +94,9 @@ const routerWith = (over: Partial<OpeningRouterDeps> = {}) => {
   const setIntent = over.setIntent ?? vi.fn();
   const router = createOpeningRouter({
     canSpeak: () => true,
+    // The project question is stage TWO; these specs drive it directly. The
+    // stage-one ("how are you") specs below use the router's own default.
+    startAt: 'project_type',
     ...over,
     say,
     setIntent,
@@ -95,7 +108,13 @@ describe('opening router', () => {
   it('answers a new-project choice with the scripted line and records the intent', async () => {
     const { router, say, setIntent } = routerWith();
     const outcome = await router.handleClientTurn('I want to build a new app');
-    expect(outcome).toEqual({ handled: true, choice: 'new_project', reply: OPENING_REPLY_NEW });
+    expect(outcome).toEqual({
+      handled: true,
+      phase: 'project_type',
+      choice: 'new_project',
+      reply: OPENING_REPLY_NEW,
+      spoken: OPENING_REPLY_NEW,
+    });
     expect(say).toHaveBeenCalledWith(OPENING_REPLY_NEW);
     expect(setIntent).toHaveBeenCalledWith('new_project');
     expect(router.active).toBe(false);
@@ -105,7 +124,13 @@ describe('opening router', () => {
   it('answers an existing-project choice with the scripted line and records the intent', async () => {
     const { router, say, setIntent } = routerWith();
     const outcome = await router.handleClientTurn('I already have a website that needs fixing');
-    expect(outcome).toEqual({ handled: true, choice: 'existing_project', reply: OPENING_REPLY_EXISTING });
+    expect(outcome).toEqual({
+      handled: true,
+      phase: 'project_type',
+      choice: 'existing_project',
+      reply: OPENING_REPLY_EXISTING,
+      spoken: OPENING_REPLY_EXISTING,
+    });
     expect(say).toHaveBeenCalledWith(OPENING_REPLY_EXISTING);
     expect(setIntent).toHaveBeenCalledWith('improve_existing');
     expect(router.choice).toBe('existing_project');
@@ -114,7 +139,13 @@ describe('opening router', () => {
   it('asks the clarification question on an unclear answer and stays on the opening', async () => {
     const { router, say, setIntent } = routerWith();
     const outcome = await router.handleClientTurn('hmm');
-    expect(outcome).toEqual({ handled: true, choice: 'unclear', reply: OPENING_REPLY_UNCLEAR });
+    expect(outcome).toEqual({
+      handled: true,
+      phase: 'project_type',
+      choice: 'unclear',
+      reply: OPENING_REPLY_UNCLEAR,
+      spoken: OPENING_REPLY_UNCLEAR,
+    });
     expect(say).toHaveBeenCalledWith(OPENING_REPLY_UNCLEAR);
     expect(setIntent).not.toHaveBeenCalled();
     expect(router.active).toBe(true);
@@ -167,6 +198,171 @@ describe('opening router', () => {
     });
     const { router } = routerWith({ say });
     await expect(router.handleClientTurn('a new project')).resolves.toEqual({ handled: false });
+    expect(router.active).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stage 1 — "How are you today?"
+// ---------------------------------------------------------------------------
+
+describe('classifyWellbeing', () => {
+  it('reads a positive answer', () => {
+    for (const answer of [
+      'good',
+      "I'm good, thanks",
+      'I am doing well',
+      'fine thank you',
+      'all good',
+      'pretty good',
+      'great!',
+      "can't complain",
+      'yeah okay',
+    ]) {
+      expect(classifyWellbeing(answer), answer).toBe('positive');
+    }
+  });
+
+  it('reads a negative answer, and never mistakes "not good" for "good"', () => {
+    for (const answer of [
+      'not good',
+      'not so great',
+      "I'm not doing well",
+      'could be better',
+      'a bit tired honestly',
+      'having a rough day',
+      'I am unwell',
+    ]) {
+      expect(classifyWellbeing(answer), answer).toBe('negative');
+    }
+  });
+
+  it('falls back to neutral instead of guessing — small talk is never clarified', () => {
+    for (const answer of ['', '  ', 'hmm', 'as usual', 'you tell me', 'busy morning here']) {
+      expect(classifyWellbeing(answer), JSON.stringify(answer)).toBe('neutral');
+    }
+  });
+
+  it('notices when the client asks Buddy back', () => {
+    for (const answer of ['I am good, and you?', 'fine, how about you', 'good, what about you?']) {
+      expect(asksBuddyBack(answer), answer).toBe(true);
+    }
+    expect(asksBuddyBack('I am good thanks')).toBe(false);
+  });
+});
+
+describe('wellbeingReply', () => {
+  it('acknowledges the answer, then asks the project question — one question only', () => {
+    const { scripted, choice } = wellbeingReply('I am good, thanks');
+    expect(choice).toBe('unclear');
+    expect(scripted.reply).toBe(
+      [WELLBEING_ACK_POSITIVE, OPENING_PURPOSE, PROJECT_TYPE_QUESTION].join(' '),
+    );
+    expect(scripted.reply.match(/\?/g)).toHaveLength(1);
+  });
+
+  it('answers a client who is not doing well with sympathy, not cheer', () => {
+    const { scripted } = wellbeingReply('not great, rough day');
+    expect(scripted.reply.startsWith(WELLBEING_ACK_NEGATIVE)).toBe(true);
+    expect(scripted.reply).not.toContain(WELLBEING_ACK_POSITIVE);
+  });
+
+  it('answers the reciprocal question before moving on', () => {
+    const { scripted } = wellbeingReply('good, and you?');
+    expect(scripted.reply).toBe(
+      [WELLBEING_ACK_POSITIVE, WELLBEING_ACK_RECIPROCAL, OPENING_PURPOSE, PROJECT_TYPE_QUESTION].join(' '),
+    );
+  });
+
+  it('uses the neutral acknowledgement for an answer it cannot read', () => {
+    expect(wellbeingReply('hmm').scripted.reply.startsWith(WELLBEING_ACK_NEUTRAL)).toBe(true);
+  });
+
+  it('skips the project question when that answer already contains it', () => {
+    const { scripted, choice } = wellbeingReply('I am fine. I want to build a new app.');
+    expect(choice).toBe('new_project');
+    expect(scripted.reply).toBe([WELLBEING_ACK_POSITIVE, OPENING_REPLY_NEW].join(' '));
+    expect(scripted.reply).not.toContain(PROJECT_TYPE_QUESTION);
+  });
+
+  it('paces playout with a paragraph break per sentence, same words', () => {
+    const { scripted } = wellbeingReply('good');
+    expect(scripted.spoken.split('\n\n')).toEqual([
+      WELLBEING_ACK_POSITIVE,
+      OPENING_PURPOSE,
+      PROJECT_TYPE_QUESTION,
+    ]);
+    expect(scripted.spoken.replace(/\n\n/g, ' ')).toBe(scripted.reply);
+  });
+
+  it('drops empty parts rather than leaving double spaces', () => {
+    expect(scriptedReply('One.', '', 'Two.')).toEqual({ reply: 'One. Two.', spoken: 'One.\n\nTwo.' });
+  });
+});
+
+describe('opening router — the two scripted stages in order', () => {
+  const twoStage = (over: Partial<OpeningRouterDeps> = {}) =>
+    routerWith({ startAt: 'wellbeing', ...over });
+
+  it('starts on the wellbeing answer, because that is what the greeting asked', () => {
+    const { router } = twoStage();
+    expect(router.phase).toBe('wellbeing');
+    expect(router.active).toBe(true);
+  });
+
+  it('answers the client\u2019s first words, then asks new-versus-existing, then acknowledges it', async () => {
+    const { router, say, setIntent } = twoStage();
+
+    const first = await router.handleClientTurn('I am good, thank you');
+    expect(first).toMatchObject({ handled: true, phase: 'wellbeing', choice: 'unclear' });
+    expect(setIntent).not.toHaveBeenCalled();
+    expect(router.phase).toBe('project_type');
+
+    const second = await router.handleClientTurn('I already have a website that needs fixing');
+    expect(second).toMatchObject({ handled: true, phase: 'project_type', choice: 'existing_project' });
+    expect(setIntent).toHaveBeenCalledWith('improve_existing');
+    expect(router.active).toBe(false);
+
+    expect(say.mock.calls.map((c) => c[0])).toEqual([
+      [WELLBEING_ACK_POSITIVE, OPENING_PURPOSE, PROJECT_TYPE_QUESTION].join('\n\n'),
+      OPENING_REPLY_EXISTING,
+    ]);
+  });
+
+  it('never leaves the first turn unanswered, whatever the client said', async () => {
+    for (const first of ['', 'hmm', 'not so good', 'who is this?', 'good yaar']) {
+      const { router, say } = twoStage();
+      await expect(router.handleClientTurn(first)).resolves.toMatchObject({ handled: true });
+      expect(say, JSON.stringify(first)).toHaveBeenCalledTimes(1);
+      expect(say.mock.calls[0]?.[0]).toContain(PROJECT_TYPE_QUESTION);
+    }
+  });
+
+  it('resolves in ONE turn when the first answer already names the project type', async () => {
+    const { router, say, setIntent } = twoStage();
+    const outcome = await router.handleClientTurn('I am fine. I want to build a new app.');
+    expect(outcome).toMatchObject({ handled: true, phase: 'wellbeing', choice: 'new_project' });
+    expect(setIntent).toHaveBeenCalledWith('new_project');
+    expect(router.active).toBe(false);
+    expect(say.mock.calls[0]?.[0]).not.toContain(PROJECT_TYPE_QUESTION);
+  });
+
+  it('asks the wellbeing question\u2019s follow-up only once, never twice', async () => {
+    const { router, say } = twoStage();
+    await router.handleClientTurn('good');
+    await router.handleClientTurn('hmm');
+    await router.handleClientTurn('a new project');
+    expect(say.mock.calls.map((c) => c[0])).toEqual([
+      [WELLBEING_ACK_POSITIVE, OPENING_PURPOSE, PROJECT_TYPE_QUESTION].join('\n\n'),
+      OPENING_REPLY_UNCLEAR,
+      OPENING_REPLY_NEW,
+    ]);
+  });
+
+  it('attempts no speech at all on a session that cannot speak', async () => {
+    const { router, say } = twoStage({ canSpeak: () => false });
+    await expect(router.handleClientTurn('good')).resolves.toEqual({ handled: false });
+    expect(say).not.toHaveBeenCalled();
     expect(router.active).toBe(false);
   });
 });

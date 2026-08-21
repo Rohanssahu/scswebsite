@@ -67,25 +67,88 @@ export const GREETING =
 // =============================================================================
 
 /**
+ * The client's first name as Buddy may speak it, or `''` when there is nothing
+ * usable to say.
+ *
+ * The name reaches us from the scheduling form via the database, so it is
+ * treated as untrusted display text: only the FIRST word is used, diacritics
+ * are folded to ASCII (the consultation is English-only, and the greeting is
+ * asserted to be printable ASCII), anything that is not a letter, apostrophe or
+ * hyphen is dropped, and the result is capped. Anything left with fewer than
+ * two letters is discarded rather than spoken.
+ */
+export function clientFirstName(raw: string | null | undefined): string {
+  const first = (raw ?? '').trim().split(/\s+/)[0] ?? '';
+  const ascii = first.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const cleaned = ascii.replace(/[^A-Za-z'\u2019-]/g, '').replace(/^[-'\u2019]+|[-'\u2019]+$/g, '');
+  if (cleaned.replace(/[^A-Za-z]/g, '').length < 2) return '';
+  const capped = cleaned.slice(0, 24);
+  return capped.charAt(0).toUpperCase() + capped.slice(1);
+}
+
+/**
  * The opening greeting, sentence by sentence.
+ *
+ * Buddy greets the client BY NAME, introduces himself, and asks how they are —
+ * and nothing else. The new-versus-existing project question is deliberately
+ * NOT here: it is asked only after the client has answered this one, by the
+ * opening router (see opening.ts), so the client is never handed two questions
+ * at once.
  *
  * Kept as an array because pacing is punctuation-driven: the spoken form joins
  * these with a blank line so ElevenLabs renders a real pause after each
- * sentence, while {@link CONSULTATION_GREETING} keeps the exact single-line
+ * sentence, while {@link consultationGreeting} keeps the exact single-line
  * wording for logs and assertions. The words are identical either way.
  */
-export const CONSULTATION_GREETING_SENTENCES: readonly string[] = [
-  'Hello, welcome to SCS Softwares.',
-  'I\u2019m Buddy, your AI project consultant.',
-  'I\u2019m here to understand your requirements and help you plan the right solution.',
-  'Are you looking to build a new project, or do you already have an existing project that needs improvement or fixing?',
-];
+export function consultationGreetingSentences(clientName?: string | null): readonly string[] {
+  const name = clientFirstName(clientName);
+  return [
+    name ? `Hello ${name}, welcome to SCS Softwares.` : 'Hello, welcome to SCS Softwares.',
+    'I\u2019m Buddy, your AI project consultant.',
+    'How are you today?',
+  ];
+}
 
 /** Canonical greeting text (one line, single spaces). */
-export const CONSULTATION_GREETING = CONSULTATION_GREETING_SENTENCES.join(' ');
+export function consultationGreeting(clientName?: string | null): string {
+  return consultationGreetingSentences(clientName).join(' ');
+}
 
 /** What Buddy actually speaks: same words, paragraph breaks for natural pauses. */
-export const CONSULTATION_GREETING_SPOKEN = CONSULTATION_GREETING_SENTENCES.join('\n\n');
+export function consultationGreetingSpoken(clientName?: string | null): string {
+  return consultationGreetingSentences(clientName).join('\n\n');
+}
+
+/**
+ * Spoken when the LLM gives up on a turn.
+ *
+ * @livekit/agents reports an exhausted LLM turn by emitting a non-recoverable
+ * `llm_error` and closing the stream with NO chunks — no exception, no text, no
+ * speech. Without this line the client's turn is simply never answered, which
+ * is indistinguishable from Buddy ignoring them. It blames nothing and mentions
+ * no internal detail; it just asks for the turn again.
+ */
+export const LLM_RECOVERY_TEXT =
+  'Sorry, I lost that for a moment. Could you say it once more?';
+
+/**
+ * Spoken when the LLM has failed on {@link MAX_CONSECUTIVE_LLM_FAILURES}
+ * turns in a row — a dead key or an exhausted quota fails every request, so
+ * the meeting ends with a route forward instead of an endless "say that again".
+ */
+export const LLM_UNAVAILABLE_TEXT =
+  'I am very sorry — I am having trouble continuing this meeting right now. Your progress is saved, so you can rejoin from the same link a little later, or reach the SCS team through the contact form on the website. Thank you for your patience.';
+
+/**
+ * Spoken when speech recognition itself has failed.
+ *
+ * Without a transcript no client turn ever completes, so nothing in the
+ * conversation can react — the client talks into what feels like a dead line.
+ * The meeting chat is the honest way out: typed messages become ordinary client
+ * turns without touching speech recognition at all.
+ */
+export const STT_UNAVAILABLE_TEXT =
+  'I am sorry — I cannot hear you at the moment. Please type your answer in the meeting chat, and I will carry on from there.';
 
 export interface ConsultationPromptContext {
   clientName: string;
@@ -106,11 +169,12 @@ export function buildConsultationPrompt(knowledge: ScsKnowledge, context: Consul
 - Use plain, everyday English. Explain technical terms in one short clause.
 
 # Client
-- The client's name is ${context.clientName || 'unknown'}. Use it sparingly — at most once early on. Do not repeat their name in reply after reply.
+- The client's name is ${context.clientName || 'unknown'}. You ALREADY greeted them by name, so do not use it again unless it is genuinely needed. Do not repeat their name in reply after reply.
 
 # The opening is already handled
-- Your greeting has ALREADY been spoken, and the client's "new project" / "existing project" answer has ALREADY been acknowledged with a scripted line before your first turn. Do NOT greet again, do NOT re-introduce yourself, and do NOT ask again whether the project is new or existing.
-- Your first turn continues from the client's answer.
+- Your greeting has ALREADY been spoken: you welcomed the client by name, introduced yourself as their AI project consultant, and asked how they are. Their answer has ALREADY been acknowledged. Do NOT greet again, do NOT re-introduce yourself, and do NOT ask again how they are or how their day is going.
+- The client's "new project" / "existing project" answer has ALREADY been asked for and acknowledged with a scripted line before your first turn. Do NOT ask again whether the project is new or existing.
+- Your first turn continues from the client's answer: go straight to the next MISSING requirement below.
 
 # Attached project analysis
 ${context.analysisSummary ? `The client completed a preliminary project analysis before this meeting:\n${context.analysisSummary}\n\nSummarize in two or three short sentences what you understand from it, then ask the client to correct anything wrong. NEVER ask again for details already listed above${context.knownFields.length ? ` (already known: ${context.knownFields.join(', ')})` : ''} — only for missing or conflicting details.` : 'No project analysis is attached — this is a general consultation. Say so once, briefly, then discover the project from scratch.'}

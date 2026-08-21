@@ -31,6 +31,7 @@ import {
   VAD_MIN_SPEECH_MS,
   loadConsultationTurnTaking,
   loadConsultationVoiceSettings,
+  loadLlmConnOptions,
   loadSessionLimits,
 } from './config.js';
 import {
@@ -49,10 +50,17 @@ import {
   spellPhoneForReadback,
 } from './guards.js';
 import { loadKnowledge } from './knowledge.js';
-import { CONSULTATION_GREETING_SPOKEN, buildConsultationPrompt } from './prompts.js';
+import {
+  LLM_RECOVERY_TEXT,
+  LLM_UNAVAILABLE_TEXT,
+  STT_UNAVAILABLE_TEXT,
+  buildConsultationPrompt,
+  consultationGreetingSpoken,
+} from './prompts.js';
 import { createGreetingGate } from './greeting.js';
 import { createOpeningRouter, type OpeningRouter } from './opening.js';
 import { createSilenceReminder } from './silence.js';
+import { CONSENT_REQUIRED_REPLY, submissionToolParameters } from './tool_params.js';
 import { buildConsultationTurnHandling, isConfirmedClientTurn } from './turn_taking.js';
 import { createLlm } from './providers/llm.js';
 import { createStt } from './providers/stt.js';
@@ -76,6 +84,11 @@ import {
 } from './state.js';
 
 const STATE_TOPIC = 'buddy.state';
+/** Consecutive non-recoverable LLM failures before the meeting is closed
+ * politely. Below this, Buddy asks the client to repeat the turn; at it, no
+ * further turn can succeed either (an exhausted quota or a dead key fails
+ * every request), so asking again would only waste the client's time. */
+const MAX_CONSECUTIVE_LLM_FAILURES = 3;
 /** The agent framework's own chat topic (see @livekit/agents `TOPIC_CHAT`).
  * Inbound it carries the client's typed messages; outbound Buddy uses it for
  * detail that belongs in writing rather than in speech. */
@@ -678,15 +691,12 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     finalize_consultation: llm.tool({
       description:
         'Store the confirmed requirements, proposal and contact details as a submission to SCS. Call only after: proposal confirmed, contact details verified and read back, and the client explicitly said to submit. Set human_review=true when they asked for a human project-manager review.',
-      parameters: z
-        .object({
-          contact_consent: z.literal(true),
-          human_review: z.boolean().default(false),
-          review_message: z.string().trim().max(2000).optional(),
-        })
-        .strict(),
-      execute: async ({ human_review, review_message }) => {
+      parameters: submissionToolParameters,
+      execute: async ({ contact_consent, human_review, review_message }) => {
         // Server-side authorization chain — none of this trusts the model:
+        if (!contact_consent) {
+          return CONSENT_REQUIRED_REPLY;
+        }
         if (!client) {
           return 'Submissions are not available right now. Apologize and point the client to the contact form at /contact.';
         }
@@ -796,6 +806,9 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     // Seconds (framework default 15).
     userAwayTimeout: limits.idleTimeoutSeconds,
     maxToolSteps: 5,
+    // A timed-out LLM attempt yields NO reply and NO exception, so the default
+    // 10 s window would silently drop slow turns (see config.ts).
+    connOptions: { llmConnOptions: loadLlmConnOptions() },
   });
 
   // ---- greeting: exactly once, only on a running session --------------------
@@ -816,9 +829,11 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   });
 
   const greeting = createGreetingGate({
-    // ONE English greeting, always the same words. The spoken form only adds
-    // paragraph breaks so ElevenLabs pauses after each sentence.
-    text: () => CONSULTATION_GREETING_SPOKEN,
+    // ONE English greeting: the client's name, who Buddy is, and "how are you"
+    // — nothing else. The project question follows only after they answer (see
+    // the opening router below). The spoken form only adds paragraph breaks so
+    // ElevenLabs pauses after each sentence.
+    text: () => consultationGreetingSpoken(context?.clientName),
     canSpeak: () => canSpeak(session),
     clientPresent,
     say: async (text, signal) => {
@@ -847,23 +862,24 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     },
   });
 
-  // ---- the scripted opening: new project vs existing project ----------------
+  // ---- the scripted opening: "how are you", then new vs existing project ----
   //
-  // The greeting's question has exactly three outcomes and three scripted
-  // replies, so it is answered HERE, deterministically, rather than by the LLM.
-  // It runs from `onUserTurnCompleted`, i.e. only on a CONFIRMED completed turn
-  // — interim transcripts never reach it.
+  // Both opening questions have a fixed set of outcomes and scripted replies,
+  // so they are answered HERE, deterministically, rather than by the LLM. The
+  // router runs from `onUserTurnCompleted`, i.e. only on a CONFIRMED completed
+  // turn — interim transcripts never reach it.
   const opening: OpeningRouter = createOpeningRouter({
     canSpeak: () => canSpeak(session),
-    say: async (text) => {
+    say: async (spoken) => {
       // `addToChatCtx: false`: the scripted line is written into the chat
       // context by onUserTurnCompleted below, together with the client's turn,
       // in one update. Letting say() append it too would either duplicate it or
       // be overwritten by that update.
-      await session.say(text, { allowInterruptions: true, addToChatCtx: false });
+      await session.say(spoken, { allowInterruptions: true, addToChatCtx: false });
       // ConversationItemAdded only fires for chat-context items, so the
-      // scripted lines are persisted here instead.
-      persistMessage('buddy', text);
+      // scripted lines are persisted here instead — as one line, without the
+      // playout paragraph breaks.
+      persistMessage('buddy', spoken.replace(/\n\n/g, ' '));
     },
     setIntent: (intent) => {
       if (!state.intent) state.intent = intent;
@@ -920,11 +936,23 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   });
 
   // ---- limits, auditing, transcript persistence ---------------------------------
+  //
+  // A provider failure must never turn into silence: when the LLM gives up on a
+  // turn, @livekit/agents closes the stream with no chunks and no exception, so
+  // Buddy would simply never answer. One short recovery line per client turn
+  // hands the turn back instead — and if the provider stays down (an exhausted
+  // quota fails every single turn), the meeting is closed politely rather than
+  // asking the client to repeat themselves forever. See the Error handler below.
+  let recoverySpoken = false;
+  let consecutiveLlmFailures = 0;
+  let sttNoticeSpoken = false;
+
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
     // INTERIM transcripts are ignored outright: they never advance the turn
     // count, never reach the router and never trigger a reply. Only a confirmed,
     // non-empty final transcript counts as the client having spoken.
     if (!isConfirmedClientTurn(ev)) return;
+    recoverySpoken = false;
     silence.clientSpoke();
     turnCount += 1;
     persistMessage('client', ev.transcript);
@@ -945,6 +973,8 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
 
   session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (ev) => {
     if (ev.item.type === 'message' && ev.item.role === 'assistant') {
+      // The provider answered: the failure streak is over.
+      consecutiveLlmFailures = 0;
       persistMessage('buddy', ev.item.textContent ?? '');
     }
   });
@@ -974,7 +1004,39 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   });
 
   session.on(voice.AgentSessionEventTypes.Error, (ev) => {
-    logEvent('provider_error', { label: String(ev.error?.type ?? 'unknown').slice(0, 100) });
+    const error = ev.error;
+    logEvent('provider_error', { label: String(error?.type ?? 'unknown').slice(0, 100) });
+    // Recoverable errors are the framework's own retries — it is still trying.
+    if (!error || error.recoverable) return;
+    // Speech-to-text down is the quietest failure of all: the client talks, no
+    // transcript ever arrives, so no turn completes and Buddy has nothing to
+    // answer. Say so once and point at the meeting chat, which reaches the same
+    // conversation WITHOUT going through speech recognition.
+    if (error.type === 'stt_error') {
+      if (sttNoticeSpoken || !canSpeak(session)) return;
+      sttNoticeSpoken = true;
+      logEvent('stt_unavailable');
+      void session.say(STT_UNAVAILABLE_TEXT, { allowInterruptions: true });
+      return;
+    }
+    if (error.type !== 'llm_error') return;
+    consecutiveLlmFailures += 1;
+    if (opening.active || !canSpeak(session)) return;
+    if (consecutiveLlmFailures >= MAX_CONSECUTIVE_LLM_FAILURES) {
+      logEvent('llm_unavailable', { failures: consecutiveLlmFailures });
+      // Await the playout rather than guessing a delay: the room must not go
+      // away mid-apology, and the line is long.
+      const closing = session.say(LLM_UNAVAILABLE_TEXT, { allowInterruptions: false });
+      void Promise.resolve(closing)
+        .catch(() => undefined)
+        .then(() => endSession('llm_unavailable'));
+      return;
+    }
+    // Once per client turn: a retry storm must not stack recovery lines.
+    if (recoverySpoken) return;
+    recoverySpoken = true;
+    logEvent('llm_recovery_spoken', { failures: consecutiveLlmFailures });
+    void session.say(LLM_RECOVERY_TEXT, { allowInterruptions: true });
   });
 
   session.on(voice.AgentSessionEventTypes.SessionUsageUpdated, (ev) => {

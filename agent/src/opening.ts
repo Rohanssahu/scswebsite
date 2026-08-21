@@ -1,9 +1,16 @@
 // =============================================================================
 // Buddy agent — the consultation opening flow.
 //
-// After the greeting, exactly one question is on the table: is this a NEW
-// project, or an EXISTING one that needs improvement or fixing? The answer to
-// that one question is routed HERE rather than by the LLM, because:
+// The opening is TWO scripted stages, one question each, in this order:
+//
+//   1. wellbeing   — the greeting asked "How are you today?"; whatever the
+//                    client answers is acknowledged, and only THEN is the
+//                    project question asked. No answer is ever ignored, so the
+//                    client is never left waiting after their first words.
+//   2. project_type — is this a NEW project, or an EXISTING one that needs
+//                    improvement or fixing?
+//
+// Both stages are routed HERE rather than by the LLM, because:
 //
 //   * the three replies are scripted word-for-word, so they must not drift;
 //   * the reply must never bundle a second question onto the first answer;
@@ -14,6 +21,10 @@
 // timers, no LiveKit types, no network. It runs off the CONFIRMED end of a
 // client turn only — interim transcripts never reach it (see meeting.ts,
 // `onUserTurnCompleted`).
+//
+// Every scripted reply comes back in two forms: `reply` is the canonical single
+// line (chat context, transcript, logs) and `spoken` is the same words with a
+// paragraph break between sentences so ElevenLabs pauses between them.
 // =============================================================================
 
 /** What the client's first answer turned out to mean. */
@@ -136,6 +147,124 @@ export function intentForChoice(choice: Exclude<OpeningChoice, 'unclear'>): Open
   return choice === 'new_project' ? 'new_project' : 'improve_existing';
 }
 
+// --- stage 1: the wellbeing answer -------------------------------------------
+
+/** How the client answered "How are you today?". */
+export type WellbeingSentiment = 'positive' | 'negative' | 'neutral';
+
+/** Acknowledgement for a client who is doing well. */
+export const WELLBEING_ACK_POSITIVE = 'Glad to hear that.';
+
+/** Acknowledgement for a client who is NOT doing well. */
+export const WELLBEING_ACK_NEGATIVE =
+  'I\u2019m sorry to hear that. I\u2019ll keep this simple and go at your pace.';
+
+/** Acknowledgement when the answer carries no sentiment we can read. */
+export const WELLBEING_ACK_NEUTRAL = 'Thank you.';
+
+/** Added only when the client asked Buddy back ("and you?"). */
+export const WELLBEING_ACK_RECIPROCAL = 'I\u2019m doing well, thank you.';
+
+/** Said once, on the way into the project question. */
+export const OPENING_PURPOSE =
+  'I\u2019m here to understand your requirements and help you plan the right solution.';
+
+/** Stage 2's question — asked only after the wellbeing answer, never with it. */
+export const PROJECT_TYPE_QUESTION =
+  'Are you looking to build a new project, or do you already have an existing project that needs improvement or fixing?';
+
+/** Negatives are checked FIRST: "not good" must never read as "good". */
+const WELLBEING_NEGATIVE_PATTERNS: RegExp[] = [
+  /\b(?:not|isn[\u2019']?t|ain[\u2019']?t)\s+(?:so\s+|too\s+|that\s+|very\s+|really\s+)?(?:good|great|well|fine|ok|okay|nice|happy)\b/,
+  /\bnot\s+(?:doing|feeling)\s+(?:so\s+|too\s+|that\s+|very\s+)?(?:good|great|well|fine)\b/,
+  /\bcould\s+be\s+better\b/,
+  /\b(?:bad|terrible|awful|horrible|rough|lousy|miserable|unwell|sick|ill|exhausted|tired|stressed|frustrated|worried|upset|angry|sad|depressed)\b/,
+  /\bnot\s+(?:great|good)\b/,
+  /\bhaving\s+a\s+(?:bad|rough|hard|tough)\s+(?:day|week|time)\b/,
+];
+
+/** Plain positives. Only reached when no negative matched. */
+const WELLBEING_POSITIVE_PATTERNS: RegExp[] = [
+  /\b(?:good|great|fine|well|ok|okay|okey|alright|all\s+right|excellent|fantastic|awesome|amazing|wonderful|perfect|nice|super|fabulous|brilliant|happy|blessed|relaxed|energetic)\b/,
+  /\ball\s+good\b/,
+  /\bno\s+complaints\b/,
+  /\bcan[\u2019']?t\s+complain\b/,
+  /\bpretty\s+(?:good|well)\b/,
+  /\bdoing\s+(?:good|great|well|fine)\b/,
+  /\bvery\s+well\b/,
+  /\bi\s*(?:\u2019|')?\s*m\s+(?:good|great|fine|well|ok|okay)\b/,
+];
+
+/** The client asked Buddy back. */
+const WELLBEING_RECIPROCAL_PATTERNS: RegExp[] = [
+  /\band\s+(?:you|yourself|yours)\b/,
+  /\bhow\s+(?:are|about)\s+you\b/,
+  /\bwhat\s+about\s+you\b/,
+  /\byou\s*\?/,
+  /\bhow\s+are\s+things\s+(?:with|on)\s+your\b/,
+];
+
+/**
+ * Read the sentiment of the client's wellbeing answer.
+ *
+ * Unlike the project question this NEVER returns "unclear": small talk must be
+ * acknowledged and moved on from, not clarified. An answer we cannot read
+ * simply gets the neutral acknowledgement.
+ */
+export function classifyWellbeing(text: string): WellbeingSentiment {
+  const normalized = normalize(text ?? '');
+  if (normalized.length < 2) return 'neutral';
+  if (WELLBEING_NEGATIVE_PATTERNS.some((r) => r.test(normalized))) return 'negative';
+  if (WELLBEING_POSITIVE_PATTERNS.some((r) => r.test(normalized))) return 'positive';
+  return 'neutral';
+}
+
+/** True when the client turned the question back on Buddy. */
+export function asksBuddyBack(text: string): boolean {
+  const normalized = normalize(text ?? '');
+  return WELLBEING_RECIPROCAL_PATTERNS.some((r) => r.test(normalized));
+}
+
+export function wellbeingAck(sentiment: WellbeingSentiment): string {
+  if (sentiment === 'positive') return WELLBEING_ACK_POSITIVE;
+  if (sentiment === 'negative') return WELLBEING_ACK_NEGATIVE;
+  return WELLBEING_ACK_NEUTRAL;
+}
+
+// --- scripted lines ----------------------------------------------------------
+
+/** A scripted reply in both of its forms (see the module header). */
+export interface ScriptedReply {
+  /** One line, single spaces — chat context, transcript, logs, assertions. */
+  reply: string;
+  /** The same words with a paragraph break between sentences, for playout. */
+  spoken: string;
+}
+
+/** Joins sentences into a {@link ScriptedReply}; empty parts are dropped. */
+export function scriptedReply(...parts: string[]): ScriptedReply {
+  const sentences = parts.filter((part) => part.trim().length > 0);
+  return { reply: sentences.join(' '), spoken: sentences.join('\n\n') };
+}
+
+/**
+ * The reply to the wellbeing answer.
+ *
+ * When that same answer ALREADY says whether the project is new or existing
+ * (a client who says "I'm good, I want to build an app"), the project question
+ * is skipped and its scripted answer is given instead — the router never asks
+ * something the client just answered.
+ */
+export function wellbeingReply(text: string): { scripted: ScriptedReply; choice: OpeningChoice } {
+  const ack = wellbeingAck(classifyWellbeing(text));
+  const back = asksBuddyBack(text) ? WELLBEING_ACK_RECIPROCAL : '';
+  const choice = classifyOpeningChoice(text);
+  if (choice === 'unclear') {
+    return { scripted: scriptedReply(ack, back, OPENING_PURPOSE, PROJECT_TYPE_QUESTION), choice };
+  }
+  return { scripted: scriptedReply(ack, back, openingReply(choice)), choice };
+}
+
 // --- router ------------------------------------------------------------------
 
 /**
@@ -145,8 +274,11 @@ export function intentForChoice(choice: Exclude<OpeningChoice, 'unclear'>): Open
  */
 export const MAX_OPENING_CLARIFICATIONS = 2;
 
+/** Which scripted question is currently on the table. */
+export type OpeningPhase = 'wellbeing' | 'project_type' | 'done';
+
 export interface OpeningRouterDeps {
-  /** Speaks the scripted line. Resolves when playout finished. */
+  /** Speaks the scripted line (the `spoken` form). Resolves when playout finished. */
   say: (text: string) => Promise<void>;
   /** Records the resolved intent in the server-side requirement state. */
   setIntent: (intent: OpeningIntent) => void;
@@ -154,17 +286,35 @@ export interface OpeningRouterDeps {
   canSpeak: () => boolean;
   onEvent?: (event: string, data?: Record<string, string | number | boolean>) => void;
   maxClarifications?: number;
+  /**
+   * Which stage the first client turn answers. Defaults to `'wellbeing'`,
+   * because the greeting ends with "How are you today?"; pass
+   * `'project_type'` when that question was never put to the client.
+   */
+  startAt?: Exclude<OpeningPhase, 'done'>;
 }
 
 export type OpeningOutcome =
   /** The router handled the turn; the LLM must NOT also reply. */
-  | { handled: true; choice: OpeningChoice; reply: string }
+  | {
+      handled: true;
+      /** The stage this turn answered. */
+      phase: Exclude<OpeningPhase, 'done'>;
+      /** Only meaningful once the project question has been answered. */
+      choice: OpeningChoice;
+      /** Canonical single-line reply (what goes into the chat context). */
+      reply: string;
+      /** What was actually spoken (paragraph breaks between sentences). */
+      spoken: string;
+    }
   /** The router is done (or was never active); the LLM owns this turn. */
   | { handled: false };
 
 export interface OpeningRouter {
-  /** True while the opening question is still unanswered. */
+  /** True while a scripted opening question is still unanswered. */
   readonly active: boolean;
+  /** Which scripted question is on the table right now. */
+  readonly phase: OpeningPhase;
   /** The resolved choice, or null while still unresolved. */
   readonly choice: Exclude<OpeningChoice, 'unclear'> | null;
   /** How many clarifications have been asked so far. */
@@ -177,40 +327,68 @@ export interface OpeningRouter {
 
 export function createOpeningRouter(deps: OpeningRouterDeps): OpeningRouter {
   const maxClarifications = deps.maxClarifications ?? MAX_OPENING_CLARIFICATIONS;
-  let active = true;
+  let phase: OpeningPhase = deps.startAt ?? 'wellbeing';
   let choice: Exclude<OpeningChoice, 'unclear'> | null = null;
   let clarifications = 0;
 
   const emit = (event: string, data: Record<string, string | number | boolean> = {}) =>
     deps.onEvent?.(event, data);
 
-  const handleClientTurn = async (text: string): Promise<OpeningOutcome> => {
-    if (!active) return { handled: false };
+  /** Resolves the project question: records the intent and closes the opening. */
+  const resolve = (resolved: Exclude<OpeningChoice, 'unclear'>) => {
+    choice = resolved;
+    phase = 'done';
+    deps.setIntent(intentForChoice(resolved));
+    emit('opening_resolved', { choice: resolved, clarifications });
+  };
 
+  /** Stage 1: acknowledge the wellbeing answer, then ask the project question. */
+  const handleWellbeingTurn = async (text: string): Promise<OpeningOutcome> => {
+    const { scripted, choice: answered } = wellbeingReply(text);
+    if (!(await speak(scripted.spoken))) return { handled: false };
+    emit('opening_wellbeing_acknowledged', {
+      sentiment: classifyWellbeing(text),
+      asked_back: asksBuddyBack(text),
+      // The client can answer both questions in one breath.
+      project_answered: answered !== 'unclear',
+    });
+    if (answered === 'unclear') {
+      phase = 'project_type';
+    } else {
+      resolve(answered);
+    }
+    return { handled: true, phase: 'wellbeing', choice: answered, ...scripted };
+  };
+
+  /** Stage 2: the new-versus-existing answer. */
+  const handleProjectTypeTurn = async (text: string): Promise<OpeningOutcome> => {
     const classified = classifyOpeningChoice(text);
 
     if (classified === 'unclear') {
       if (clarifications >= maxClarifications) {
         // Two tries were enough — hand the opening to the LLM rather than
         // asking the same question a third time.
-        active = false;
+        phase = 'done';
         emit('opening_handoff', { reason: 'clarification_limit' });
         return { handled: false };
       }
       clarifications += 1;
-      const reply = OPENING_REPLY_UNCLEAR;
-      if (!(await speak(reply))) return { handled: false };
+      const scripted = scriptedReply(OPENING_REPLY_UNCLEAR);
+      if (!(await speak(scripted.spoken))) return { handled: false };
       emit('opening_clarified', { attempt: clarifications });
-      return { handled: true, choice: 'unclear', reply };
+      return { handled: true, phase: 'project_type', choice: 'unclear', ...scripted };
     }
 
-    const reply = openingReply(classified);
-    if (!(await speak(reply))) return { handled: false };
-    choice = classified;
-    active = false;
-    deps.setIntent(intentForChoice(classified));
-    emit('opening_resolved', { choice: classified, clarifications });
-    return { handled: true, choice: classified, reply };
+    const scripted = scriptedReply(openingReply(classified));
+    if (!(await speak(scripted.spoken))) return { handled: false };
+    resolve(classified);
+    return { handled: true, phase: 'project_type', choice: classified, ...scripted };
+  };
+
+  const handleClientTurn = async (text: string): Promise<OpeningOutcome> => {
+    if (phase === 'wellbeing') return handleWellbeingTurn(text);
+    if (phase === 'project_type') return handleProjectTypeTurn(text);
+    return { handled: false };
   };
 
   /** Speaks the scripted line; false means "we could not, let the LLM run". */
@@ -218,7 +396,7 @@ export function createOpeningRouter(deps: OpeningRouterDeps): OpeningRouter {
     if (!deps.canSpeak()) {
       // Session draining/closed: never schedule speech, and never claim the
       // turn — there is nothing left to answer.
-      active = false;
+      phase = 'done';
       emit('opening_skipped', { reason: 'session_not_running' });
       return false;
     }
@@ -229,14 +407,17 @@ export function createOpeningRouter(deps: OpeningRouterDeps): OpeningRouter {
       emit('opening_error', { reason: error instanceof Error ? error.name || 'Error' : typeof error });
       // Speech failed: stop routing and let the normal LLM path take over so
       // the client is never left with silence.
-      active = false;
+      phase = 'done';
       return false;
     }
   };
 
   return {
     get active() {
-      return active;
+      return phase !== 'done';
+    },
+    get phase() {
+      return phase;
     },
     get choice() {
       return choice;
@@ -246,7 +427,7 @@ export function createOpeningRouter(deps: OpeningRouterDeps): OpeningRouter {
     },
     handleClientTurn,
     deactivate: () => {
-      active = false;
+      phase = 'done';
     },
   };
 }

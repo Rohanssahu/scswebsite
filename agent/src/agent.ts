@@ -42,6 +42,7 @@ import {
   ENDPOINTING_MAX_DELAY_MS,
   ENDPOINTING_MIN_DELAY_MS,
   VAD_MIN_SILENCE_MS,
+  loadLlmConnOptions,
   loadSessionLimits,
 } from './config.js';
 import {
@@ -73,6 +74,7 @@ import {
   logLifecycle,
   onJobShutdownSignal,
 } from './session_lifecycle.js';
+import { CONSENT_REQUIRED_REPLY, submissionToolParameters } from './tool_params.js';
 import {
   VOICE_LANGUAGES,
   applyUpdate,
@@ -344,15 +346,12 @@ export default defineAgent({
       submit_lead: llm.tool({
         description:
           'Store the confirmed requirement, estimate and contact details, and send the confirmation emails. Call only after: estimate confirmed, contact details verified and read back, and the visitor gave contact consent.',
-        parameters: z
-          .object({
-            contact_consent: z.literal(true),
-            human_review: z.boolean().default(false),
-            review_message: z.string().trim().max(2000).optional(),
-          })
-          .strict(),
-        execute: async ({ human_review, review_message }) => {
+        parameters: submissionToolParameters,
+        execute: async ({ contact_consent, human_review, review_message }) => {
           // Server-side authorization chain — none of this trusts the model:
+          if (!contact_consent) {
+            return CONSENT_REQUIRED_REPLY;
+          }
           if (!backend || !sessionId) {
             return 'Submissions are not available right now. Apologize and point the visitor to the contact form at /contact.';
           }
@@ -412,6 +411,9 @@ export default defineAgent({
       // Idle visitors: mark away, then we close below. Seconds.
       userAwayTimeout: limits.idleTimeoutSeconds,
       maxToolSteps: 4,
+      // A timed-out LLM attempt yields NO reply and NO exception, so the
+      // framework's 10 s default would silently drop slow turns (config.ts).
+      connOptions: { llmConnOptions: loadLlmConnOptions() },
     });
 
     // ---- greeting: exactly once, only on a running session ------------------
