@@ -5,26 +5,29 @@
 // use: they receive an opaque `llm.LLM` instance from createLlm(). Exactly
 // ONE provider is active at a time, selected by BUDDY_LLM_PROVIDER.
 //
-//   BUDDY_LLM_PROVIDER=openai   (default) — implemented
-//   BUDDY_LLM_PROVIDER=gemini   — documented placeholder, NOT implemented
+//   BUDDY_LLM_PROVIDER=gemini   (default) — implemented, uses GOOGLE_API_KEY
+//   BUDDY_LLM_PROVIDER=openai   — implemented, uses OPENAI_API_KEY
 //
-// Adding Gemini later:
-//   1. `npm install @livekit/agents-plugin-google`
-//   2. Implement createGeminiLlm() below with
-//        new google.LLM({ model: process.env.BUDDY_GEMINI_MODEL ?? 'gemini-2.0-flash',
-//                         apiKey: process.env.GOOGLE_API_KEY })
-//   3. Set BUDDY_LLM_PROVIDER=gemini and GOOGLE_API_KEY in the worker env.
 // Nothing in the frontend, Edge Functions or database changes — the provider
-// is invisible outside this module.
+// is invisible outside this module. An unrecognized value fails loudly
+// instead of silently falling back, so a typo in worker env config can never
+// silently switch providers.
 // =============================================================================
 
 import type { llm } from '@livekit/agents';
+import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
 
 export type LlmProvider = 'openai' | 'gemini';
 
 export function resolveProvider(envValue?: string | null): LlmProvider {
-  return envValue === 'gemini' ? 'gemini' : 'openai';
+  const value = (envValue ?? '').trim();
+  if (!value || value === 'gemini') return 'gemini';
+  if (value === 'openai') return 'openai';
+  throw new Error(
+    `Unknown BUDDY_LLM_PROVIDER "${envValue}" — must be "gemini" or "openai". ` +
+      'Refusing to silently fall back to a different provider.',
+  );
 }
 
 function createOpenAiLlm(): llm.LLM {
@@ -37,13 +40,15 @@ function createOpenAiLlm(): llm.LLM {
   });
 }
 
-/** Placeholder — see the header for the exact steps to enable Gemini. */
 function createGeminiLlm(): llm.LLM {
-  throw new Error(
-    'Gemini provider is not implemented yet. Install @livekit/agents-plugin-google, ' +
-      'implement createGeminiLlm() in src/providers/llm.ts, and set GOOGLE_API_KEY. ' +
-      'Until then run with BUDDY_LLM_PROVIDER=openai.',
-  );
+  if (!process.env.GOOGLE_API_KEY) {
+    throw new Error('GOOGLE_API_KEY is required for the gemini provider');
+  }
+  return new google.LLM({
+    model: process.env.BUDDY_GEMINI_MODEL ?? 'gemini-2.5-flash',
+    apiKey: process.env.GOOGLE_API_KEY,
+    temperature: 0.3,
+  });
 }
 
 export function createLlm(): llm.LLM {

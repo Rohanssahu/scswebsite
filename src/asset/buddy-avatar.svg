@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Buddy — AI Project Consultant">
+  <!--
+    PLACEHOLDER Buddy avatar for the AI Consultation Meeting.
+    To use the real avatar image: replace THIS file (same path/name:
+    src/asset/buddy-avatar.svg) with the supplied image, or drop a PNG/JPG next
+    to it and update the single import in
+    src/components/consultation/buddyAvatar.ts. No other code changes needed.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="0.5" stop-color="#ec4899"/>
+      <stop offset="1" stop-color="#9333ea"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f3e8ff"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="120" fill="url(#bg)"/>
+  <!-- shoulders / suit -->
+  <path d="M40 218c8-38 42-58 80-58s72 20 80 58a120 120 0 0 1-160 0z" fill="#1e1b4b"/>
+  <path d="M104 168h32l-10 26h-12z" fill="#ffffff" opacity="0.9"/>
+  <!-- head -->
+  <circle cx="120" cy="104" r="52" fill="url(#face)"/>
+  <!-- headset -->
+  <path d="M74 100a46 46 0 0 1 92 0" fill="none" stroke="#1e1b4b" stroke-width="9" stroke-linecap="round"/>
+  <rect x="64" y="96" width="14" height="26" rx="7" fill="#1e1b4b"/>
+  <rect x="162" y="96" width="14" height="26" rx="7" fill="#1e1b4b"/>
+  <path d="M171 122c0 16-16 26-32 27" fill="none" stroke="#1e1b4b" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="136" cy="150" r="6" fill="#ec4899"/>
+  <!-- eyes -->
+  <circle cx="102" cy="102" r="7.5" fill="#1e1b4b"/>
+  <circle cx="138" cy="102" r="7.5" fill="#1e1b4b"/>
+  <circle cx="104.5" cy="99.5" r="2.5" fill="#ffffff"/>
+  <circle cx="140.5" cy="99.5" r="2.5" fill="#ffffff"/>
+  <!-- smile -->
+  <path d="M103 124c5 7 12 10 17 10s12-3 17-10" fill="none" stroke="#1e1b4b" stroke-width="5" stroke-linecap="round"/>
+  <!-- AI spark badge -->
+  <g transform="translate(158 44)">
+    <circle r="17" fill="#ffffff"/>
+    <path d="M0-9L2.4-2.4 9 0 2.4 2.4 0 9-2.4 2.4-9 0-2.4-2.4z" fill="#9333ea"/>
+  </g>
+</svg>

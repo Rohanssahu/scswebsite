@@ -16,6 +16,10 @@ export type VoiceIntent = (typeof VOICE_INTENTS)[number];
 export const VOICE_LANGUAGES = ['en', 'hi', 'hinglish'] as const;
 export type VoiceLanguage = (typeof VOICE_LANGUAGES)[number];
 
+/** Consultation meetings additionally offer Marathi, Urdu and Arabic. */
+export const CONSULTATION_LANGUAGES = ['en', 'hi', 'hinglish', 'mr', 'ur', 'ar'] as const;
+export type ConsultationLanguage = (typeof CONSULTATION_LANGUAGES)[number];
+
 const shortText = z.string().trim().min(1).max(500);
 const shortList = z.array(z.string().trim().min(1).max(200)).max(25);
 
@@ -48,6 +52,18 @@ export const requirementFieldsSchema = z
     deployment_details: shortText,
     urgency: shortText,
     secure_upload_needed: shortText,
+    // consultation-meeting extras (additive; mirrored by the consultation-agent
+    // Edge Function whitelist — voice-lead silently drops them, so the general
+    // voice flow is unaffected)
+    target_countries: shortText,
+    user_roles: shortList,
+    notifications: shortText,
+    design_figma_availability: shortText,
+    api_documentation: shortText,
+    engagement_model: shortText,
+    developer_preference: shortText,
+    weekly_capacity_preference: shortText,
+    security_compliance: shortText,
   })
   .partial()
   .strict();
@@ -72,7 +88,9 @@ export type StateUpdate = z.infer<typeof stateUpdateSchema>;
 
 export interface ProjectState {
   intent: VoiceIntent | null;
-  language: VoiceLanguage | null;
+  /** Superset type: the general voice flow only ever sets VOICE_LANGUAGES;
+   * consultation meetings may set any CONSULTATION_LANGUAGES value. */
+  language: ConsultationLanguage | null;
   fields: RequirementFields;
   assumptions: string[];
   contradictions: string[];
@@ -246,6 +264,15 @@ export function buildSummary(state: ProjectState): string {
     deployment_details: 'Deployment/hosting',
     urgency: 'Urgency',
     secure_upload_needed: 'Secure upload needed',
+    target_countries: 'Target countries',
+    user_roles: 'User roles',
+    notifications: 'Notifications',
+    design_figma_availability: 'Design/Figma availability',
+    api_documentation: 'API documentation',
+    engagement_model: 'Engagement model',
+    developer_preference: 'AI vs human developer preference',
+    weekly_capacity_preference: 'Weekly capacity',
+    security_compliance: 'Security/compliance',
   };
   for (const key of Object.keys(label) as (keyof RequirementFields)[]) {
     const v = f[key];

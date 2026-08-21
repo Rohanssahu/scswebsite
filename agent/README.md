@@ -20,8 +20,10 @@ Architecture summary:
 
 - `src/agent.ts` — entrypoint: VAD → STT → LLM → TTS pipeline, strict tools,
   session limits, audit events.
-- `src/providers/llm.ts` — provider abstraction (OpenAI now; Gemini adapter
-  placeholder documented in the file).
+- `src/providers/llm.ts` — LLM provider abstraction (Gemini by default, OpenAI
+  as an alternative).
+- `src/providers/stt.ts` — STT provider abstraction (OpenAI only today; see
+  the file header for why Gemini STT isn't a safe drop-in yet).
 - `src/state.ts` — typed requirement state; the model can only write through
   the strict zod schema.
 - `src/estimate.ts` — deterministic estimate engine; the model classifies,

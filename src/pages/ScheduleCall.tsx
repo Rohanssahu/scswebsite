@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Clock, CheckCircle2, Video, Phone, MessageCircle } from 'lucide-react';
+import { CalendarDays, Clock, CheckCircle2, Video, Phone, MessageCircle, Sparkles } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ConsultationScheduler from '@/components/consultation/ConsultationScheduler';
 import { saveBooking } from '@/lib/analysisStore';
 import { formatDate } from '@/i18n/languageConfig';
 import { DemoBooking } from '@/types/projectAnalysis';
@@ -61,6 +62,9 @@ const ScheduleCall = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', meetingPreference: 'Google Meet', message: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmed, setConfirmed] = useState<DemoBooking | null>(null);
+  // Default to the AI consultation; the existing demo booking form stays
+  // available under the second tab.
+  const [mode, setMode] = useState<'ai' | 'human'>('ai');
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -139,7 +143,44 @@ const ScheduleCall = () => {
               </p>
             </div>
 
-            <form data-guide-id="schedule-form" onSubmit={submit} className="glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8">
+            {/* Mode switch: AI consultation meeting (new) vs the existing
+                demo booking form. No duplicate CTA is added elsewhere. */}
+            <div role="tablist" aria-label={t('meeting.schedule.modeLabel')} className="mx-auto mt-8 flex max-w-md gap-2">
+              <button
+                role="tab"
+                type="button"
+                aria-selected={mode === 'ai'}
+                onClick={() => setMode('ai')}
+                className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                  mode === 'ai' ? 'border-pink-500 bg-pink-50 text-gray-900' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
+                }`}
+              >
+                <Sparkles className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabAi')}
+              </button>
+              <button
+                role="tab"
+                type="button"
+                aria-selected={mode === 'human'}
+                onClick={() => setMode('human')}
+                className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                  mode === 'human' ? 'border-pink-500 bg-pink-50 text-gray-900' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
+                }`}
+              >
+                <CalendarDays className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabHuman')}
+              </button>
+            </div>
+
+            {mode === 'ai' && (
+              <div className="mt-6">
+                <ConsultationScheduler />
+              </div>
+            )}
+
+            <form
+              data-guide-id="schedule-form"
+              onSubmit={submit}
+              className={`glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 ${mode === 'ai' ? 'hidden' : ''}`}
+            >
               {/* Date */}
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 <CalendarDays className="h-4 w-4" aria-hidden="true" /> {t('schedule.selectDate')}

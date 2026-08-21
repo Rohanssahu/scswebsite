@@ -2,8 +2,9 @@
 // Buddy — SCS Softwares real-time voice IT Manager.
 // LiveKit Agents worker entrypoint.
 //
-// Pipeline: Silero VAD → OpenAI streaming STT → provider-abstracted LLM
-// (OpenAI now, Gemini adapter documented) → ElevenLabs multilingual TTS.
+// Pipeline: Silero VAD → OpenAI streaming STT (only remaining OpenAI
+// dependency — see src/providers/stt.ts) → Gemini LLM (provider-abstracted,
+// see src/providers/llm.ts) → ElevenLabs multilingual TTS.
 // Turn detection is VAD-based with barge-in (visitor interruptions) enabled
 // by the framework defaults; background-noise tolerance comes from the VAD
 // activation threshold below.
@@ -27,7 +28,6 @@ import {
   voice,
 } from '@livekit/agents';
 import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
-import * as openai from '@livekit/agents-plugin-openai';
 import * as silero from '@livekit/agents-plugin-silero';
 import 'dotenv/config';
 import { z } from 'zod';
@@ -54,8 +54,10 @@ import {
   spellPhoneForReadback,
 } from './guards.js';
 import { loadKnowledge } from './knowledge.js';
+import { runConsultationMeeting } from './meeting.js';
 import { GREETING, buildSystemPrompt } from './prompts.js';
 import { createLlm } from './providers/llm.js';
+import { createStt } from './providers/stt.js';
 import {
   VOICE_LANGUAGES,
   applyUpdate,
@@ -72,17 +74,28 @@ const STATE_TOPIC = 'buddy.state';
 interface SessionMeta {
   sessionId: string | null;
   preferredLanguage: string | null;
+  /** 'consultation' switches to the meeting mode (metadata is minted by the
+   * consultation-meeting Edge Function — never by the browser). */
+  mode: string | null;
+  meetingId: string | null;
 }
 
 function parseParticipantMeta(raw: string | undefined): SessionMeta {
   try {
-    const parsed = JSON.parse(raw ?? '') as { sessionId?: unknown; preferredLanguage?: unknown };
+    const parsed = JSON.parse(raw ?? '') as {
+      sessionId?: unknown;
+      preferredLanguage?: unknown;
+      mode?: unknown;
+      meetingId?: unknown;
+    };
     return {
       sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
       preferredLanguage: typeof parsed.preferredLanguage === 'string' ? parsed.preferredLanguage : null,
+      mode: typeof parsed.mode === 'string' ? parsed.mode : null,
+      meetingId: typeof parsed.meetingId === 'string' ? parsed.meetingId : null,
     };
   } catch {
-    return { sessionId: null, preferredLanguage: null };
+    return { sessionId: null, preferredLanguage: null, mode: null, meetingId: null };
   }
 }
 
@@ -104,6 +117,17 @@ export default defineAgent({
     await ctx.connect();
     const participant = await ctx.waitForParticipant();
     const meta = parseParticipantMeta(participant.metadata);
+
+    // Consultation-meeting mode: server-minted metadata only; the general
+    // voice flow below stays untouched.
+    if (meta.mode === 'consultation' && meta.meetingId) {
+      await runConsultationMeeting(ctx, {
+        meetingId: meta.meetingId,
+        preferredLanguage: meta.preferredLanguage,
+      });
+      return;
+    }
+
     const sessionId = meta.sessionId;
     const consentAt = new Date().toISOString();
 
@@ -350,11 +374,7 @@ export default defineAgent({
     // ---- voice pipeline -------------------------------------------------------
     const session = new voice.AgentSession({
       vad: ctx.proc.userData.vad as silero.VAD,
-      stt: new openai.STT({
-        model: 'gpt-4o-transcribe',
-        // Buddy's three languages; detection handles code-switching (Hinglish).
-        detectLanguage: true,
-      }),
+      stt: createStt(),
       llm: createLlm(),
       tts: new elevenlabs.TTS({
         model: process.env.ELEVENLABS_MODEL ?? 'eleven_turbo_v2_5', // multilingual incl. hi

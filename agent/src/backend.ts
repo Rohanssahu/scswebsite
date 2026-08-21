@@ -79,6 +79,19 @@ export interface BackendConfig {
   timeoutMs: number;
 }
 
+/** Config for the consultation-agent Edge Function (same secret, its own URL). */
+export function loadConsultationBackendConfig(): BackendConfig | null {
+  const functionUrl = process.env.BUDDY_CONSULTATION_URL ?? '';
+  const agentSecret = process.env.VOICE_AGENT_SECRET ?? '';
+  if (!/^https:\/\//.test(functionUrl) || agentSecret.length < 16) return null;
+  const timeoutMs = Number.parseInt(process.env.BUDDY_BACKEND_TIMEOUT_MS ?? '10000', 10);
+  return {
+    functionUrl: functionUrl.replace(/\/+$/, ''),
+    agentSecret,
+    timeoutMs: Number.isInteger(timeoutMs) && timeoutMs >= 1000 && timeoutMs <= 60000 ? timeoutMs : 10000,
+  };
+}
+
 export function loadBackendConfig(): BackendConfig | null {
   // BUDDY_ prefix: names starting with SUPABASE_ are reserved by Supabase
   // tooling and can be stripped/overridden in managed environments.
@@ -165,6 +178,146 @@ export class VoiceLeadClient {
       ...(extra.language ? { selected_language: extra.language } : {}),
       ...(extra.started ? { started: true } : {}),
       ...(extra.ended ? { ended: true } : {}),
+    });
+  }
+}
+
+// =============================================================================
+// Consultation-meeting client (consultation-agent Edge Function).
+// Same transport + shared-secret scheme as VoiceLeadClient.
+// =============================================================================
+
+export interface MeetingContext {
+  id: string;
+  reference: string;
+  status: string;
+  meetingKind: string;
+  reviewStatus: string;
+  clientName: string;
+  preferredLanguage: string | null;
+  transcriptConsent: boolean;
+  consentAt: string;
+  analysisSnapshot: Record<string, unknown>;
+  requirements: Record<string, unknown>;
+  requirementSummary: string | null;
+  finalized: boolean;
+}
+
+/** Whitelist-parse a load_context response. Returns null on anything odd. */
+export function parseMeetingContext(body: Record<string, unknown> | undefined): MeetingContext | null {
+  const m = body?.meeting;
+  if (typeof m !== 'object' || m === null) return null;
+  const d = m as Record<string, unknown>;
+  if (typeof d.id !== 'string' || typeof d.reference !== 'string') return null;
+  return {
+    id: d.id,
+    reference: d.reference,
+    status: typeof d.status === 'string' ? d.status : 'unknown',
+    meetingKind: typeof d.meetingKind === 'string' ? d.meetingKind : 'instant',
+    reviewStatus: typeof d.reviewStatus === 'string' ? d.reviewStatus : 'none',
+    clientName: typeof d.clientName === 'string' ? d.clientName.slice(0, 100) : '',
+    preferredLanguage: typeof d.preferredLanguage === 'string' ? d.preferredLanguage : null,
+    transcriptConsent: d.transcriptConsent === true,
+    consentAt: typeof d.consentAt === 'string' ? d.consentAt : new Date().toISOString(),
+    analysisSnapshot:
+      typeof d.analysisSnapshot === 'object' && d.analysisSnapshot !== null
+        ? (d.analysisSnapshot as Record<string, unknown>)
+        : {},
+    requirements:
+      typeof d.requirements === 'object' && d.requirements !== null
+        ? (d.requirements as Record<string, unknown>)
+        : {},
+    requirementSummary: typeof d.requirementSummary === 'string' ? d.requirementSummary : null,
+    finalized: d.finalized === true,
+  };
+}
+
+export class ConsultationClient {
+  constructor(private config: BackendConfig) {}
+
+  private async post(payload: Record<string, unknown>): Promise<BackendResult> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    try {
+      const res = await fetch(this.config.functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-buddy-agent-key': this.config.agentSecret,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      let body: Record<string, unknown> = {};
+      try {
+        body = (await res.json()) as Record<string, unknown>;
+      } catch {
+        body = {};
+      }
+      return {
+        ok: res.ok && body.ok === true,
+        status: res.status,
+        error: typeof body.error === 'string' ? body.error : undefined,
+        referenceCode: typeof body.referenceCode === 'string' ? body.referenceCode : undefined,
+        body,
+      };
+    } catch (e) {
+      const aborted = e instanceof Error && e.name === 'AbortError';
+      return { ok: false, status: 0, error: aborted ? 'timeout' : 'network' };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async loadContext(meetingId: string): Promise<MeetingContext | null> {
+    const result = await this.post({ action: 'load_context', meeting_id: meetingId });
+    if (!result.ok) return null;
+    return parseMeetingContext(result.body);
+  }
+
+  saveState(
+    meetingId: string,
+    fields: Record<string, unknown>,
+    summary: string,
+    language: string | null,
+    transcriptConsent?: boolean,
+  ): Promise<BackendResult> {
+    return this.post({
+      action: 'save_state',
+      meeting_id: meetingId,
+      fields,
+      summary,
+      ...(language ? { selected_language: language } : {}),
+      ...(transcriptConsent !== undefined ? { transcript_consent: transcriptConsent } : {}),
+    });
+  }
+
+  saveMessage(meetingId: string, sender: 'client' | 'buddy' | 'system', content: string): Promise<BackendResult> {
+    return this.post({ action: 'save_message', meeting_id: meetingId, sender, content });
+  }
+
+  saveProposal(meetingId: string, proposal: Record<string, unknown>): Promise<BackendResult> {
+    return this.post({ action: 'save_proposal', meeting_id: meetingId, proposal });
+  }
+
+  finalize(payload: Record<string, unknown>): Promise<BackendResult> {
+    return this.post(payload);
+  }
+
+  meetingEvent(
+    meetingId: string,
+    eventType: string,
+    data: Record<string, string | number | boolean> = {},
+  ): Promise<BackendResult> {
+    return this.post({ action: 'meeting_event', meeting_id: meetingId, event_type: eventType, data });
+  }
+
+  meetingStatus(meetingId: string, status: 'in_progress' | 'completed' | 'error', ended = false): Promise<BackendResult> {
+    return this.post({
+      action: 'meeting_status',
+      meeting_id: meetingId,
+      status,
+      ...(ended ? { ended: true } : {}),
     });
   }
 }

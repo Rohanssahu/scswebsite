@@ -25,3 +25,16 @@ verify_jwt = false
 # authenticates with that shared secret instead of a Supabase JWT.
 [functions.voice-lead]
 verify_jwt = false
+
+# consultation-meeting is a deliberately public endpoint like livekit-token:
+# browsers call it with the sb_publishable_* key. Its access control lives in
+# the function itself: origin allowlist, Turnstile on create/join, honeypot,
+# strict validation, per-IP rate limiting, a body-size cap, a scoped meeting
+# access token (hash-stored) and a global CONSULTATION_ENABLED kill switch.
+[functions.consultation-meeting]
+verify_jwt = false
+
+# consultation-agent is server-to-server ONLY (Buddy agent worker → Supabase),
+# exactly like voice-lead: no CORS, VOICE_AGENT_SECRET shared-key auth.
+[functions.consultation-agent]
+verify_jwt = false

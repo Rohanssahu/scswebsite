@@ -90,7 +90,16 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === 'string' && s.trim());
 }
 
-/** Reject malformed AI output so the caller falls back to the demo engine. */
+/**
+ * Reject malformed AI output so the caller falls back to the demo engine.
+ *
+ * This is a shape/type check only — the `ai-estimate` Edge Function already
+ * rejects unknown fields and clamps every cost/duration-driving number
+ * (hourlyRate, hours, weeklyCapacityHours) to a safe deterministic range
+ * server-side (see supabase/functions/ai-estimate/gemini.ts,
+ * validateAndClampAnalysis). This client-side check is defense in depth, not
+ * the primary safety net.
+ */
 function validateAnalysis(raw: unknown): raw is Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'> {
   if (typeof raw !== 'object' || raw === null) return false;
   const r = raw as Record<string, unknown>;
@@ -114,10 +123,18 @@ function validateAnalysis(raw: unknown): raw is Omit<AnalysisResult, 'mode' | 'g
     r.team.length > 0 &&
     r.team.every(
       (t: Record<string, unknown>) =>
-        t && typeof t.role === 'string' && typeof t.hours === 'number' && t.hours > 0 && typeof t.hourlyRate === 'number' && t.hourlyRate > 0,
+        t &&
+        typeof t.role === 'string' &&
+        typeof t.hours === 'number' &&
+        t.hours > 0 &&
+        t.hours <= 600 &&
+        typeof t.hourlyRate === 'number' &&
+        t.hourlyRate > 0 &&
+        t.hourlyRate <= 25,
     ) &&
     typeof r.weeklyCapacityHours === 'number' &&
     r.weeklyCapacityHours > 0 &&
+    r.weeklyCapacityHours <= 60 &&
     isStringArray(r.assumptions) &&
     Array.isArray(r.milestones) &&
     r.milestones.length > 0 &&
@@ -127,6 +144,30 @@ function validateAnalysis(raw: unknown): raw is Omit<AnalysisResult, 'mode' | 'g
     isStringArray(r.benefits) &&
     isStringArray(r.nextSteps)
   );
+}
+
+const KNOWN_ANALYSIS_KEYS = [
+  'healthScore',
+  'riskLevel',
+  'requirementSummary',
+  'currentlyWorking',
+  'problemsDetected',
+  'missingFeatures',
+  'recommendedSolution',
+  'team',
+  'weeklyCapacityHours',
+  'assumptions',
+  'milestones',
+  'benefits',
+  'nextSteps',
+] as const;
+
+/** Rebuild the AI result from a known-key allowlist so any unexpected field
+ * on the raw response is dropped rather than spread through unchecked. */
+function stripUnknownKeys(raw: Record<string, unknown>): Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'> {
+  const out = {} as Record<string, unknown>;
+  for (const key of KNOWN_ANALYSIS_KEYS) out[key] = raw[key];
+  return out as Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'>;
 }
 
 /**
@@ -151,9 +192,10 @@ export async function generateAiAnalysis(
   });
   if (error || !data?.ok) throw new Error(error?.message ?? 'AI analysis failed');
   if (!validateAnalysis(data.result)) throw new Error('AI returned an invalid analysis');
+  const safeResult = stripUnknownKeys(data.result);
   return {
-    ...data.result,
-    healthScore: Math.max(0, Math.min(100, Math.round(data.result.healthScore))),
+    ...safeResult,
+    healthScore: Math.max(0, Math.min(100, Math.round(safeResult.healthScore))),
     mode,
     generatedAt: new Date().toISOString(),
     source: 'ai',

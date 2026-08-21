@@ -96,12 +96,44 @@ export interface BuddyProgressView {
   confidence: string;
 }
 
+/** Consultation-meeting proposal published by the agent (whitelist-parsed). */
+export interface BuddyProposalView {
+  version: number;
+  status: 'preliminary';
+  requiresHumanReview: true;
+  summary: string;
+  recommendedSolution: string[];
+  architecture: string[];
+  technologyStack: string[];
+  inScope: string[];
+  outOfScope: string[];
+  aiRoles: string[];
+  humanRoles: string[];
+  milestones: Array<{ title: string; weeks: string }>;
+  assumptions: string[];
+  dependencies: string[];
+  risks: string[];
+  totalHoursMin: number;
+  totalHoursMax: number;
+  totalCostMin: number;
+  totalCostMax: number;
+  durationWeeksMin: number;
+  durationWeeksMax: number;
+  weeklyCapacityHours: number;
+  currency: 'USD';
+  confidence: 'low' | 'medium' | 'high';
+}
+
 export interface BuddyStateView {
   progress: BuddyProgressView | null;
   language: string | null;
   estimate: BuddyEstimateView | null;
   confirmed: boolean;
   referenceCode: string | null;
+  /** 'consultation' in meeting mode; null in the general voice flow. */
+  mode: string | null;
+  proposal: BuddyProposalView | null;
+  finalized: boolean;
 }
 
 const num = (v: unknown, min: number, max: number): number | null =>
@@ -197,12 +229,77 @@ export function parseBuddyState(raw: string): BuddyStateView | null {
 
   const reference = typeof d.referenceCode === 'string' && /^SCS-[A-Z0-9]{8}$/.test(d.referenceCode) ? d.referenceCode : null;
 
+  let proposal: BuddyProposalView | null = null;
+  if (typeof d.proposal === 'object' && d.proposal !== null) {
+    const p = d.proposal as Record<string, unknown>;
+    const hoursMin = num(p.totalHoursMin, 0, 100000);
+    const hoursMax = num(p.totalHoursMax, 0, 100000);
+    const costMin = num(p.totalCostMin, 0, 10000000);
+    const costMax = num(p.totalCostMax, 0, 10000000);
+    const weeksMin = num(p.durationWeeksMin, 0, 520);
+    const weeksMax = num(p.durationWeeksMax, 0, 520);
+    const capacity = num(p.weeklyCapacityHours, 1, 168);
+    const confidence = p.confidence === 'low' || p.confidence === 'medium' || p.confidence === 'high' ? p.confidence : null;
+    const summary = typeof p.summary === 'string' ? p.summary.slice(0, 2000) : '';
+    if (
+      summary &&
+      hoursMin !== null &&
+      hoursMax !== null &&
+      costMin !== null &&
+      costMax !== null &&
+      weeksMin !== null &&
+      weeksMax !== null &&
+      capacity !== null &&
+      confidence !== null
+    ) {
+      const milestones = Array.isArray(p.milestones)
+        ? p.milestones
+            .filter((m): m is Record<string, unknown> => typeof m === 'object' && m !== null)
+            .slice(0, 12)
+            .map((m) => ({
+              title: typeof m.title === 'string' ? m.title.slice(0, 200) : '',
+              weeks: typeof m.weeks === 'string' ? m.weeks.slice(0, 40) : '',
+            }))
+            .filter((m) => m.title)
+        : [];
+      proposal = {
+        version: num(p.version, 0, 100) ?? 1,
+        status: 'preliminary',
+        requiresHumanReview: true,
+        summary,
+        recommendedSolution: strList(p.recommendedSolution),
+        architecture: strList(p.architecture),
+        technologyStack: strList(p.technologyStack),
+        inScope: strList(p.inScope),
+        outOfScope: strList(p.outOfScope),
+        aiRoles: strList(p.aiRoles, 12, 200),
+        humanRoles: strList(p.humanRoles, 12, 200),
+        milestones,
+        assumptions: strList(p.assumptions),
+        dependencies: strList(p.dependencies),
+        risks: strList(p.risks),
+        totalHoursMin: hoursMin,
+        totalHoursMax: hoursMax,
+        totalCostMin: costMin,
+        totalCostMax: costMax,
+        durationWeeksMin: weeksMin,
+        durationWeeksMax: weeksMax,
+        weeklyCapacityHours: capacity,
+        currency: 'USD',
+        confidence,
+      };
+    }
+  }
+
   return {
     progress,
     language: typeof d.language === 'string' ? d.language.slice(0, 20) : null,
     estimate,
     confirmed: d.confirmed === true,
     referenceCode: reference,
+    mode: typeof d.mode === 'string' ? d.mode.slice(0, 20) : null,
+    proposal,
+    finalized: d.finalized === true,
   };
 }
 

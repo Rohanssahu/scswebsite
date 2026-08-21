@@ -31,6 +31,8 @@ import ScheduleCall from "./pages/ScheduleCall";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
+// Lazy-loaded: keeps livekit-client out of the main bundle.
+const AiConsultation = lazy(() => import("./pages/AiConsultation"));
 import VirtualGuide from "./components/virtual-guide/VirtualGuide";
 import ScrollButtons from "./components/ScrollButtons";
 
@@ -96,6 +98,16 @@ const RoutesComponent = () => {
         }
       />
       <Route path="/schedule-call" element={<ScheduleCall />} />
+      <Route
+        path="/ai-consultation/:meetingReference"
+        element={
+          <Suspense
+            fallback={<div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">{t('common.loading')}</div>}
+          >
+            <AiConsultation />
+          </Suspense>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
