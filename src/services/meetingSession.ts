@@ -387,6 +387,9 @@ export class MeetingSession {
       return 'failed';
     }
     this.detachMicTrackWatch();
+    // Muted while we deliberately unpublish, so our own teardown is not
+    // reported back to the client as the microphone being lost.
+    this.micMuted = true;
     try {
       await room.localParticipant.setMicrophoneEnabled(false);
       await room.localParticipant.setMicrophoneEnabled(true, this.audioCaptureOptions());
@@ -442,6 +445,8 @@ export class MeetingSession {
     this.connecting = null;
     this.stopLevelPolling();
     this.detachMicTrackWatch();
+    // Leaving unpublishes the microphone; that is not a device failure.
+    this.micPublication = 'unknown';
     await this.room?.disconnect();
     this.cleanupAudio();
     this.room = null;
@@ -452,6 +457,7 @@ export class MeetingSession {
     this.connecting = null;
     this.stopLevelPolling();
     this.detachMicTrackWatch();
+    this.micPublication = 'unknown';
     await this.room?.disconnect();
     this.cleanupAudio();
     this.room = null;

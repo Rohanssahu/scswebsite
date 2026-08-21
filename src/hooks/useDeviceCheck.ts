@@ -38,15 +38,20 @@ export function useDeviceCheck(): DeviceCheckApi {
   const [snapshot, setSnapshot] = useState<DeviceCheckSnapshot>(INITIAL_DEVICE_CHECK_SNAPSHOT);
   const controllerRef = useRef<DeviceCheckController | null>(null);
 
-  useEffect(() => {
+  const createController = useCallback((): DeviceCheckController => {
     const controller = new DeviceCheckController(browserDeviceCheckDeps(), setSnapshot);
     controllerRef.current = controller;
     setSnapshot(controller.getSnapshot());
+    return controller;
+  }, []);
+
+  useEffect(() => {
+    createController();
     return () => {
-      controller.dispose();
+      controllerRef.current?.dispose();
       controllerRef.current = null;
     };
-  }, []);
+  }, [createController]);
 
   const testMicrophone = useCallback(() => {
     void controllerRef.current?.testMicrophone();
@@ -72,10 +77,16 @@ export function useDeviceCheck(): DeviceCheckApi {
     controllerRef.current?.selectOutput(deviceId);
   }, []);
 
+  /**
+   * Releases everything, then arms a fresh controller. If the client is ever
+   * sent back to the lobby (a failed join, a retry from the meeting), the
+   * checks start from "not tested" and are runnable again — rather than the
+   * hook being permanently dead and the Join button permanently disabled.
+   */
   const release = useCallback(() => {
     controllerRef.current?.dispose();
-    controllerRef.current = null;
-  }, []);
+    createController();
+  }, [createController]);
 
   return {
     ...snapshot,

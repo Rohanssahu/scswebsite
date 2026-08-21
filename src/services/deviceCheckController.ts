@@ -533,33 +533,40 @@ export class DeviceCheckController {
     }
   }
 
-  /** Re-reads the device lists without touching any test state. */
-  async refreshDevices(): Promise<void> {
+  /**
+   * Re-reads the device lists without touching any test state. Returns the raw
+   * enumeration so callers can tell "no devices listed" from "not listed".
+   */
+  async refreshDevices(): Promise<RawDeviceInfo[] | null> {
     const mediaDevices = this.deps.mediaDevices;
-    if (!mediaDevices || typeof mediaDevices.enumerateDevices !== 'function') return;
+    if (!mediaDevices || typeof mediaDevices.enumerateDevices !== 'function') return null;
     const devices = await mediaDevices.enumerateDevices().catch(() => null);
-    if (!devices || this.disposed) return;
+    if (!devices || this.disposed) return null;
     const micInputs = describeDevices(devices, 'audioinput', (index) => `Microphone ${index}`);
     const outputs = this.snapshot.outputSelectionSupported
       ? describeDevices(devices, 'audiooutput', (index) => `Speaker ${index}`)
       : [];
-    const selectedOutputId =
-      this.snapshot.selectedOutputId && isDeviceMissing(this.snapshot.selectedOutputId, outputs)
-        ? null
-        : this.snapshot.selectedOutputId;
+    const known = devices.length > 0;
+    const selectedOutputId = isDeviceMissing(this.snapshot.selectedOutputId, outputs, known)
+      ? null
+      : this.snapshot.selectedOutputId;
     this.patch({ micInputs, outputs, selectedOutputId });
+    return devices;
   }
 
   private async handleDeviceChange(): Promise<void> {
     if (this.disposed) return;
-    await this.refreshDevices();
-    if (this.disposed) return;
+    const devices = await this.refreshDevices();
+    if (this.disposed || !devices) return;
+    const known = devices.length > 0;
 
     const inputs = this.snapshot.micInputs;
-    const chosenGone = isDeviceMissing(this.snapshot.selectedMicId, inputs);
-    const testedGone = isDeviceMissing(this.testedMicId, inputs);
+    const chosenGone = isDeviceMissing(this.snapshot.selectedMicId, inputs, known);
+    const testedGone = isDeviceMissing(this.testedMicId, inputs, known);
     if (!chosenGone && !testedGone) return;
 
+    // Never silently fall back to a device the client did not choose: drop the
+    // selection and make them run the test again.
     this.invalidateMicPass(chosenGone ? null : this.snapshot.selectedMicId);
   }
 

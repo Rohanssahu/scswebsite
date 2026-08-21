@@ -102,10 +102,10 @@ export function classifyMediaError(error: unknown): Extract<MicTestState, 'denie
     case 'PermissionDeniedError':
     case 'SecurityError':
       return 'denied';
+    // Overconstrained means the exact deviceId we asked for is gone — from the
+    // client's point of view, the microphone they tested is no longer there.
     case 'NotFoundError':
     case 'DevicesNotFoundError':
-    // The exact deviceId we asked for is gone — from the client's point of
-    // view the microphone they tested is no longer there.
     case 'OverconstrainedError':
     case 'ConstraintNotSatisfiedError':
       return 'no_device';
@@ -302,12 +302,21 @@ export function describeDevices(
     }));
 }
 
-/** True when the previously tested device is no longer in the device list. */
-export function isDeviceMissing(deviceId: string | null, options: readonly DeviceOption[]): boolean {
-  if (!deviceId) return false;
-  // An empty list usually means "enumeration told us nothing" (Safari before
-  // permission), not "every microphone was unplugged" — never invalidate then.
-  if (options.length === 0) return false;
+/**
+ * True when the previously tested device is no longer in the device list.
+ *
+ * `enumerationKnown` separates the two reasons an empty list can happen:
+ * "enumeration told us nothing" (Safari before permission — never invalidate)
+ * from "the browser listed its devices and this one is not among them" (the
+ * only microphone was unplugged — do invalidate). Callers holding the raw
+ * enumeration pass `raw.length > 0`; the default is the safe reading.
+ */
+export function isDeviceMissing(
+  deviceId: string | null,
+  options: readonly DeviceOption[],
+  enumerationKnown: boolean = options.length > 0,
+): boolean {
+  if (!deviceId || !enumerationKnown) return false;
   return !options.some((option) => option.deviceId === deviceId);
 }
 

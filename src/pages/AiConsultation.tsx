@@ -29,7 +29,6 @@ import {
   LogIn,
   Mic,
   MicOff,
-  Speaker,
   Video,
   VideoOff,
   X,

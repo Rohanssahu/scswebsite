@@ -1485,6 +1485,7 @@
         "retry": "Try again",
         "prompt": "Please say “Hello Buddy” for a couple of seconds.",
         "level": "Input level",
+        "progress": "Voice check {{percent}}% complete — keep speaking.",
         "using": "Using: {{device}}",
         "selectorLabel": "Microphone",
         "defaultDevice": "Browser default",

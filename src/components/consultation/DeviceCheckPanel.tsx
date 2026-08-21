@@ -107,28 +107,33 @@ const DeviceCheckPanel: React.FC<DeviceCheckPanelProps> = ({ check }) => {
           </p>
         )}
 
-        {/* live input meter — visible whenever a stream is open */}
-        {(check.micState === 'listening' || check.micState === 'passed') && (
+        {/* Live input meter. Shown only while a stream is actually open — once
+            the test passes the stream is released, so a moving bar would be a
+            decoration rather than a real reading. */}
+        {check.micState === 'listening' && (
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span id="mic-level-label">{t('meeting.setup.mic.level')}</span>
-              <span>{check.micState === 'passed' ? `100%` : `${progressPercent}%`}</span>
+              <span>{levelPercent}%</span>
             </div>
             <div
               role="progressbar"
               aria-labelledby="mic-level-label"
-              aria-valuenow={check.micState === 'passed' ? 100 : levelPercent}
+              aria-valuenow={levelPercent}
               aria-valuemin={0}
               aria-valuemax={100}
               className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-gray-200"
             >
               <div
-                className={`h-full rounded-full transition-[width] duration-100 ${
-                  check.micState === 'passed' ? 'bg-emerald-600' : 'bg-pink-500'
-                }`}
-                style={{ width: `${check.micState === 'passed' ? 100 : Math.max(2, levelPercent)}%` }}
+                className="h-full rounded-full bg-pink-500 transition-[width] duration-100"
+                style={{ width: `${Math.max(2, levelPercent)}%` }}
               />
             </div>
+            {progressPercent > 0 && (
+              <p className="mt-1 text-xs text-gray-600">
+                {t('meeting.setup.mic.progress', { percent: progressPercent })}
+              </p>
+            )}
           </div>
         )}
 
