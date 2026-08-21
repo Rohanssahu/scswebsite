@@ -25,23 +25,26 @@
 // =============================================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { AccessToken } from 'npm:livekit-server-sdk@2';
 import {
-  buildVisitorGrant,
   generateParticipantIdentity,
   generateRoomName,
   isOriginAllowed,
   isVoiceAgentEnabled,
+  resolveAgentName,
   resolveAllowedOrigins,
   resolveRateWindows,
   TOKEN_TTL_SECONDS,
   validateTokenRequest,
 } from './security.ts';
+import { mintVoiceToken } from './token.ts';
 
 const MAX_BODY_BYTES = 10_000;
 
 const allowedOrigins = resolveAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS'));
 const rateWindows = resolveRateWindows(Deno.env.get('VOICE_RATE_LIMITS'));
+// Explicit-dispatch target; must match the worker's BUDDY_AGENT_NAME.
+// Server-resolved with a safe default — never influenced by the request.
+const agentName = resolveAgentName(Deno.env.get('BUDDY_AGENT_NAME'));
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -228,18 +231,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const at = new AccessToken(apiKey, apiSecret, {
+    // Participant metadata lets the agent worker know the session id +
+    // language hint without trusting anything from the browser. The token
+    // also carries the RoomConfiguration that explicitly dispatches the
+    // named Buddy agent — applied when this (always fresh, random) room is
+    // first created.
+    const token = await mintVoiceToken({
+      apiKey,
+      apiSecret,
+      roomName,
       identity,
-      ttl: TOKEN_TTL_SECONDS,
-      // Room metadata lets the agent worker know the session id + language
-      // hint without trusting anything from the browser.
       metadata: JSON.stringify({
         sessionId: session.id,
         preferredLanguage: validated.data.preferredLanguage,
       }),
+      agentName,
     });
-    at.addGrant(buildVisitorGrant(roomName));
-    const token = await at.toJwt();
 
     return json(
       200,

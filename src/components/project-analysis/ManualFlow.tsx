@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Sparkles, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles, MessageSquare, Plus, X } from 'lucide-react';
 import { getQuestions } from '@/data/analysisQuestions';
 import { AnswerMap, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
 import FileDropzone from './FileDropzone';
+import { extractFromDocument, isAiAnalysisReady, isReadableDocument, readDocument } from '@/services/aiAnalysis';
 
 interface ManualFlowProps {
   mode: ProjectMode;
@@ -31,6 +32,11 @@ const ManualFlow = ({
   const firstUnanswered = questions.findIndex((q) => answers[q.id] === undefined && !q.optional);
   const [step, setStep] = useState(firstUnanswered === -1 ? 0 : firstUnanswered);
   const [error, setError] = useState<string | null>(null);
+  const [customDraft, setCustomDraft] = useState('');
+
+  useEffect(() => {
+    setCustomDraft('');
+  }, [step]);
 
   const isReviewStep = step === questions.length;
   const question = isReviewStep ? null : questions[step];
@@ -63,6 +69,59 @@ const ManualFlow = ({
     if (!question) return;
     setError(null);
     onAnswersChange({ ...answers, [question.id]: value });
+  };
+
+  // Read added documents with AI: attach a content summary for the analysis
+  // and auto-fill any questions the visitor has not answered yet. Failures are
+  // silent — the file stays attached as name/size only.
+  const [docStatus, setDocStatus] = useState<string | null>(null);
+
+  const handleRawFiles = async (raw: File[]) => {
+    const fresh = raw.slice(0, 5 - files.length);
+    if (!fresh.length) return;
+    let currentFiles = [...files, ...fresh.map((f) => ({ name: f.name, size: f.size }))].slice(0, 5);
+    onFilesChange(currentFiles);
+    if (!isAiAnalysisReady) return;
+    let currentAnswers = { ...answers };
+    for (const file of fresh) {
+      if (!isReadableDocument(file)) continue;
+      setDocStatus(`Reading "${file.name}" with AI…`);
+      try {
+        const doc = await readDocument(file);
+        const { answers: extracted, docSummary } = await extractFromDocument(mode, doc);
+        currentFiles = currentFiles.map((f) => (f.name === file.name ? { ...f, text: docSummary } : f));
+        onFilesChange(currentFiles);
+        let filled = 0;
+        for (const q of questions) {
+          const value = currentAnswers[q.id];
+          const empty = value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+          if (empty && extracted[q.id] !== undefined) {
+            currentAnswers = { ...currentAnswers, [q.id]: extracted[q.id] };
+            filled += 1;
+          }
+        }
+        if (filled > 0) onAnswersChange(currentAnswers);
+        setDocStatus(
+          filled > 0
+            ? `Read "${file.name}" and auto-filled ${filled} unanswered question${filled === 1 ? '' : 's'}.`
+            : `Read "${file.name}" — its content will be used in the analysis.`,
+        );
+      } catch {
+        setDocStatus(`Couldn't read "${file.name}" — it stays attached as a reference.`);
+      }
+    }
+  };
+
+  // Free-typed value for multi-selects where no predefined option fits.
+  const addCustomToMulti = () => {
+    if (!question) return;
+    const value = customDraft.trim();
+    if (!value) return;
+    const currentValue = (valueOf(question.id) as string[]) ?? [];
+    if (!currentValue.some((o) => o.toLowerCase() === value.toLowerCase())) {
+      setAnswer([...currentValue, value]);
+    }
+    setCustomDraft('');
   };
 
   return (
@@ -139,53 +198,112 @@ const ManualFlow = ({
                 />
               )}
               {question.type === 'single' && question.options && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {question.options.map((opt) => {
-                    const selected = valueOf(question.id) === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => setAnswer(opt)}
-                        className={`rounded-xl border px-4 py-3 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                          selected
-                            ? 'border-pink-500 bg-pink-50 text-gray-900'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
-                        }`}
-                      >
-                        <span className="flex items-center justify-between">
-                          {opt}
-                          {selected && <Check className="h-4 w-4 text-pink-600" aria-hidden="true" />}
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {question.options.map((opt) => {
+                      const selected = valueOf(question.id) === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setAnswer(opt)}
+                          className={`rounded-xl border px-4 py-3 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                            selected
+                              ? 'border-pink-500 bg-pink-50 text-gray-900'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
+                          }`}
+                        >
+                          <span className="flex items-center justify-between">
+                            {opt}
+                            {selected && <Check className="h-4 w-4 text-pink-600" aria-hidden="true" />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {question.allowCustom && (
+                    <input
+                      value={
+                        question.options.includes(valueOf(question.id) as string)
+                          ? ''
+                          : ((valueOf(question.id) as string) ?? '')
+                      }
+                      onChange={(e) => setAnswer(e.target.value)}
+                      placeholder={question.customPlaceholder ?? 'Or type your own…'}
+                      aria-label={`${question.label} — type your own`}
+                      className="mt-3 w-full rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:outline-none"
+                    />
+                  )}
                 </div>
               )}
               {question.type === 'multi' && question.options && (
-                <div className="flex flex-wrap gap-2">
-                  {question.options.map((opt) => {
-                    const currentValue = (valueOf(question.id) as string[]) ?? [];
-                    const selected = currentValue.includes(opt);
-                    return (
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    {question.options.map((opt) => {
+                      const currentValue = (valueOf(question.id) as string[]) ?? [];
+                      const selected = currentValue.includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() =>
+                            setAnswer(selected ? currentValue.filter((o) => o !== opt) : [...currentValue, opt])
+                          }
+                          className={`rounded-full border px-3.5 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                            selected
+                              ? 'border-pink-500 bg-pink-100 text-gray-900'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                    {((valueOf(question.id) as string[]) ?? [])
+                      .filter((opt) => !question.options!.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          aria-pressed
+                          onClick={() =>
+                            setAnswer(((valueOf(question.id) as string[]) ?? []).filter((o) => o !== opt))
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-full border border-pink-500 bg-pink-100 px-3.5 py-2 text-sm text-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                        >
+                          {opt}
+                          <X className="h-3.5 w-3.5 text-pink-600" aria-hidden="true" />
+                        </button>
+                      ))}
+                  </div>
+                  {question.allowCustom && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <input
+                        value={customDraft}
+                        onChange={(e) => setCustomDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCustomToMulti();
+                          }
+                        }}
+                        placeholder={question.customPlaceholder ?? 'Or type your own…'}
+                        aria-label={`${question.label} — type your own`}
+                        className="w-full max-w-xs rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:outline-none"
+                      />
                       <button
-                        key={opt}
                         type="button"
-                        aria-pressed={selected}
-                        onClick={() =>
-                          setAnswer(selected ? currentValue.filter((o) => o !== opt) : [...currentValue, opt])
-                        }
-                        className={`rounded-full border px-3.5 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                          selected
-                            ? 'border-pink-500 bg-pink-100 text-gray-900'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
-                        }`}
+                        disabled={!customDraft.trim()}
+                        onClick={addCustomToMulti}
+                        aria-label="Add your answer"
+                        className="rounded-full border border-gray-300 p-2.5 text-gray-600 hover:border-pink-400 hover:text-gray-900 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
                       >
-                        {opt}
+                        <Plus className="h-4 w-4" aria-hidden="true" />
                       </button>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -197,7 +315,17 @@ const ManualFlow = ({
               Optionally add reference documents, then generate your demo analysis.
             </p>
             <div className="mt-5">
-              <FileDropzone files={files} onChange={onFilesChange} />
+              <FileDropzone
+                files={files}
+                onChange={onFilesChange}
+                onRawFiles={isAiAnalysisReady ? handleRawFiles : undefined}
+                aiEnabled={isAiAnalysisReady}
+              />
+              {docStatus && (
+                <p role="status" className="mt-2 text-xs text-pink-700">
+                  {docStatus}
+                </p>
+              )}
             </div>
             <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
               <h4 className="text-sm font-semibold text-gray-900">Your answers</h4>
@@ -245,7 +373,8 @@ const ManualFlow = ({
             onClick={onGenerate}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
           >
-            <Sparkles className="h-4 w-4" aria-hidden="true" /> Generate Demo Analysis
+            <Sparkles className="h-4 w-4" aria-hidden="true" />{' '}
+            {isAiAnalysisReady ? 'Generate AI Analysis' : 'Generate Demo Analysis'}
           </button>
         ) : (
           <button

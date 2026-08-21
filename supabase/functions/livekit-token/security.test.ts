@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildVisitorGrant,
+  DEFAULT_AGENT_NAME,
   DEFAULT_RATE_WINDOWS,
   generateParticipantIdentity,
   generateRoomName,
   isOriginAllowed,
   isVoiceAgentEnabled,
+  resolveAgentName,
   resolveAllowedOrigins,
   resolveRateWindows,
   TOKEN_TTL_SECONDS,
@@ -82,6 +84,13 @@ describe('request validation', () => {
     }
   });
 
+  it('rejects any attempt to control agent dispatch from the browser', () => {
+    for (const extra of ['agentName', 'agents', 'roomConfig', 'dispatch']) {
+      const res = validateTokenRequest({ ...validBody(), [extra]: 'evil-agent' });
+      expect(res.ok, extra).toBe(false);
+    }
+  });
+
   it('rejects non-object bodies', () => {
     expect(validateTokenRequest(null).ok).toBe(false);
     expect(validateTokenRequest([]).ok).toBe(false);
@@ -136,6 +145,27 @@ describe('rate limits and feature flag', () => {
     expect(isVoiceAgentEnabled('true')).toBe(true);
     for (const v of [undefined, null, '', 'TRUE', '1', 'yes', 'on']) {
       expect(isVoiceAgentEnabled(v)).toBe(false);
+    }
+  });
+});
+
+describe('agent dispatch name resolution', () => {
+  it('defaults to buddy-it-manager and matches the worker default', () => {
+    expect(DEFAULT_AGENT_NAME).toBe('buddy-it-manager');
+    expect(resolveAgentName(undefined)).toBe('buddy-it-manager');
+    expect(resolveAgentName(null)).toBe('buddy-it-manager');
+    expect(resolveAgentName('')).toBe('buddy-it-manager');
+  });
+
+  it('accepts a valid env override', () => {
+    expect(resolveAgentName('buddy-staging')).toBe('buddy-staging');
+    expect(resolveAgentName('  buddy-staging  ')).toBe('buddy-staging');
+    expect(resolveAgentName('Buddy_2')).toBe('Buddy_2');
+  });
+
+  it('falls back safely on invalid or hostile env values', () => {
+    for (const v of ['has spaces', 'semi;colon', 'x'.repeat(65), '{"a":1}', 'name\nnewline', '../etc']) {
+      expect(resolveAgentName(v), v).toBe('buddy-it-manager');
     }
   });
 });

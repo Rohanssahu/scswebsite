@@ -80,7 +80,9 @@ export interface BackendConfig {
 }
 
 export function loadBackendConfig(): BackendConfig | null {
-  const functionUrl = process.env.SUPABASE_VOICE_LEAD_URL ?? '';
+  // BUDDY_ prefix: names starting with SUPABASE_ are reserved by Supabase
+  // tooling and can be stripped/overridden in managed environments.
+  const functionUrl = process.env.BUDDY_VOICE_LEAD_URL ?? '';
   const agentSecret = process.env.VOICE_AGENT_SECRET ?? '';
   if (!/^https:\/\//.test(functionUrl) || agentSecret.length < 16) return null;
   const timeoutMs = Number.parseInt(process.env.BUDDY_BACKEND_TIMEOUT_MS ?? '10000', 10);

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildSubmitLeadPayload, type SubmitLeadArgs } from './backend.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { buildSubmitLeadPayload, loadBackendConfig, type SubmitLeadArgs } from './backend.js';
 import { buildPreliminaryEstimate } from './estimate.js';
 import { applyUpdate, emptyState, type ProjectState } from './state.js';
 
@@ -50,6 +50,26 @@ function args(overrides: Partial<SubmitLeadArgs> = {}): SubmitLeadArgs {
     ...overrides,
   };
 }
+
+describe('backend config env vars', () => {
+  afterEach(() => {
+    delete process.env.BUDDY_VOICE_LEAD_URL;
+    delete process.env.SUPABASE_VOICE_LEAD_URL;
+    delete process.env.VOICE_AGENT_SECRET;
+  });
+
+  it('reads the function URL from BUDDY_VOICE_LEAD_URL', () => {
+    process.env.BUDDY_VOICE_LEAD_URL = 'https://example.supabase.co/functions/v1/voice-lead';
+    process.env.VOICE_AGENT_SECRET = 'x'.repeat(32);
+    expect(loadBackendConfig()?.functionUrl).toBe('https://example.supabase.co/functions/v1/voice-lead');
+  });
+
+  it('ignores the reserved SUPABASE_-prefixed name entirely (no fallback)', () => {
+    process.env.SUPABASE_VOICE_LEAD_URL = 'https://example.supabase.co/functions/v1/voice-lead';
+    process.env.VOICE_AGENT_SECRET = 'x'.repeat(32);
+    expect(loadBackendConfig()).toBeNull();
+  });
+});
 
 describe('submit_lead payload mapping', () => {
   it('builds the wire shape voice-lead expects', () => {

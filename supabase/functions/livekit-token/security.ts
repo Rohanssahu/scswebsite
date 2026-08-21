@@ -190,3 +190,19 @@ export function resolveRateWindows(envValue?: string | null): RateWindow[] {
 export function isVoiceAgentEnabled(envValue?: string | null): boolean {
   return envValue === 'true';
 }
+
+// --- agent dispatch ---------------------------------------------------------------
+
+/** Must match the worker's BUDDY_AGENT_NAME (agent/src/agent.ts). */
+export const DEFAULT_AGENT_NAME = 'buddy-it-manager';
+
+/**
+ * Resolve the agent name used for explicit dispatch. Comes ONLY from the
+ * server environment — never from the request. Invalid values fall back to
+ * the default so a typo can never silently disable dispatch or inject an
+ * unexpected name into tokens.
+ */
+export function resolveAgentName(envValue?: string | null): string {
+  const value = (envValue ?? '').trim();
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(value) ? value : DEFAULT_AGENT_NAME;
+}

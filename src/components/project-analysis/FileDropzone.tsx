@@ -5,6 +5,14 @@ import { UploadedFileMeta } from '@/types/projectAnalysis';
 interface FileDropzoneProps {
   files: UploadedFileMeta[];
   onChange: (files: UploadedFileMeta[]) => void;
+  /**
+   * When provided, added files are handed to the parent as raw File objects
+   * (for AI reading/auto-fill) instead of being merged here. Removal still
+   * goes through onChange.
+   */
+  onRawFiles?: (files: File[]) => void;
+  /** True when uploaded documents are read by the AI backend. */
+  aiEnabled?: boolean;
 }
 
 function formatSize(bytes: number): string {
@@ -13,19 +21,20 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * UI-only upload control. Only file names/sizes are kept in memory —
- * nothing is read or transmitted anywhere.
- */
-const FileDropzone = ({ files, onChange }: FileDropzoneProps) => {
+const FileDropzone = ({ files, onChange, onRawFiles, aiEnabled = false }: FileDropzoneProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
   const addFiles = (list: FileList | null) => {
     if (!list) return;
-    const metas = Array.from(list).map((f) => ({ name: f.name, size: f.size }));
-    const merged = [...files, ...metas.filter((m) => !files.some((f) => f.name === m.name))];
-    onChange(merged.slice(0, 5));
+    const fresh = Array.from(list).filter((f) => !files.some((existing) => existing.name === f.name));
+    if (!fresh.length) return;
+    if (onRawFiles) {
+      onRawFiles(fresh);
+      return;
+    }
+    const metas = fresh.map((f) => ({ name: f.name, size: f.size }));
+    onChange([...files, ...metas].slice(0, 5));
   };
 
   return (
@@ -33,7 +42,7 @@ const FileDropzone = ({ files, onChange }: FileDropzoneProps) => {
       <div
         role="button"
         tabIndex={0}
-        aria-label="Add reference files (demo only, nothing is uploaded)"
+        aria-label={aiEnabled ? 'Add reference documents to read and auto-fill your answers' : 'Add reference files (demo only, nothing is uploaded)'}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -70,7 +79,13 @@ const FileDropzone = ({ files, onChange }: FileDropzoneProps) => {
         />
       </div>
 
-      <p className="mt-2 text-xs font-medium text-amber-700">Demo only — your file is not being uploaded.</p>
+      {aiEnabled ? (
+        <p className="mt-2 text-xs font-medium text-gray-500">
+          PDF and text documents are read securely to auto-fill and improve your analysis.
+        </p>
+      ) : (
+        <p className="mt-2 text-xs font-medium text-amber-700">Demo only — your file is not being uploaded.</p>
+      )}
 
       {files.length > 0 && (
         <ul className="mt-3 space-y-2">

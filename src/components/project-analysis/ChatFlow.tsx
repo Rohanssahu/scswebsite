@@ -1,13 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Bot, Send, ArrowLeft, SkipForward, ClipboardList, Sparkles } from 'lucide-react';
+import { Bot, Send, ArrowLeft, SkipForward, ClipboardList, Sparkles, Plus, X, Paperclip, FileText } from 'lucide-react';
 import { getQuestions } from '@/data/analysisQuestions';
-import { AnswerMap, AnswerValue, ProjectMode } from '@/types/projectAnalysis';
+import { AnswerMap, AnswerValue, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
+import {
+  extractFromDocument,
+  isAiAnalysisReady,
+  readDocument,
+  UnsupportedDocumentError,
+} from '@/services/aiAnalysis';
 
 interface ChatFlowProps {
   mode: ProjectMode;
   answers: AnswerMap;
+  files: UploadedFileMeta[];
   onAnswersChange: (answers: AnswerMap) => void;
+  onFilesChange: (files: UploadedFileMeta[]) => void;
   onSwitchToManual: () => void;
   onGenerate: () => void;
 }
@@ -31,7 +39,9 @@ const TypingDots = () => (
   </span>
 );
 
-const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate }: ChatFlowProps) => {
+type DocStage = 'ask' | 'reading' | 'done';
+
+const ChatFlow = ({ mode, answers, files, onAnswersChange, onFilesChange, onSwitchToManual, onGenerate }: ChatFlowProps) => {
   const questions = useMemo(() => getQuestions(mode), [mode]);
   const reduceMotion = useReducedMotion();
 
@@ -41,8 +51,15 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
   const [typing, setTyping] = useState(true);
   const [textInput, setTextInput] = useState('');
   const [multiDraft, setMultiDraft] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState('');
+  // Document intake: offered once at the start so answers can be auto-filled.
+  const [docStage, setDocStage] = useState<DocStage>(() =>
+    isAiAnalysisReady && firstUnanswered <= 0 && files.length === 0 ? 'ask' : 'done',
+  );
+  const [docNotice, setDocNotice] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const current = index < questions.length ? questions[index] : null;
   const done = index >= questions.length;
@@ -53,19 +70,20 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
     setTyping(true);
     setTextInput('');
     setMultiDraft([]);
+    setCustomInput('');
     const t = setTimeout(() => setTyping(false), reduceMotion ? 100 : 750);
     return () => clearTimeout(t);
-  }, [index, reduceMotion]);
+  }, [index, docStage, reduceMotion]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
-  }, [index, typing, multiDraft, reduceMotion]);
+  }, [index, typing, multiDraft, docStage, docNotice, reduceMotion]);
 
   useEffect(() => {
-    if (!typing && current && (current.type === 'text' || current.type === 'textarea')) {
+    if (!typing && docStage === 'done' && current && (current.type === 'text' || current.type === 'textarea')) {
       inputRef.current?.focus();
     }
-  }, [typing, current]);
+  }, [typing, current, docStage]);
 
   const submitAnswer = (value: AnswerValue) => {
     if (!current) return;
@@ -88,6 +106,59 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
     submitAnswer(textInput.trim());
   };
 
+  // Read the uploaded document, let the AI auto-fill answers, then resume the
+  // questionnaire at the first question that is still missing. Any failure
+  // falls through to the normal question flow — the visitor is never blocked.
+  const handleDocFile = async (file: File | null | undefined) => {
+    if (!file) return;
+    setDocStage('reading');
+    try {
+      const doc = await readDocument(file);
+      const { answers: extracted, docSummary } = await extractFromDocument(mode, doc);
+      const valid: AnswerMap = {};
+      for (const q of questions) {
+        if (extracted[q.id] !== undefined) valid[q.id] = extracted[q.id];
+      }
+      const merged = { ...answers, ...valid };
+      onAnswersChange(merged);
+      onFilesChange(
+        [...files.filter((f) => f.name !== file.name), { name: file.name, size: file.size, text: docSummary }].slice(0, 5),
+      );
+      const nextIdx = questions.findIndex((q) => merged[q.id] === undefined);
+      setIndex(nextIdx === -1 ? questions.length : nextIdx);
+      const filled = Object.keys(valid).length;
+      setDocNotice(
+        filled > 0
+          ? `I read "${file.name}" and auto-filled ${filled} answer${filled === 1 ? '' : 's'}. Use "Back / edit answer" to change anything — I just need the remaining details.`
+          : `I read "${file.name}" and will use it in the analysis, but I couldn't confidently pre-fill any answers — let's go through the questions.`,
+      );
+    } catch (e) {
+      setDocNotice(
+        e instanceof UnsupportedDocumentError
+          ? `${e.message}. No problem — let's continue with the questions instead.`
+          : "I couldn't read that document right now. No problem — let's continue with the questions instead.",
+      );
+    } finally {
+      setDocStage('done');
+    }
+  };
+
+  // Free-typed value for questions where no predefined option fits:
+  // single-choice submits immediately, multi-choice joins the draft as a chip.
+  const addCustomValue = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = customInput.trim();
+    if (!value || !current) return;
+    if (current.type === 'single') {
+      submitAnswer(value);
+      return;
+    }
+    if (!multiDraft.some((o) => o.toLowerCase() === value.toLowerCase())) {
+      setMultiDraft([...multiDraft, value]);
+    }
+    setCustomInput('');
+  };
+
   return (
     <div className="glow-card mx-auto flex h-[600px] max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
       {/* Header */}
@@ -98,7 +169,9 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">SCS Project Assistant</p>
-            <p className="text-xs text-gray-500">Demo — scripted questions, no live AI</p>
+            <p className="text-xs text-gray-500">
+              {isAiAnalysisReady ? 'AI-assisted — reads your documents & analyzes your answers' : 'Demo — scripted questions, no live AI'}
+            </p>
           </div>
         </div>
         <button
@@ -129,6 +202,12 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+        {docNotice && docStage === 'done' && (
+          <div className="flex max-w-[85%] items-start gap-2 rounded-2xl rounded-tl-sm border border-pink-200 bg-pink-50 px-4 py-2.5 text-sm text-gray-700">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
+            <span>{docNotice}</span>
+          </div>
+        )}
         {questions.slice(0, Math.min(index, questions.length)).map((q) => (
           <div key={q.id} className="space-y-2">
             <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-700">
@@ -159,6 +238,54 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
             >
               <TypingDots />
             </motion.div>
+          ) : docStage !== 'done' ? (
+            <motion.div
+              key={`doc-${docStage}`}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-3"
+            >
+              {docStage === 'ask' ? (
+                <>
+                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-700">
+                    {mode === 'new'
+                      ? 'Before we start — do you have a requirements document (PDF, TXT, MD…)? Upload it and I will read it, auto-fill your answers and only ask what is missing.'
+                      : 'Before we start — do you have any project documents (requirements, specs, notes — PDF, TXT, MD…)? Upload one and I will read it, auto-fill your answers and only ask what is missing.'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => docInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-1.5 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" aria-hidden="true" /> Upload document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDocStage('done')}
+                      className="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-700 hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      No document — ask me questions
+                    </button>
+                    <input
+                      ref={docInputRef}
+                      type="file"
+                      accept=".pdf,.txt,.md,.markdown,.csv,.json,.html,.htm,.rtf,.xml,.yml,.yaml"
+                      className="hidden"
+                      onChange={(e) => {
+                        handleDocFile(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="inline-flex max-w-[85%] items-center gap-3 rounded-2xl rounded-tl-sm border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-700">
+                  <TypingDots />
+                  Reading your document with AI — this takes a few seconds…
+                </div>
+              )}
+            </motion.div>
           ) : current ? (
             <motion.div
               key={current.id}
@@ -172,6 +299,7 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
               </div>
 
               {(current.type === 'single' || current.type === 'multi') && current.options && (
+                <div className="space-y-2">
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Quick replies">
                   {current.options.map((opt) => {
                     const selected = multiDraft.includes(opt);
@@ -197,6 +325,21 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
                       </button>
                     );
                   })}
+                  {current.type === 'multi' &&
+                    multiDraft
+                      .filter((opt) => !current.options!.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          aria-pressed
+                          onClick={() => setMultiDraft(multiDraft.filter((o) => o !== opt))}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-pink-500 bg-pink-100 px-3 py-1.5 text-sm text-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                        >
+                          {opt}
+                          <X className="h-3.5 w-3.5 text-pink-600" aria-hidden="true" />
+                        </button>
+                      ))}
                   {current.type === 'multi' && (
                     <button
                       type="button"
@@ -208,6 +351,30 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
                     </button>
                   )}
                 </div>
+                {current.allowCustom && (
+                  <form onSubmit={addCustomValue} className="flex items-center gap-2">
+                    <input
+                      value={customInput}
+                      onChange={(e) => setCustomInput(e.target.value)}
+                      placeholder={current.customPlaceholder ?? 'Or type your own…'}
+                      aria-label="Type your own answer"
+                      className="w-full max-w-xs rounded-full border border-dashed border-gray-300 bg-white px-3.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!customInput.trim()}
+                      aria-label={current.type === 'multi' ? 'Add your answer' : 'Send your answer'}
+                      className="rounded-full border border-gray-300 p-2 text-gray-600 hover:border-pink-400 hover:text-gray-900 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      {current.type === 'multi' ? (
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Send className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </form>
+                )}
+                </div>
               )}
             </motion.div>
           ) : (
@@ -218,15 +385,17 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
               className="space-y-3"
             >
               <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-700">
-                That's everything I need! Generate your demo analysis to see the recommended team, hours, cost and
-                timeline.
+                {isAiAnalysisReady
+                  ? 'That\'s everything I need! Generate your AI analysis to see the recommended team, hours, cost and timeline tailored to your project.'
+                  : 'That\'s everything I need! Generate your demo analysis to see the recommended team, hours, cost and timeline.'}
               </div>
               <button
                 type="button"
                 onClick={onGenerate}
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
               >
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> Generate Demo Analysis
+                <Sparkles className="h-4 w-4" aria-hidden="true" />{' '}
+                {isAiAnalysisReady ? 'Generate AI Analysis' : 'Generate Demo Analysis'}
               </button>
             </motion.div>
           )}
@@ -235,7 +404,7 @@ const ChatFlow = ({ mode, answers, onAnswersChange, onSwitchToManual, onGenerate
 
       {/* Composer */}
       <div className="border-t border-gray-200 px-4 py-3 sm:px-6">
-        {current && !typing && (current.type === 'text' || current.type === 'textarea') && (
+        {current && !typing && docStage === 'done' && (current.type === 'text' || current.type === 'textarea') && (
           <form onSubmit={handleTextSubmit} className="flex items-end gap-2">
             {current.type === 'textarea' ? (
               <textarea

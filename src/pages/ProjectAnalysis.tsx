@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -6,9 +6,10 @@ import ModeSelection from '../components/project-analysis/ModeSelection';
 import ChatFlow from '../components/project-analysis/ChatFlow';
 import ManualFlow from '../components/project-analysis/ManualFlow';
 import AnalysisProgress from '../components/project-analysis/AnalysisProgress';
-import { AnalysisDraft, EntryMethod, ProjectMode } from '@/types/projectAnalysis';
+import { AnalysisDraft, AnalysisResult, EntryMethod, ProjectMode } from '@/types/projectAnalysis';
 import { clearDraft, hasDraftAnswers, loadDraft, saveDraft, saveResult } from '@/lib/analysisStore';
 import { buildDemoAnalysis } from '@/data/demoAnalysis';
+import { generateAiAnalysis, isAiAnalysisReady } from '@/services/aiAnalysis';
 
 type Phase = 'select' | 'entry' | 'analyzing';
 
@@ -67,11 +68,33 @@ const ProjectAnalysis = () => {
     setPhase('select');
   };
 
-  const generate = () => setPhase('analyzing');
+  // Real AI analysis runs alongside the progress animation. `aiPending` keeps
+  // the animation holding on its last step until the AI responds; the result
+  // ref avoids stale closures when finishAnalysis fires.
+  const aiResultRef = useRef<AnalysisResult | null>(null);
+  const [aiPending, setAiPending] = useState(false);
+
+  const generate = () => {
+    setPhase('analyzing');
+    aiResultRef.current = null;
+    if (draft.mode && isAiAnalysisReady) {
+      setAiPending(true);
+      generateAiAnalysis(draft.mode, draft.answers, draft.files)
+        .then((result) => {
+          aiResultRef.current = result;
+        })
+        .catch(() => {
+          aiResultRef.current = null; // fall back to the local engine below
+        })
+        .finally(() => setAiPending(false));
+    }
+  };
 
   const finishAnalysis = () => {
     if (!draft.mode) return;
-    saveResult(buildDemoAnalysis(draft.mode, draft.answers));
+    const result =
+      aiResultRef.current ?? { ...buildDemoAnalysis(draft.mode, draft.answers), source: 'demo' as const };
+    saveResult(result);
     navigate('/project-analysis/result');
   };
 
@@ -90,13 +113,13 @@ const ProjectAnalysis = () => {
 
         <div className="container relative mx-auto px-4 py-12 sm:py-16">
           {phase === 'analyzing' ? (
-            <AnalysisProgress onComplete={finishAnalysis} />
+            <AnalysisProgress onComplete={finishAnalysis} ready={!aiPending} ai={isAiAnalysisReady} />
           ) : showEntry ? (
             <div>
               <div className="mx-auto mb-6 flex max-w-2xl flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="rounded-full border border-gray-300 bg-white px-3 py-1 text-gray-700">
                   {draft.mode === 'new' ? 'New project' : 'Existing project'} ·{' '}
-                  {draft.method === 'ai' ? 'AI assistant (demo)' : 'Manual form'}
+                  {draft.method === 'ai' ? (isAiAnalysisReady ? 'AI assistant' : 'AI assistant (demo)') : 'Manual form'}
                 </span>
                 <button
                   type="button"
@@ -111,7 +134,9 @@ const ProjectAnalysis = () => {
                 <ChatFlow
                   mode={draft.mode as ProjectMode}
                   answers={draft.answers}
+                  files={draft.files}
                   onAnswersChange={(answers) => setDraft((d) => ({ ...d, answers }))}
+                  onFilesChange={(files) => setDraft((d) => ({ ...d, files }))}
                   onSwitchToManual={() => setDraft((d) => ({ ...d, method: 'manual' as EntryMethod }))}
                   onGenerate={generate}
                 />
@@ -146,7 +171,9 @@ const ProjectAnalysis = () => {
                 onBack={() => setDraft((d) => ({ ...d, mode: null }))}
               />
               <p className="mt-10 text-center text-xs text-gray-400">
-                Demo analysis — estimates are generated with example logic in your browser. No data leaves this page.
+                {isAiAnalysisReady
+                  ? 'AI-assisted analysis — estimates are generated from your answers and documents. The final quote follows a review call.'
+                  : 'Demo analysis — estimates are generated with example logic in your browser. No data leaves this page.'}
               </p>
             </div>
           )}

@@ -88,6 +88,10 @@ export class VoiceSession {
   private levelTimer: number | null = null;
   private muted = false;
   private decoder = new TextDecoder();
+  /** True once the remote Buddy agent participant is in the room. The UI
+   * stays on "Connecting…" until then — local mic activity alone must never
+   * show Listening/Thinking. */
+  private agentPresent = false;
 
   constructor(private callbacks: VoiceSessionCallbacks) {}
 
@@ -130,12 +134,23 @@ export class VoiceSession {
       this.callbacks.onState('completed');
     });
     room.on(RoomEvent.Reconnecting, () => this.callbacks.onState('connecting'));
-    room.on(RoomEvent.Reconnected, () => this.callbacks.onState(this.muted ? 'paused' : 'listening'));
+    room.on(RoomEvent.Reconnected, () => {
+      if (!this.agentPresent) this.callbacks.onState('connecting');
+      else this.callbacks.onState(this.muted ? 'paused' : 'listening');
+    });
 
-    // The agent publishes its state via participant attributes when speaking;
-    // active-speaker events give us listening/speaking/thinking transitions.
+    // Buddy has joined: only now does the session leave "Connecting…".
+    room.on(RoomEvent.ParticipantConnected, () => {
+      if (this.agentPresent) return;
+      this.agentPresent = true;
+      this.callbacks.onState(this.muted ? 'paused' : 'listening');
+    });
+
+    // Active-speaker events give us listening/speaking/thinking transitions —
+    // but only once the agent is actually in the room; before that, local mic
+    // activity must not fake a live conversation state.
     room.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
-      if (this.muted) return;
+      if (this.muted || !this.agentPresent) return;
       const agentSpeaking = speakers.some((s) => s.identity !== room.localParticipant.identity);
       const userSpeaking = speakers.some((s) => s.identity === room.localParticipant.identity);
       if (agentSpeaking) this.callbacks.onState('speaking');
@@ -153,7 +168,10 @@ export class VoiceSession {
     }
 
     this.startLevelPolling();
-    this.callbacks.onState('listening');
+    // The agent may already be in the room (fast dispatch) or still on its
+    // way — stay in "connecting" until it arrives.
+    this.agentPresent = room.remoteParticipants.size > 0;
+    this.callbacks.onState(this.agentPresent ? 'listening' : 'connecting');
   }
 
   private startLevelPolling(): void {
@@ -179,7 +197,8 @@ export class VoiceSession {
   async setMuted(muted: boolean): Promise<void> {
     this.muted = muted;
     await this.room?.localParticipant.setMicrophoneEnabled(!muted);
-    this.callbacks.onState(muted ? 'paused' : 'listening');
+    if (!this.agentPresent) this.callbacks.onState('connecting');
+    else this.callbacks.onState(muted ? 'paused' : 'listening');
   }
 
   /** Text-chat fallback: rides the agent framework's lk.chat text stream. */

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, SkipForward, RotateCcw, Repeat, X } from 'lucide-react';
+import { ArrowLeft, SkipForward, RotateCcw, Repeat, X, Plus, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getQuestions } from '@/data/analysisQuestions';
 import { valueKey } from '@/i18n/languageConfig';
@@ -22,9 +22,11 @@ const RequirementFlow = ({ guide }: RequirementFlowProps) => {
   const { t } = useTranslation();
   const { flow, currentQuestion } = guide;
   const [multiDraft, setMultiDraft] = useState<string[]>([]);
+  const [customDraft, setCustomDraft] = useState('');
 
   useEffect(() => {
     setMultiDraft([]);
+    setCustomDraft('');
   }, [currentQuestion?.id]);
 
   if (!flow || flow.status === 'analyzing' || flow.status === 'done') return null;
@@ -76,6 +78,21 @@ const RequirementFlow = ({ guide }: RequirementFlowProps) => {
               </button>
             );
           })}
+          {currentQuestion.type === 'multi' &&
+            multiDraft
+              .filter((opt) => !currentQuestion.options!.includes(opt))
+              .map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  aria-pressed
+                  onClick={() => setMultiDraft(multiDraft.filter((o) => o !== opt))}
+                  className="inline-flex min-h-9 items-center gap-1 rounded-full border border-pink-500 bg-pink-100 px-2.5 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  {opt}
+                  <X className="h-3 w-3 text-pink-600" aria-hidden="true" />
+                </button>
+              ))}
           {currentQuestion.type === 'multi' && (
             <button
               type="button"
@@ -87,6 +104,43 @@ const RequirementFlow = ({ guide }: RequirementFlowProps) => {
             </button>
           )}
         </div>
+      )}
+
+      {currentQuestion && (currentQuestion.type === 'single' || currentQuestion.type === 'multi') && currentQuestion.allowCustom && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const value = customDraft.trim();
+            if (!value) return;
+            if (currentQuestion.type === 'single') {
+              guide.answerQuestion(value);
+            } else if (!multiDraft.some((o) => o.toLowerCase() === value.toLowerCase())) {
+              setMultiDraft([...multiDraft, value]);
+            }
+            setCustomDraft('');
+          }}
+          className="mt-1.5 flex items-center gap-1.5"
+        >
+          <input
+            value={customDraft}
+            onChange={(e) => setCustomDraft(e.target.value)}
+            placeholder={t('guide.flow.typeYourOwn', { defaultValue: 'Or type your own…' })}
+            aria-label={t('guide.flow.typeYourOwn', { defaultValue: 'Or type your own…' })}
+            className="min-h-9 w-full max-w-52 rounded-full border border-dashed border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!customDraft.trim()}
+            aria-label={t('guide.flow.addAnswer', { defaultValue: 'Add your answer' })}
+            className="min-h-9 rounded-full border border-gray-300 px-2.5 text-gray-600 hover:border-pink-400 hover:text-gray-900 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+          >
+            {currentQuestion.type === 'multi' ? (
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Send className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden="true" />
+            )}
+          </button>
+        </form>
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">

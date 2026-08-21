@@ -13,10 +13,16 @@ const STEPS = [
 
 interface AnalysisProgressProps {
   onComplete: () => void;
+  /**
+   * When false, the animation holds on the final step until the real AI
+   * analysis resolves; onComplete only fires once both are done.
+   */
+  ready?: boolean;
+  /** True when a real AI analysis is running (changes the copy). */
+  ai?: boolean;
 }
 
-/** Timed frontend state transitions only — no real analysis is happening. */
-const AnalysisProgress = ({ onComplete }: AnalysisProgressProps) => {
+const AnalysisProgress = ({ onComplete, ready = true, ai = false }: AnalysisProgressProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const reduceMotion = useReducedMotion();
   const stepDuration = reduceMotion ? 250 : 900;
@@ -26,9 +32,11 @@ const AnalysisProgress = ({ onComplete }: AnalysisProgressProps) => {
       const done = setTimeout(onComplete, reduceMotion ? 100 : 600);
       return () => clearTimeout(done);
     }
+    // Hold the last step while the AI analysis is still in flight.
+    if (currentStep === STEPS.length - 1 && !ready) return;
     const timer = setTimeout(() => setCurrentStep((s) => s + 1), stepDuration);
     return () => clearTimeout(timer);
-  }, [currentStep, onComplete, reduceMotion, stepDuration]);
+  }, [currentStep, onComplete, ready, reduceMotion, stepDuration]);
 
   const progress = Math.min(100, Math.round((currentStep / STEPS.length) * 100));
 
@@ -41,9 +49,13 @@ const AnalysisProgress = ({ onComplete }: AnalysisProgressProps) => {
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold text-gray-900">Preparing your demo analysis…</h2>
+      <h2 className="text-2xl font-bold text-gray-900">
+        {ai ? 'Preparing your AI analysis…' : 'Preparing your demo analysis…'}
+      </h2>
       <p className="mt-2 text-sm text-gray-500">
-        Simulated analysis — this preview uses example logic, not real code inspection.
+        {ai
+          ? 'Our AI is reviewing your answers and documents to build a tailored estimate.'
+          : 'Simulated analysis — this preview uses example logic, not real code inspection.'}
       </p>
 
       <div className="mt-6 h-2 overflow-hidden rounded-full bg-gray-200" aria-hidden="true">

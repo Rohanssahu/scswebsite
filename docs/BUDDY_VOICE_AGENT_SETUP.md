@@ -86,6 +86,10 @@ supabase secrets set RATE_LIMIT_SALT="$(openssl rand -hex 16)"
 supabase secrets set VOICE_AGENT_ENABLED="true"
 supabase secrets set VOICE_RATE_LIMITS="4,10"     # sessions per IP: hour,day
 
+# Optional: explicit-dispatch agent name embedded in every participant token.
+# Defaults to "buddy-it-manager" and MUST match the worker's BUDDY_AGENT_NAME.
+supabase secrets set BUDDY_AGENT_NAME="buddy-it-manager"
+
 # voice-lead (worker → Supabase)
 supabase secrets set VOICE_AGENT_SECRET="$(openssl rand -hex 32)"   # keep a copy for the worker
 supabase secrets set RESEND_API_KEY="re_..."
@@ -122,10 +126,13 @@ Then run the site locally (`npm run dev` at the repo root, with
 **Talk to Buddy** in the Buddy panel. The dev worker picks up the room.
 
 Note: the worker registers with the agent name `buddy-it-manager`
-(`BUDDY_AGENT_NAME`). With explicit dispatch, LiveKit Cloud routes Buddy
-rooms to it; for local testing without dispatch rules, LiveKit dev workers
-receive jobs for new rooms automatically when no named dispatch is set — if
-your project uses named dispatch, add a dispatch rule for `buddy-it-manager`.
+(`BUDDY_AGENT_NAME`), which puts LiveKit in **explicit dispatch** mode. The
+`livekit-token` function embeds a `RoomConfiguration` with a
+`RoomAgentDispatch` for that exact name in every participant token, so the
+worker is dispatched the moment the visitor's (always fresh, random) room is
+created — no manual dispatch rules are needed. If you rename the agent, set
+the same value in BOTH the worker env and the `BUDDY_AGENT_NAME` Supabase
+secret.
 
 ## 8. Agent worker — LiveKit Cloud deployment
 
