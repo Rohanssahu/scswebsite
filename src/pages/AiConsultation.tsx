@@ -7,7 +7,8 @@
 // The lobby's audio checks are MANDATORY: "Join consultation" stays disabled
 // until the microphone actually heard a voice AND the client confirmed they
 // heard the test sound (see services/deviceCheck.ts for the exact gate). The
-// camera is optional and never blocks joining.
+// lobby has no camera step at all: clients join audio-only and turn the camera
+// on from the meeting controls if they want it.
 //
 // Security notes:
 //   * access requires the meeting reference PLUS the scoped access token that
@@ -27,10 +28,7 @@ import {
   CheckCircle2,
   Loader2,
   LogIn,
-  Mic,
-  MicOff,
   Video,
-  VideoOff,
   X,
 } from 'lucide-react';
 import TurnstileWidget, { type TurnstileWidgetHandle } from '@/components/forms/TurnstileWidget';
@@ -96,13 +94,10 @@ const AiConsultation: React.FC = () => {
   /** Epoch ms the live stage was entered — drives the header duration only. */
   const [liveSince, setLiveSince] = useState<number | null>(null);
 
-  // lobby device state — the mandatory audio checks live in useDeviceCheck;
-  // only the OPTIONAL camera preview is owned here.
+  // lobby device state — the mandatory audio checks live in useDeviceCheck.
+  // There is no lobby camera or mute control: both are toggled inside the
+  // meeting itself, so the lobby never opens a camera at all.
   const check = useDeviceCheck();
-  const [lobbyCamera, setLobbyCamera] = useState(false);
-  const [lobbyMicMuted, setLobbyMicMuted] = useState(false);
-  const [lobbyStream, setLobbyStream] = useState<MediaStream | null>(null);
-  const lobbyVideoRef = useRef<HTMLVideoElement>(null);
 
   // panel state
   const [panelOpen, setPanelOpen] = useState(false);
@@ -175,30 +170,6 @@ const AiConsultation: React.FC = () => {
     trackConsultation('consultation_failed', { category });
   }, [check.micState]);
 
-  const toggleLobbyCamera = async () => {
-    if (lobbyCamera) {
-      lobbyStream?.getTracks().forEach((tr) => tr.stop());
-      setLobbyStream(null);
-      setLobbyCamera(false);
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setLobbyStream(stream);
-      setLobbyCamera(true);
-    } catch {
-      setLobbyCamera(false);
-      setError(t('meeting.errors.camera_denied'));
-    }
-  };
-
-  useEffect(() => {
-    const el = lobbyVideoRef.current;
-    if (!el) return;
-    el.srcObject = lobbyStream;
-    if (lobbyStream) void el.play().catch(() => undefined);
-  }, [lobbyStream]);
-
   // ---- join gate ----------------------------------------------------------
   // Single source of truth for whether joining is allowed. Camera state is
   // deliberately not part of it.
@@ -226,15 +197,15 @@ const AiConsultation: React.FC = () => {
     setError(null);
     try {
       const joinResponse = await joinMeeting(meetingReference, accessToken, turnstileToken);
-      // Release every temporary lobby resource before the room acquires its
-      // own: preview camera tracks, and the device-check stream/AudioContext.
-      lobbyStream?.getTracks().forEach((tr) => tr.stop());
-      setLobbyStream(null);
+      // Release the one temporary lobby resource before the room acquires its
+      // own: the device-check stream / AudioContext.
       check.release();
       if (joinResponse.meeting) setView(joinResponse.meeting);
       await meeting.connect(joinResponse, {
-        camera: lobbyCamera,
-        micMuted: lobbyMicMuted,
+        // Joins audio-only and unmuted; both are toggled from the meeting
+        // controls once the client is in the room.
+        camera: false,
+        micMuted: false,
         // The exact microphone the client just tested.
         micDeviceId,
       });
@@ -524,120 +495,94 @@ const AiConsultation: React.FC = () => {
   if (phase === 'lobby' && view) {
     return (
       <Shell>
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <h1 className="text-2xl font-bold sm:text-3xl">
             {t('meeting.lobby.title')} <span className="text-gradient-ai">{t('meeting.lobby.titleAccent')}</span>
           </h1>
-          <p className="mt-2 text-sm text-gray-600">{t('meeting.lobby.subtitle', { name: view.name })}</p>
+          <p className="mt-1 text-sm text-gray-600">{t('meeting.lobby.subtitle', { name: view.name })}</p>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            {/* Buddy preview */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 text-center">
-              <img
-                src={BUDDY_AVATAR_URL}
-                alt=""
-                className="mx-auto h-28 w-28 rounded-full bg-white ring-4 ring-pink-500/30"
-              />
-              <p className="mt-3 font-semibold text-gray-900">{t('meeting.buddyName')}</p>
-              <p className="text-sm text-pink-700">{t('meeting.buddyRole')}</p>
-              <p className="mt-3 rounded-xl bg-purple-50 px-3 py-2 text-xs text-purple-800">{t('meeting.aiBadge')}</p>
-              <dl className="mt-4 space-y-1.5 text-start text-sm">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">{t('meeting.details.reference')}</dt>
-                  <dd className="font-mono text-gray-900">{view.reference}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">{t('meeting.details.language')}</dt>
-                  <dd className="text-gray-900">
-                    {t(`meeting.languages.${view.preferredLanguage ?? 'en'}`, {
-                      defaultValue: view.preferredLanguage ?? 'en',
-                    })}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">{t('meeting.lobby.analysis')}</dt>
-                  <dd className="text-gray-900">
-                    {view.hasAnalysis ? t('meeting.lobby.analysisYes') : t('meeting.lobby.analysisNo')}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* mandatory 2-step audio setup */}
-            <div className="space-y-4">
-              <DeviceCheckPanel check={check} />
-
-              {/* camera — OPTIONAL: it never gates the Join button */}
-              <section aria-labelledby="lobby-camera-heading" className="rounded-2xl border border-gray-200 bg-white p-5">
-                <h2 id="lobby-camera-heading" className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                  {t('meeting.setup.cameraTitle')}
-                </h2>
-                <p className="mt-1 text-xs text-gray-500">{t('meeting.setup.cameraOptional')}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void toggleLobbyCamera()}
-                    aria-pressed={lobbyCamera}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-                  >
-                    {lobbyCamera ? <VideoOff className="h-4 w-4" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
-                    {lobbyCamera ? t('meeting.controls.cameraOff') : t('meeting.controls.cameraOn')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLobbyMicMuted((m) => !m)}
-                    aria-pressed={lobbyMicMuted}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-                  >
-                    {lobbyMicMuted ? <MicOff className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
-                    {lobbyMicMuted ? t('meeting.controls.unmute') : t('meeting.controls.mute')}
-                  </button>
-                </div>
-                {lobbyCamera && (
-                  <video
-                    ref={lobbyVideoRef}
-                    muted
-                    playsInline
-                    autoPlay
-                    aria-label={t('meeting.lobby.cameraPreview')}
-                    className="mt-3 aspect-video w-full rounded-xl bg-navy-800 object-cover"
-                    style={{ transform: 'scaleX(-1)' }}
-                  />
-                )}
-              </section>
-
-              {/* verification + join */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
-
-                {error && (
-                  <p role="alert" className="mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                    {error}
+          {/* One vertical stack of full-width cards: identity strip, the two
+              audio steps side by side, then verification + checklist + join.
+              Keeps the lobby close to a single screen. */}
+          <div className="mt-4 space-y-4">
+            {/* Buddy — compact identity strip */}
+            <section className="rounded-2xl border border-gray-200 bg-white p-3.5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <img
+                  src={BUDDY_AVATAR_URL}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-full bg-white ring-2 ring-pink-500/30"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-gray-900">{t('meeting.buddyName')}</p>
+                  <p className="text-sm text-pink-700">{t('meeting.buddyRole')}</p>
+                  <p className="mt-1.5 inline-block rounded-lg bg-purple-50 px-2 py-1 text-xs text-purple-800">
+                    {t('meeting.aiBadge')}
                   </p>
-                )}
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:items-start">
-                  <JoinChecklist items={checklist} />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => void join()}
-                      disabled={!canJoin}
-                      aria-describedby="join-hint"
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-                    >
-                      {joining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
-                      {t('meeting.lobby.join')}
-                    </button>
-                    {/* why the button is disabled, announced as it changes */}
-                    <p id="join-hint" aria-live="polite" className="mt-2 text-center text-xs text-gray-600">
-                      {blockReason
-                        ? t(`meeting.setup.blocked.${blockReason}`)
-                        : t('meeting.setup.readyToJoin')}
-                    </p>
-                    <p className="mt-2 text-center text-xs text-gray-500">{t('meeting.lobby.privacyNote')}</p>
-                  </div>
                 </div>
+                <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm sm:justify-end">
+                  <div>
+                    <dt className="text-xs text-gray-500">{t('meeting.details.reference')}</dt>
+                    <dd className="font-mono text-gray-900">{view.reference}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">{t('meeting.details.language')}</dt>
+                    <dd className="text-gray-900">
+                      {t(`meeting.languages.${view.preferredLanguage ?? 'en'}`, {
+                        defaultValue: view.preferredLanguage ?? 'en',
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">{t('meeting.lobby.analysis')}</dt>
+                    <dd className="text-gray-900">
+                      {view.hasAnalysis ? t('meeting.lobby.analysisYes') : t('meeting.lobby.analysisNo')}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+
+            {/* mandatory 2-step audio setup — steps side by side */}
+            <DeviceCheckPanel check={check} />
+
+            {/* verification + checklist + join, full width under the steps.
+                Turnstile and the checklist share one row so the button stays
+                on the first screen. */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                <div className="shrink-0">
+                  <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <JoinChecklist items={checklist} />
+                </div>
+              </div>
+
+              {error && (
+                <p role="alert" className="mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {error}
+                </p>
+              )}
+
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => void join()}
+                  disabled={!canJoin}
+                  aria-describedby="join-hint"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  {joining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
+                  {t('meeting.lobby.join')}
+                </button>
+                {/* why the button is disabled, announced as it changes */}
+                <p id="join-hint" aria-live="polite" className="mt-2 text-center text-xs text-gray-600">
+                  {blockReason
+                    ? t(`meeting.setup.blocked.${blockReason}`)
+                    : t('meeting.setup.readyToJoin')}
+                </p>
+                <p className="mt-1 text-center text-xs text-gray-500">{t('meeting.lobby.privacyNote')}</p>
               </div>
             </div>
           </div>

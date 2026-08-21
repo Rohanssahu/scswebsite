@@ -6,8 +6,8 @@
 //   Step 2  Speaker: explicit "Play test sound" → local tone → the client
 //           answers whether they heard it.
 //
-// The camera lives outside this panel because it is optional and must never
-// block joining.
+// There is no camera step: the camera is never touched before joining and is
+// toggled from the meeting controls instead.
 //
 // Accessibility: every status is text + icon (never colour alone), the whole
 // panel is keyboard-operable with visible focus rings, and state changes are
@@ -54,7 +54,7 @@ const DeviceCheckPanel: React.FC<DeviceCheckPanelProps> = ({ check }) => {
     .join('. ');
 
   return (
-    <section aria-labelledby="device-check-heading" className="rounded-2xl border border-gray-200 bg-white p-5">
+    <section aria-labelledby="device-check-heading" className="rounded-2xl border border-gray-200 bg-white p-4">
       <h2 id="device-check-heading" className="text-sm font-semibold uppercase tracking-wide text-gray-500">
         {t('meeting.setup.title')}
       </h2>
@@ -65,10 +65,13 @@ const DeviceCheckPanel: React.FC<DeviceCheckPanelProps> = ({ check }) => {
         {announcement}
       </p>
 
+      {/* Both steps sit side by side from lg up, so the mandatory setup is one
+          short row and the join card below it stays on the first screen. */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2 lg:items-start">
       {/* ---------------------------------------------------------------- */}
       {/* Step 1 — microphone                                              */}
       {/* ---------------------------------------------------------------- */}
-      <div className="mt-4 rounded-xl border border-gray-200 p-4">
+      <div className="rounded-xl border border-gray-200 p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <Mic className="h-4 w-4 text-pink-600" aria-hidden="true" />
@@ -194,7 +197,7 @@ const DeviceCheckPanel: React.FC<DeviceCheckPanelProps> = ({ check }) => {
       {/* ---------------------------------------------------------------- */}
       {/* Step 2 — speaker                                                 */}
       {/* ---------------------------------------------------------------- */}
-      <div className="mt-4 rounded-xl border border-gray-200 p-4">
+      <div className="rounded-xl border border-gray-200 p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <Volume2 className="h-4 w-4 text-purple-600" aria-hidden="true" />
@@ -303,6 +306,7 @@ const DeviceCheckPanel: React.FC<DeviceCheckPanelProps> = ({ check }) => {
             {t(check.speakerErrorKey)}
           </p>
         )}
+      </div>
       </div>
     </section>
   );

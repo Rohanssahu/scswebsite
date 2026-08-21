@@ -34,23 +34,23 @@ const JoinChecklist: React.FC<JoinChecklistProps> = ({ items }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         {t('meeting.setup.checklist.title')}
       </p>
-      <ul className="mt-2 space-y-1.5">
+      {/* laid out as wrapping chips so the four conditions cost one or two
+          lines instead of a four-row list */}
+      <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
         {items.map((item) => {
           const Icon = ICONS[item.status];
           return (
-            <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
-              <span className={`flex min-w-0 items-center gap-2 ${TEXT[item.status]}`}>
-                <Icon
-                  className={`h-4 w-4 shrink-0 ${item.status === 'testing' ? 'animate-spin' : ''}`}
-                  aria-hidden="true"
-                />
-                <span className="truncate text-gray-800">{t(`meeting.setup.checklist.${item.id}`)}</span>
-              </span>
-              <span className={`shrink-0 text-xs font-medium ${TEXT[item.status]}`}>
+            <li key={item.id} className="flex items-center gap-1.5 text-xs">
+              <Icon
+                className={`h-3.5 w-3.5 shrink-0 ${TEXT[item.status]} ${item.status === 'testing' ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
+              <span className="text-gray-800">{t(`meeting.setup.checklist.${item.id}`)}</span>
+              <span className={`font-medium ${TEXT[item.status]}`}>
                 {t(`meeting.setup.checklist.status.${item.status}`)}
               </span>
             </li>

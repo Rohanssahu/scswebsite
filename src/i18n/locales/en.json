@@ -1470,11 +1470,11 @@
       "analysisYes": "Attached",
       "analysisNo": "Not attached",
       "join": "Join consultation",
-      "privacyNote": "No audio recording is stored. Your camera is optional and only used after you enable it."
+      "privacyNote": "No audio recording is stored. You join with audio only — the camera can be turned on inside the meeting."
     },
     "setup": {
       "title": "Audio setup",
-      "required": "Both checks are required before you can join. Your camera is optional.",
+      "required": "Both checks are required before you can join.",
       "step1": "Step 1 — Microphone",
       "step2": "Step 2 — Speaker",
       "readyToJoin": "All checks passed — you can join now.",
@@ -1673,7 +1673,14 @@
       "openLobby": "Open meeting lobby",
       "downloadIcs": "Download .ics",
       "addGoogle": "Add to Google Calendar",
-      "calendarNote": "These links let you add the meeting to your own calendar — no calendar event was created for you."
+      "calendarNote": "These links let you add the meeting to your own calendar — no calendar event was created for you.",
+      "stepNext": "Next",
+      "stepBack": "Back",
+      "stepConfirm": "Confirm",
+      "stepCounter": "Step {{current}} of {{total}}",
+      "stepMode": "Meeting type",
+      "tabAiDesc": "Buddy joins instantly — no waiting for a callback.",
+      "tabHumanDesc": "Pick a slot and an SCS consultant calls you back."
     }
   }
 }

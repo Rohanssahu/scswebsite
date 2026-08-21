@@ -39,6 +39,19 @@ const SERVICES = [
   'devops-services',
 ] as const;
 
+// Step 1 of the flow: which kind of meeting. Titles reuse the old tab strings.
+const MODE_OPTIONS: Array<{ value: 'ai' | 'human'; icon: typeof Video; titleKey: string; descKey: string }> = [
+  { value: 'ai', icon: Bot, titleKey: 'meeting.schedule.tabAi', descKey: 'meeting.schedule.tabAiDesc' },
+  { value: 'human', icon: CalendarDays, titleKey: 'meeting.schedule.tabHuman', descKey: 'meeting.schedule.tabHumanDesc' },
+];
+
+// The AI flow previews its next steps greyed out on step 1; the human-call form
+// is a single page, so it has nothing to preview.
+const MODE_STEP_TITLES: Record<'ai' | 'human', string[]> = {
+  ai: ['meeting.schedule.chooseOption', 'meeting.schedule.yourDetails', 'meeting.schedule.stepConfirm'],
+  human: [],
+};
+
 const BUDGET_RANGES = ['Under $1,000', '$1,000 – $5,000', '$5,000 – $15,000', '$15,000 – $50,000', '$50,000+'];
 const TIMELINES = ['ASAP', 'Within 1 month', '1–3 months', '3–6 months', 'Flexible'];
 
@@ -115,6 +128,9 @@ const ScheduleCall = () => {
   // consultation is what opens; a human call stays one tab away for whoever
   // wants a person instead.
   const [mode, setMode] = useState<'ai' | 'human'>('ai');
+  // Meeting type is step 1 of one continuous flow; the chosen flow's own steps
+  // continue from there, so nothing on this page needs scrolling to reach.
+  const [modeChosen, setModeChosen] = useState(false);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -207,7 +223,7 @@ const ScheduleCall = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
-      <main className="container mx-auto max-w-3xl px-4 py-12 sm:py-16">
+      <main className="container mx-auto max-w-4xl px-4 py-8 sm:py-10">
         {confirmed ? (
           <div className="glow-card rounded-2xl border border-gray-200 bg-white p-8 text-center">
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" aria-hidden="true" />
@@ -257,52 +273,122 @@ const ScheduleCall = () => {
           </div>
         ) : (
           <>
-            <div className="text-center">
-              <h1 className="text-3xl font-bold sm:text-4xl">
-                {t('schedule.title1')} <span className="text-gradient-ai">{t('schedule.title2')}</span>
-              </h1>
-              <p className="mx-auto mt-3 max-w-xl text-gray-600">{t('schedule.sub')}</p>
-            </div>
+            {/* The visible title lives inside the step-1 card so the whole flow
+                is one block that fits a screen; the page keeps an h1 for
+                screen readers and search engines. */}
+            <h1 className="sr-only">
+              {t('schedule.title1')} {t('schedule.title2')}
+            </h1>
 
-            {/* Mode switch: instant AI consultation vs. a call with the team.
-                Both live on this page — there is no second consultation page. */}
-            <div role="tablist" aria-label={t('meeting.schedule.modeLabel')} className="mx-auto mt-8 flex max-w-md gap-2">
-              <button
-                role="tab"
-                type="button"
-                aria-selected={mode === 'ai'}
-                onClick={() => setMode('ai')}
-                className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                  mode === 'ai' ? 'border-pink-500 bg-pink-50 text-gray-900' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
-                }`}
-              >
-                <Bot className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabAi')}
-              </button>
-              <button
-                role="tab"
-                type="button"
-                aria-selected={mode === 'human'}
-                onClick={() => setMode('human')}
-                className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                  mode === 'human' ? 'border-pink-500 bg-pink-50 text-gray-900' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
-                }`}
-              >
-                <CalendarDays className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabHuman')}
-              </button>
-            </div>
+            {/* Step 1 — instant AI consultation vs. a call with the team. Both
+                live on this page; there is no second consultation page. */}
+            {!modeChosen && (
+              <div className="glow-card mt-4 flex flex-col rounded-2xl border border-gray-200 bg-white p-6 sm:h-[32rem] sm:p-8">
+                <ol className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 text-xs">
+                  {[t('meeting.schedule.stepMode'), ...MODE_STEP_TITLES[mode].map((k) => t(k))].map((title, i) => (
+                    <li key={title} className="flex items-center gap-1">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium ${
+                          i === 0 ? 'bg-pink-50 text-pink-700' : 'text-gray-400'
+                        }`}
+                      >
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                            i === 0 ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-600'
+                          }`}
+                          aria-hidden="true"
+                        >
+                          {i + 1}
+                        </span>
+                        <span className="hidden sm:inline">{title}</span>
+                      </span>
+                      {i === 0 && (
+                        <span className="text-gray-300" aria-hidden="true">
+                          ›
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
 
-            {mode === 'ai' && (
-              <div className="mt-6">
-                <ConsultationScheduler />
+                <div className="mt-6 text-center">
+                  <p className="text-xl font-bold text-gray-900 sm:text-2xl">
+                    {t('schedule.title1')} <span className="text-gradient-ai">{t('schedule.title2')}</span>
+                  </p>
+                  <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-gray-600">{t('schedule.sub')}</p>
+                </div>
+
+                <fieldset className="mt-6 flex-1">
+                  <legend className="sr-only">{t('meeting.schedule.modeLabel')}</legend>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {MODE_OPTIONS.map((opt) => {
+                      const selected = mode === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setMode(opt.value)}
+                          className={`flex min-h-11 flex-col items-start gap-1.5 rounded-xl border p-4 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                            selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <opt.icon className="h-4 w-4 text-pink-600" aria-hidden="true" />
+                            <span className="text-sm font-semibold text-gray-900">{t(opt.titleKey)}</span>
+                          </span>
+                          <span className="text-xs text-gray-600">{t(opt.descKey)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+
+                <div className="mt-6 flex items-center justify-end border-t border-gray-100 pt-5">
+                  <button
+                    type="button"
+                    onClick={() => setModeChosen(true)}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                  >
+                    {t('meeting.schedule.stepNext')}
+                  </button>
+                </div>
+                <p className="mt-3 text-center text-xs leading-relaxed text-gray-500">{t('meeting.schedule.aiDisclosure')}</p>
               </div>
             )}
+
+            <div className={modeChosen && mode === 'ai' ? 'mt-4' : 'hidden'}>
+              <ConsultationScheduler
+                leadingStepTitle={t('meeting.schedule.stepMode')}
+                onLeadingStep={() => setModeChosen(false)}
+              />
+            </div>
 
             <form
               data-guide-id="schedule-form"
               onSubmit={submit}
               noValidate
-              className={`glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 ${mode === 'ai' ? 'hidden' : ''}`}
+              className={`glow-card mt-4 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 ${
+                modeChosen && mode === 'human' ? '' : 'hidden'
+              }`}
             >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setModeChosen(false)}
+                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white"
+                    aria-hidden="true"
+                  >
+                    1
+                  </span>
+                  {t('meeting.schedule.stepMode')}
+                </button>
+                <span className="text-xs font-medium text-gray-500">{t('meeting.schedule.tabHuman')}</span>
+              </div>
+
               <HoneypotField value={honeypot} onChange={setHoneypot} />
 
               {!isLeadCaptureReady && (

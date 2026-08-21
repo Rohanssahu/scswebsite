@@ -48,23 +48,22 @@ const Footer = () => {
       {/* Brand gradient accent line */}
       <div className="h-px bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600" aria-hidden="true" />
 
-      <div className="container mx-auto px-4 py-14">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {/* Company Info */}
           <div>
             <Link
               to="/"
               className="inline-flex items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
             >
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
                 <img src={icon.logos} alt="SCS Softwares logo" className="h-full w-full object-contain" />
               </div>
-              <span className="text-2xl font-bold">
+              <span className="text-xl font-bold">
                 Scs <span className="text-gradient-ai">Softwares</span>
               </span>
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-gray-400">{t('footer.tagline')}</p>
-            <div className="mt-5 flex gap-3">
+            <div className="mt-4 flex gap-2">
               {socials.map((social) => (
                 <a
                   key={social.name}
@@ -72,7 +71,7 @@ const Footer = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={social.name}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-800 text-gray-400 transition-colors hover:border-pink-400 hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-800 text-gray-400 transition-colors hover:border-pink-400 hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 >
                   <social.icon className="h-4 w-4" aria-hidden="true" />
                 </a>
@@ -83,7 +82,8 @@ const Footer = () => {
           {/* Services */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.ourServices')}</h3>
-            <ul className="mt-5 space-y-3">
+            {/* Two columns so six links take three rows instead of six */}
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
               {services.map((service) => (
                 <li key={service.path}>
                   <Link to={service.path} className={footerLinkCls}>
@@ -97,7 +97,7 @@ const Footer = () => {
           {/* Quick Links */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.quickLinks')}</h3>
-            <ul className="mt-5 space-y-3">
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
               {quickLinks.map((link) => (
                 <li key={link.path}>
                   <Link to={link.path} className={footerLinkCls}>
@@ -111,41 +111,47 @@ const Footer = () => {
           {/* Contact Info */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.contactInfo')}</h3>
-            <div className="mt-5 space-y-4 text-sm text-gray-400">
-              <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-pink-500" aria-hidden="true" />
-                <span className="leading-relaxed">
-                  9th Floor, Shekhar Central, Palasia Square, Manorama Ganj, Indore, Madhya Pradesh 452001
-                </span>
+            <div className="mt-3 space-y-1.5 text-sm text-gray-400">
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pink-500" aria-hidden="true" />
+                <span>9th Floor, Shekhar Central, Palasia Square, Indore, MP 452001</span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Phone className="h-5 w-5 shrink-0 text-pink-500" aria-hidden="true" />
-                <span>+91 7828690192</span>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-pink-500" aria-hidden="true" />
+                <a
+                  href="mailto:info@scssoftwares.com"
+                  className="transition-colors hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded"
+                >
+                  info@scssoftwares.com
+                </a>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 shrink-0 text-pink-500" aria-hidden="true" />
-                <span>info@scssoftwares.com</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <WhatsAppIcon className="h-5 w-5 shrink-0 text-emerald-500" />
+              {/* One phone row: the number was previously repeated for call and WhatsApp */}
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-pink-500" aria-hidden="true" />
+                <a
+                  href="tel:+917828690192"
+                  className="transition-colors hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded"
+                >
+                  +91 7828690192
+                </a>
                 <a
                   href="https://wa.me/917828690192"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded"
+                  aria-label="WhatsApp +91 7828690192"
+                  className="text-emerald-500 transition-colors hover:text-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded"
                 >
-                  +91 7828690192
+                  <WhatsAppIcon className="h-4 w-4" />
                 </a>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-4 border-t border-gray-800 pt-8 text-center sm:flex-row sm:justify-between sm:text-start">
-          <p className="text-sm text-gray-500">{t('footer.copyright')}</p>
+        <div className="mt-6 flex flex-col items-center gap-3 border-t border-gray-800 pt-4 text-center sm:flex-row sm:justify-between sm:text-start">
+          <p className="text-xs text-gray-500">{t('footer.copyright')}</p>
           {/* Language choice lives here so the navbar stays focused on the CTAs */}
           <LanguageSwitcher />
         </div>

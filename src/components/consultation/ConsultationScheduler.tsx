@@ -68,7 +68,14 @@ function nextDays(count: number, locale: string): DayOption[] {
   return days;
 }
 
-const ConsultationScheduler: React.FC = () => {
+interface ConsultationSchedulerProps {
+  /** Title of the step that precedes this card (the page's meeting-type step). */
+  leadingStepTitle?: string;
+  /** Called when the visitor steps back into that leading step. */
+  onLeadingStep?: () => void;
+}
+
+const ConsultationScheduler: React.FC<ConsultationSchedulerProps> = ({ leadingStepTitle, onLeadingStep }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const turnstileRef = React.useRef<TurnstileWidgetHandle>(null);
@@ -100,14 +107,62 @@ const ConsultationScheduler: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<{ meeting: MeetingView; accessToken: string } | null>(null);
+  const [step, setStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
 
   const isScheduled = choice === 'later';
+
+  // The scheduler runs as short steps (choose → next → next) so each step fits
+  // one screen and its primary button never sits below the fold.
+  type StepId = 'choice' | 'when' | 'details' | 'confirm';
+  const stepIds: StepId[] = isScheduled
+    ? ['choice', 'when', 'details', 'confirm']
+    : ['choice', 'details', 'confirm'];
+  const currentIndex = Math.min(step, stepIds.length - 1);
+  const currentStep = stepIds[currentIndex];
+  const reachedConfirm = maxStep >= stepIds.indexOf('confirm');
+
+  /** Validates one step only, so Next never reports fields the visitor hasn't seen. */
+  const stepErrors = (id: StepId): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (id === 'when') {
+      if (!date) errs.date = t('meeting.schedule.errDate');
+      if (!time) errs.time = t('meeting.schedule.errTime');
+    }
+    if (id === 'details') {
+      if (!form.name.trim() || form.name.trim().length < 2) errs.name = t('meeting.schedule.errName');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) errs.email = t('meeting.schedule.errEmail');
+      if (form.phone.trim() && !/^\+?[\d\s().-]{7,20}$/.test(form.phone.trim())) {
+        errs.phone = t('meeting.schedule.errPhone');
+      }
+    }
+    return errs;
+  };
+
+  const goToStep = (index: number) => {
+    setErrors({});
+    setStep(Math.max(0, Math.min(index, stepIds.length - 1)));
+  };
+
+  const goNext = () => {
+    const errs = stepErrors(currentStep);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    const next = Math.min(currentIndex + 1, stepIds.length - 1);
+    setStep(next);
+    setMaxStep((m) => Math.max(m, next));
+  };
 
   const set = (key: 'name' | 'email' | 'phone' | 'company') => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Enter on an early step means "next", not "submit".
+    if (currentStep !== 'confirm') {
+      goNext();
+      return;
+    }
     const errs: Record<string, string> = {};
     if (!form.name.trim() || form.name.trim().length < 2) errs.name = t('meeting.schedule.errName');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) errs.email = t('meeting.schedule.errEmail');
@@ -119,7 +174,12 @@ const ConsultationScheduler: React.FC = () => {
     if (!form.consent) errs.consent = t('meeting.schedule.errConsent');
     if (!turnstileToken) errs.turnstile = t('meeting.schedule.errTurnstile');
     setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) {
+      // Send the visitor back to the step that owns the failing field.
+      if (errs.name || errs.email || errs.phone) setStep(stepIds.indexOf('details'));
+      else if (errs.date || errs.time) setStep(stepIds.indexOf('when'));
+      return;
+    }
 
     let scheduledAtUtc: string | undefined;
     if (isScheduled && date && time) {
@@ -282,190 +342,319 @@ const ConsultationScheduler: React.FC = () => {
     },
   ];
 
-  return (
-    <form onSubmit={submit} data-guide-id="schedule-form" className="glow-card rounded-2xl border border-gray-200 bg-white p-5 sm:p-8">
-      {/* analysis context */}
-      {snapshot ? (
-        <p className="flex gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {t('meeting.schedule.analysisAttached')}
-        </p>
-      ) : (
-        <p className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <FileWarning className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {t('meeting.schedule.noAnalysis')}{' '}
-          <Link to="/project-analysis" className="underline">
-            {t('meeting.schedule.runAnalysis')}
-          </Link>
-        </p>
-      )}
+  const stepTitles: Record<StepId, string> = {
+    choice: t('meeting.schedule.chooseOption'),
+    when: t('meeting.schedule.selectDate'),
+    details: t('meeting.schedule.yourDetails'),
+    confirm: t('meeting.schedule.stepConfirm'),
+  };
 
-      {/* choice */}
-      <fieldset className="mt-6">
-        <legend className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          {t('meeting.schedule.chooseOption')}
-        </legend>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {options.map((opt) => {
-            const selected = choice === opt.value;
-            return (
+  const chosenOption = options.find((o) => o.value === choice);
+  const stepOffset = leadingStepTitle ? 1 : 0;
+
+  return (
+    <form
+      onSubmit={submit}
+      data-guide-id="schedule-form"
+      className="glow-card flex flex-col rounded-2xl border border-gray-200 bg-white p-6 sm:h-[32rem] sm:p-8"
+    >
+      {/* step rail — already-completed steps stay one tap away */}
+      <ol className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 text-xs">
+        {leadingStepTitle && (
+          <li className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onLeadingStep}
+              className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium text-gray-600 transition-colors hover:text-pink-600"
+            >
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white"
+                aria-hidden="true"
+              >
+                1
+              </span>
+              <span className="hidden sm:inline">{leadingStepTitle}</span>
+            </button>
+            <span className="text-gray-300" aria-hidden="true">
+              ›
+            </span>
+          </li>
+        )}
+        {stepIds.map((id, i) => {
+          const active = i === currentIndex;
+          const done = i < currentIndex;
+          return (
+            <li key={id} className="flex items-center gap-1">
               <button
-                key={opt.value}
                 type="button"
-                aria-pressed={selected}
-                onClick={() => setChoice(opt.value)}
-                className={`flex min-h-11 flex-col items-start gap-1 rounded-xl border p-3 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                  selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
+                disabled={!done}
+                onClick={() => goToStep(i)}
+                aria-current={active ? 'step' : undefined}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium transition-colors ${
+                  active
+                    ? 'bg-pink-50 text-pink-700'
+                    : done
+                      ? 'text-gray-600 hover:text-pink-600'
+                      : 'text-gray-400'
                 }`}
               >
-                <opt.icon className="h-4 w-4 text-pink-600" aria-hidden="true" />
-                <span className="text-sm font-semibold text-gray-900">{opt.title}</span>
-                <span className="text-xs text-gray-600">{opt.desc}</span>
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                    active ? 'bg-pink-600 text-white' : done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {i + 1 + stepOffset}
+                </span>
+                <span className="hidden sm:inline">{stepTitles[id]}</span>
               </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {/* date + time (scheduled only) */}
-      {isScheduled && (
-        <>
-          <h3 className="mt-7 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            <CalendarDays className="h-4 w-4" aria-hidden="true" /> {t('meeting.schedule.selectDate')}
-          </h3>
-          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-7">
-            {days.map((d) => {
-              const selected = date === d.iso;
-              return (
-                <button
-                  key={d.iso}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setDate(d.iso)}
-                  className={`min-h-11 rounded-xl border px-2 py-2 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                    selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
-                  }`}
-                >
-                  <span className="block text-[11px] uppercase text-gray-500">{d.weekday}</span>
-                  <span className="block text-lg font-semibold">{d.day}</span>
-                  <span className="block text-[11px] text-gray-500">{d.month}</span>
-                </button>
-              );
-            })}
-          </div>
-          {errors.date && <p role="alert" className="mt-2 text-sm text-rose-600">{errors.date}</p>}
-
-          <h3 className="mt-6 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            <Clock className="h-4 w-4" aria-hidden="true" /> {t('meeting.schedule.selectTime')}
-          </h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {SLOT_TIMES.map((s) => {
-              const selected = time === s;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setTime(s)}
-                  className={`min-h-11 rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
-                    selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
-                  }`}
-                >
-                  {s}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-xs text-gray-500">{t('meeting.schedule.timezoneNote', { timezone })}</p>
-          {errors.time && <p role="alert" className="mt-2 text-sm text-rose-600">{errors.time}</p>}
-        </>
-      )}
-
-      {/* details */}
-      <h3 className="mt-7 text-sm font-semibold uppercase tracking-wide text-gray-500">
-        {t('meeting.schedule.yourDetails')}
+              {i < stepIds.length - 1 && (
+                <span className="text-gray-300" aria-hidden="true">
+                  ›
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="sr-only" aria-live="polite">
+        {t('meeting.schedule.stepCounter', {
+          current: currentIndex + 1 + stepOffset,
+          total: stepIds.length + stepOffset,
+        })}
+      </p>
+      <h3 className="mt-5 text-sm font-semibold uppercase tracking-wide text-gray-500 sm:hidden">
+        {stepTitles[currentStep]}
       </h3>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="ac-name" className="mb-1 block text-sm text-gray-700">
-            {t('meeting.schedule.name')}
-          </label>
-          <input id="ac-name" value={form.name} onChange={set('name')} autoComplete="name" className={inputCls} />
-          {errors.name && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.name}</p>}
-        </div>
-        <div>
-          <label htmlFor="ac-email" className="mb-1 block text-sm text-gray-700">
-            {t('meeting.schedule.email')}
-          </label>
-          <input id="ac-email" type="email" value={form.email} onChange={set('email')} autoComplete="email" className={inputCls} />
-          {errors.email && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.email}</p>}
-        </div>
-        <div>
-          <label htmlFor="ac-phone" className="mb-1 block text-sm text-gray-700">
-            {t('meeting.schedule.phone')}
-          </label>
-          <input id="ac-phone" value={form.phone} onChange={set('phone')} autoComplete="tel" className={inputCls} />
-          {errors.phone && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
-        </div>
-        <div>
-          <label htmlFor="ac-company" className="mb-1 block text-sm text-gray-700">
-            {t('meeting.schedule.company')}
-          </label>
-          <input id="ac-company" value={form.company} onChange={set('company')} autoComplete="organization" className={inputCls} />
-        </div>
-        <div>
-          <label htmlFor="ac-language" className="mb-1 block text-sm text-gray-700">
-            {t('meeting.schedule.language')}
-          </label>
-          <select
-            id="ac-language"
-            value={form.language}
-            onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
-            className={inputCls}
-          >
-            {CONSULTATION_LANGUAGES.map((code) => (
-              <option key={code} value={code}>
-                {t(`meeting.languages.${code}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <span className="mb-1 block text-sm text-gray-700">{t('meeting.schedule.timezone')}</span>
-          <p className={`${inputCls} bg-gray-50 text-gray-600`}>{timezone}</p>
-        </div>
-      </div>
 
-      {/* consent */}
-      <div className="mt-6 space-y-3">
-        <label className="flex items-start gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={form.consent}
-            onChange={(e) => setForm((f) => ({ ...f, consent: e.target.checked }))}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-          />
-          <span>{t('meeting.schedule.consent')}</span>
-        </label>
-        {errors.consent && <p role="alert" className="text-xs text-rose-600">{errors.consent}</p>}
-        <label className="flex items-start gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={form.transcriptConsent}
-            onChange={(e) => setForm((f) => ({ ...f, transcriptConsent: e.target.checked }))}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-          />
-          <span>{t('meeting.schedule.transcriptConsent')}</span>
-        </label>
-        <p className="text-xs text-gray-500">{t('meeting.schedule.privacyNote')}</p>
+      <div className="mt-6 flex-1 overflow-y-auto">
+        {/* step 1 — how to consult */}
+        {currentStep === 'choice' && (
+          <>
+            {snapshot ? (
+              <p className="flex gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                {t('meeting.schedule.analysisAttached')}
+              </p>
+            ) : (
+              <p className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <FileWarning className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>
+                  {t('meeting.schedule.noAnalysis')}{' '}
+                  <Link to="/project-analysis" className="underline">
+                    {t('meeting.schedule.runAnalysis')}
+                  </Link>
+                </span>
+              </p>
+            )}
+
+            <fieldset className="mt-5">
+              <legend className="sr-only">{t('meeting.schedule.chooseOption')}</legend>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {options.map((opt) => {
+                  const selected = choice === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setChoice(opt.value)}
+                      className={`flex min-h-11 flex-col items-start gap-1.5 rounded-xl border p-4 text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                        selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <opt.icon className="h-4 w-4 text-pink-600" aria-hidden="true" />
+                        <span className="text-sm font-semibold text-gray-900">{opt.title}</span>
+                      </span>
+                      <span className="text-xs text-gray-600">{opt.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </>
+        )}
+
+        {/* step 2 (scheduled only) — date + time */}
+        {currentStep === 'when' && (
+          <>
+            <h4 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              <CalendarDays className="h-4 w-4" aria-hidden="true" /> {t('meeting.schedule.selectDate')}
+            </h4>
+            <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-7">
+              {days.map((d) => {
+                const selected = date === d.iso;
+                return (
+                  <button
+                    key={d.iso}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setDate(d.iso)}
+                    className={`min-h-11 rounded-xl border px-1 py-1.5 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                      selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
+                    }`}
+                  >
+                    <span className="block text-[10px] uppercase text-gray-500">{d.weekday}</span>
+                    <span className="block text-base font-semibold leading-tight">{d.day}</span>
+                    <span className="block text-[10px] text-gray-500">{d.month}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {errors.date && (
+              <p role="alert" className="mt-2 text-sm text-rose-600">
+                {errors.date}
+              </p>
+            )}
+
+            <h4 className="mt-6 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              <Clock className="h-4 w-4" aria-hidden="true" /> {t('meeting.schedule.selectTime')}
+            </h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {SLOT_TIMES.map((sl) => {
+                const selected = time === sl;
+                return (
+                  <button
+                    key={sl}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setTime(sl)}
+                    className={`min-h-11 rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
+                      selected ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400'
+                    }`}
+                  >
+                    {sl}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">{t('meeting.schedule.timezoneNote', { timezone })}</p>
+            {errors.time && (
+              <p role="alert" className="mt-1 text-sm text-rose-600">
+                {errors.time}
+              </p>
+            )}
+          </>
+        )}
+
+        {/* step 3 — details (three columns on desktop keeps it to two rows) */}
+        {currentStep === 'details' && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label htmlFor="ac-name" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('meeting.schedule.name')}
+              </label>
+              <input id="ac-name" value={form.name} onChange={set('name')} autoComplete="name" className={inputCls} />
+              {errors.name && (
+                <p role="alert" className="mt-1 text-xs text-rose-600">
+                  {errors.name}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="ac-email" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('meeting.schedule.email')}
+              </label>
+              <input id="ac-email" type="email" value={form.email} onChange={set('email')} autoComplete="email" className={inputCls} />
+              {errors.email && (
+                <p role="alert" className="mt-1 text-xs text-rose-600">
+                  {errors.email}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="ac-phone" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('meeting.schedule.phone')}
+              </label>
+              <input id="ac-phone" value={form.phone} onChange={set('phone')} autoComplete="tel" className={inputCls} />
+              {errors.phone && (
+                <p role="alert" className="mt-1 text-xs text-rose-600">
+                  {errors.phone}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="ac-company" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('meeting.schedule.company')}
+              </label>
+              <input id="ac-company" value={form.company} onChange={set('company')} autoComplete="organization" className={inputCls} />
+            </div>
+            <div>
+              <label htmlFor="ac-language" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {t('meeting.schedule.language')}
+              </label>
+              <select
+                id="ac-language"
+                value={form.language}
+                onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
+                className={inputCls}
+              >
+                {CONSULTATION_LANGUAGES.map((code) => (
+                  <option key={code} value={code}>
+                    {t(`meeting.languages.${code}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-gray-700">{t('meeting.schedule.timezone')}</span>
+              <p className={`${inputCls} bg-gray-50 text-gray-600`}>{timezone}</p>
+            </div>
+          </div>
+        )}
+
+        {/* step 4 — consent + verification. Kept mounted once reached so the
+            Turnstile widget is never re-created by stepping back and forth. */}
+        {reachedConfirm && (
+          <div className={currentStep === 'confirm' ? '' : 'hidden'}>
+            <p className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{chosenOption?.title}</span>
+              {isScheduled && date && time && ` · ${date} ${time} (${timezone})`}
+              {form.name.trim() && ` · ${form.name.trim()}`}
+              {form.email.trim() && ` · ${form.email.trim()}`}
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <label className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.consent}
+                  onChange={(e) => setForm((f) => ({ ...f, consent: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                />
+                <span>{t('meeting.schedule.consent')}</span>
+              </label>
+              {errors.consent && (
+                <p role="alert" className="text-xs text-rose-600">
+                  {errors.consent}
+                </p>
+              )}
+              <label className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.transcriptConsent}
+                  onChange={(e) => setForm((f) => ({ ...f, transcriptConsent: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                />
+                <span>{t('meeting.schedule.transcriptConsent')}</span>
+              </label>
+              <p className="text-xs leading-relaxed text-gray-500">{t('meeting.schedule.privacyNote')}</p>
+            </div>
+
+            <div className="mt-5">
+              <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
+              {errors.turnstile && (
+                <p role="alert" className="mt-1 text-xs text-rose-600">
+                  {errors.turnstile}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <HoneypotField value={honeypot} onChange={setHoneypot} />
-
-      <div className="mt-5">
-        <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
-        {errors.turnstile && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.turnstile}</p>}
-      </div>
 
       {errors.submit && (
         <p role="alert" className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -473,15 +662,36 @@ const ConsultationScheduler: React.FC = () => {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-      >
-        {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {choice === 'now' ? t('meeting.schedule.startNow') : t('meeting.schedule.confirm')}
-      </button>
-      <p className="mt-3 text-center text-xs text-gray-500">{t('meeting.schedule.aiDisclosure')}</p>
+      {/* one fixed action row, so the primary button is always on screen */}
+      <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-5">
+        <button
+          type="button"
+          onClick={() => (currentIndex === 0 ? onLeadingStep?.() : goToStep(currentIndex - 1))}
+          disabled={currentIndex === 0 && !onLeadingStep}
+          className="inline-flex min-h-11 items-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-pink-400 disabled:invisible focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+        >
+          {t('meeting.schedule.stepBack')}
+        </button>
+        {currentStep === 'confirm' ? (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+          >
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {choice === 'now' ? t('meeting.schedule.startNow') : t('meeting.schedule.confirm')}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={goNext}
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+          >
+            {t('meeting.schedule.stepNext')}
+          </button>
+        )}
+      </div>
+      <p className="mt-3 text-center text-xs leading-relaxed text-gray-500">{t('meeting.schedule.aiDisclosure')}</p>
     </form>
   );
 };
