@@ -46,6 +46,22 @@ describe('createStt', () => {
     expect(instance.detectLanguage).toBe(true);
   });
 
+  it('pins the language when a caller asks for it (consultation meetings are English-only)', async () => {
+    process.env.OPENAI_API_KEY = 'test-key-not-real';
+    const { createStt } = await import('./stt.js');
+    const instance = createStt({ language: 'en' }) as unknown as Record<string, unknown>;
+    expect(instance.language).toBe('en');
+    expect(instance.detectLanguage).toBe(false);
+  });
+
+  it('keeps automatic detection for the general voice flow (no language passed)', async () => {
+    process.env.OPENAI_API_KEY = 'test-key-not-real';
+    const { createStt } = await import('./stt.js');
+    const instance = createStt({}) as unknown as Record<string, unknown>;
+    expect(instance.detectLanguage).toBe(true);
+    expect(instance.language).toBeUndefined();
+  });
+
   it('throws a clear, non-sensitive error when OPENAI_API_KEY is missing', async () => {
     process.env.BUDDY_STT_PROVIDER = 'openai';
     delete process.env.OPENAI_API_KEY;

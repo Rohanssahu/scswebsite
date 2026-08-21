@@ -39,10 +39,13 @@ ProjectAnalysisResult ──"Schedule a Call"──▶ /schedule-call
         Buddy worker (agent/src/agent.ts)
           · parseParticipantMeta sees mode='consultation' → runConsultationMeeting()
           · load_context ──▶ consultation-agent Edge Function (VOICE_AGENT_SECRET)
-          · joins room, publishes buddy.state, speaks the greeting automatically
-          · tools: set_language, update_requirements, update_proposal,
+          · joins room, publishes buddy.state, speaks ONE English greeting
+          · scripted opening: new project / existing project / clarify
+            (agent/src/opening.ts — deterministic, not model-generated)
+          · tools: send_chat_note, update_requirements, update_proposal,
                    mark_confirmed, verify_contact, set_transcript_consent,
                    finalize_consultation, request_human_review
+                   (NO set_language — consultation meetings are English only)
           · numbers from agent/src/estimate.ts, re-validated server-side
                           │
                           ▼
@@ -196,8 +199,11 @@ secret scan of dist/              # no API keys, secrets or service-role strings
    re-asking known details.
 2. **No analysis** — open `/schedule-call` in a fresh browser profile → the amber
    "no analysis attached" notice shows → Buddy says so and starts fresh.
-3. **Language** — choose Urdu or Arabic in the form; Buddy asks/confirms the
-   language and the page renders RTL correctly.
+3. **English only** — Buddy greets once in English and never asks which
+   language to use. Whatever `preferredLanguage` the scheduler stored, the
+   meeting is conducted in English and the Project details panel shows English
+   once the agent joins. (The scheduler form and its RTL rendering are
+   unchanged; only Buddy's speech is English-only.)
 4. **Typed input** — mute the mic and type a requirement in Chat; Buddy answers in
    chat and voice and the Project details panel progress advances.
 5. **Proposal** — continue until Buddy calls `update_proposal`; the Live proposal
@@ -245,8 +251,69 @@ secret scan of dist/              # no API keys, secrets or service-role strings
   in `leads` and is visible to internal tooling; wiring Resend is a follow-up.
 * **No staff/admin UI** — reading consultation data requires the service role
   (RLS is on with zero policies, matching the existing tables).
-* The frontend still sends `en`/`hi` only to the older `livekit-token` widget;
-  the six-language set applies to consultation meetings.
+* **Consultation meetings are ENGLISH ONLY.** Buddy neither asks for nor
+  accepts a language choice there, and `set_language` is not exposed as a tool.
+  A `preferredLanguage` may still be stored on the meeting row and shown by the
+  scheduler UI, but it does not change how Buddy speaks. The older
+  `livekit-token` website widget is untouched and still offers en/hi/hinglish.
+
+---
+
+## 6a. Conversation behaviour, pacing and turn-taking
+
+Buddy's consultation persona is a calm senior project/requirement manager. The
+behaviour is split so each piece is unit-testable without a live session:
+
+| File | Responsibility |
+| --- | --- |
+| `agent/src/prompts.ts` | English-only system prompt, requirement flow order, style rules, the single approved greeting (`CONSULTATION_GREETING`) |
+| `agent/src/greeting.ts` | Greeting spoken exactly once per job — survives reconnect, retried join and agent re-entry |
+| `agent/src/opening.ts` | Deterministic new / existing / unclear routing with three word-for-word replies |
+| `agent/src/silence.ts` | One gentle "no rush" nudge after ~10 s of genuine silence, re-armed only by the client speaking |
+| `agent/src/turn_taking.ts` | `isConfirmedClientTurn` (interim transcripts are never acted on) and the session `turnHandling` object |
+| `agent/src/config.ts` | Every voice/timing number as a named constant with a validated env override |
+
+**Opening flow.** The greeting is spoken once, in full, and then Buddy waits.
+The client's answer is classified server-side into new project / existing
+project / unclear; each path has a fixed reply, and the LLM turn for that one
+exchange is suppressed with `StopResponse` so the wording cannot drift. An
+unclear answer gets the clarification question (at most twice, then the LLM
+takes over). The resolved choice is written to `state.intent`.
+
+**Voice pacing** (ElevenLabs `voice_settings`, the only fields the installed
+plugin sends): `speed 0.88`, `stability 0.60`, `similarity_boost 0.75`,
+`style 0.15`, `use_speaker_boost true`, with `language: 'en'` and
+`applyTextNormalization: 'auto'`. Pauses are punctuation-driven — the greeting
+is spoken as one string with a blank line between sentences; there are no
+sleeps.
+
+**Turn-taking** (all values milliseconds):
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Silero `minSilenceDuration` | 700 | a mid-sentence breath is not the end of a turn |
+| Silero `minSpeechDuration` | 120 | a click/cough is not a turn (plugin default 50) |
+| Silero `activationThreshold` | 0.6 | background-noise tolerance |
+| `endpointing.minDelay` | 1000 | Buddy never answers sooner than this |
+| `endpointing.maxDelay` | 4500 | longest thinking pause honoured |
+| `interruption.minDuration` | 600 | barge-in stays on; a cough does not cut Buddy off |
+| `preemptiveGeneration.enabled` | `false` | the framework default runs the LLM on **interim** text |
+| silence reminder | 10000 | one nudge, then silence until the client speaks |
+
+The prewarmed Silero VAD is retuned per meeting via the plugin's own
+`updateOptions`, so no second ONNX model is loaded and the general website
+voice flow keeps its own 550 ms window.
+
+**Long lists** go to the meeting chat via the `send_chat_note` tool (an
+`lk.chat` text stream) instead of being read aloud; `meetingSession.ts`
+registers an inbound handler so they render in the existing chat panel. Buddy's
+spoken words continue to arrive over `lk.transcription`, so notes never
+duplicate speech.
+
+**No speech after close.** The greeting gate, the silence reminder and the
+opening router all consult `canSpeak(session)` before scheduling anything, and
+all three are cancelled/disposed by the run-gate teardown and on client
+disconnect.
 
 ---
 

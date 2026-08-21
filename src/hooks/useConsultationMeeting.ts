@@ -15,7 +15,11 @@ import {
   type MeetingConnectionState,
   type MeetingJoinResponse,
 } from '@/services/consultationCore';
-import { MeetingSession } from '@/services/meetingSession';
+import {
+  MeetingSession,
+  type MeetingConnectOptions,
+  type MicPublicationStatus,
+} from '@/services/meetingSession';
 import type { BuddyStateView } from '@/services/voiceSessionCore';
 
 export interface ConsultationMeetingApi {
@@ -33,12 +37,17 @@ export interface ConsultationMeetingApi {
   clientSpeaking: boolean;
   buddySpeaking: boolean;
   cameraStream: MediaStream | null;
-  connect: (join: MeetingJoinResponse, options: { camera: boolean; micMuted: boolean }) => Promise<void>;
+  /** Whether the local microphone track is really published (not assumed). */
+  micPublication: MicPublicationStatus;
+  retryingMic: boolean;
+  connect: (join: MeetingJoinResponse, options: MeetingConnectOptions) => Promise<void>;
   toggleMic: () => void;
   toggleCamera: () => void;
   toggleSpeaker: () => void;
   sendChat: (text: string) => void;
   addSystemMessage: (text: string) => void;
+  /** Republishes the tested microphone after a publication failure. */
+  retryMicrophone: () => Promise<MicPublicationStatus>;
   leave: () => Promise<void>;
 }
 
@@ -60,6 +69,8 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
   const [clientSpeaking, setClientSpeaking] = useState(false);
   const [buddySpeaking, setBuddySpeaking] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [micPublication, setMicPublication] = useState<MicPublicationStatus>('unknown');
+  const [retryingMic, setRetryingMic] = useState(false);
 
   const addSystemMessage = useCallback((text: string) => {
     systemCounter.current += 1;
@@ -91,13 +102,14 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
       onLocalCamera: setCameraStream,
       onClientSpeaking: setClientSpeaking,
       onBuddySpeaking: setBuddySpeaking,
+      onMicPublication: setMicPublication,
     });
     sessionRef.current = session;
     return session;
   }, []);
 
   const connect = useCallback(
-    async (join: MeetingJoinResponse, options: { camera: boolean; micMuted: boolean }) => {
+    async (join: MeetingJoinResponse, options: MeetingConnectOptions) => {
       const session = ensureSession();
       setMicEnabled(!options.micMuted);
       setCameraEnabled(options.camera);
@@ -139,6 +151,20 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     void sessionRef.current?.sendChat(text);
   }, []);
 
+  /** Text chat never depends on this — it stays usable whatever audio does. */
+  const retryMicrophone = useCallback(async (): Promise<MicPublicationStatus> => {
+    const session = sessionRef.current;
+    if (!session) return 'failed';
+    setRetryingMic(true);
+    try {
+      const status = await session.retryMicrophone();
+      if (status === 'published') setMicEnabled(true);
+      return status;
+    } finally {
+      setRetryingMic(false);
+    }
+  }, []);
+
   const leave = useCallback(async () => {
     await sessionRef.current?.end();
   }, []);
@@ -166,12 +192,15 @@ export function useConsultationMeeting(): ConsultationMeetingApi {
     clientSpeaking,
     buddySpeaking,
     cameraStream,
+    micPublication,
+    retryingMic,
     connect,
     toggleMic,
     toggleCamera,
     toggleSpeaker,
     sendChat,
     addSystemMessage,
+    retryMicrophone,
     leave,
   };
 }

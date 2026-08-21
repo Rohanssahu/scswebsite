@@ -1,8 +1,13 @@
 // =============================================================================
 // /ai-consultation/:meetingReference — the SCS AI Consultation Meeting.
 //
-// Phases: resolving → (no access / not joinable / countdown) → lobby (device
-// checks) → live meeting → ended.
+// Phases: resolving → (no access / not joinable / countdown) → lobby (mandatory
+// microphone + speaker check) → live meeting → ended.
+//
+// The lobby's audio checks are MANDATORY: "Join consultation" stays disabled
+// until the microphone actually heard a voice AND the client confirmed they
+// heard the test sound (see services/deviceCheck.ts for the exact gate). The
+// camera is optional and never blocks joining.
 //
 // Security notes:
 //   * access requires the meeting reference PLUS the scoped access token that
@@ -30,6 +35,9 @@ import {
   X,
 } from 'lucide-react';
 import TurnstileWidget, { type TurnstileWidgetHandle } from '@/components/forms/TurnstileWidget';
+import AudioRecoveryBanner from '@/components/consultation/AudioRecoveryBanner';
+import DeviceCheckPanel from '@/components/consultation/DeviceCheckPanel';
+import JoinChecklist from '@/components/consultation/JoinChecklist';
 import BuddyTile from '@/components/consultation/BuddyTile';
 import ClientTile from '@/components/consultation/ClientTile';
 import MeetingControls from '@/components/consultation/MeetingControls';
@@ -40,6 +48,13 @@ import FilesLinksPanel from '@/components/consultation/FilesLinksPanel';
 import ProposalPanel from '@/components/consultation/ProposalPanel';
 import { BUDDY_AVATAR_URL } from '@/components/consultation/buddyAvatar';
 import { useConsultationMeeting } from '@/hooks/useConsultationMeeting';
+import { useDeviceCheck } from '@/hooks/useDeviceCheck';
+import {
+  buildChecklist,
+  canJoinConsultation,
+  deviceCheckErrorCategory,
+  joinBlockReasons,
+} from '@/services/deviceCheck';
 import { isLeadCaptureReady } from '@/services/supabaseClient';
 import {
   formatInTimezone,
@@ -82,15 +97,13 @@ const AiConsultation: React.FC = () => {
   /** Epoch ms the live stage was entered — drives the header duration only. */
   const [liveSince, setLiveSince] = useState<number | null>(null);
 
-  // lobby device state
+  // lobby device state — the mandatory audio checks live in useDeviceCheck;
+  // only the OPTIONAL camera preview is owned here.
+  const check = useDeviceCheck();
   const [lobbyCamera, setLobbyCamera] = useState(false);
   const [lobbyMicMuted, setLobbyMicMuted] = useState(false);
   const [lobbyStream, setLobbyStream] = useState<MediaStream | null>(null);
-  const [micLevel, setMicLevel] = useState(0);
-  const [micDenied, setMicDenied] = useState(false);
-  const [speakerTested, setSpeakerTested] = useState(false);
   const lobbyVideoRef = useRef<HTMLVideoElement>(null);
-  const lobbyAudioCtx = useRef<AudioContext | null>(null);
 
   // panel state
   const [panelOpen, setPanelOpen] = useState(false);
@@ -147,38 +160,21 @@ const AiConsultation: React.FC = () => {
   }, [meetingReference, doResolve]);
 
   // ---- lobby device tests --------------------------------------------------
-  const startMicTest = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMicDenied(false);
-      const ctx = new AudioContext();
-      lobbyAudioCtx.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      const buffer = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
-        if (!lobbyAudioCtx.current) return;
-        analyser.getByteFrequencyData(buffer);
-        const avg = buffer.reduce((s, v) => s + v, 0) / buffer.length;
-        setMicLevel(Math.min(1, avg / 90));
-        requestAnimationFrame(tick);
-      };
-      tick();
-    } catch {
-      setMicDenied(true);
-    }
-  }, []);
+  // Nothing is requested on mount: DeviceCheckPanel's buttons are the only
+  // things that ever open a microphone or play a sound.
 
+  // Coarse, non-identifying outcome reporting for failed microphone tests.
+  const reportedMicFailure = useRef<string | null>(null);
   useEffect(() => {
-    if (phase !== 'lobby') return;
-    void startMicTest();
-    return () => {
-      void lobbyAudioCtx.current?.close().catch(() => undefined);
-      lobbyAudioCtx.current = null;
-    };
-  }, [phase, startMicTest]);
+    const category = deviceCheckErrorCategory(check.micState);
+    if (!category) {
+      reportedMicFailure.current = null;
+      return;
+    }
+    if (reportedMicFailure.current === check.micState) return;
+    reportedMicFailure.current = check.micState;
+    trackConsultation('consultation_failed', { category });
+  }, [check.micState]);
 
   const toggleLobbyCamera = async () => {
     if (lobbyCamera) {
@@ -204,42 +200,45 @@ const AiConsultation: React.FC = () => {
     if (lobbyStream) void el.play().catch(() => undefined);
   }, [lobbyStream]);
 
-  const testSpeaker = () => {
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 528;
-      gain.gain.value = 0.08;
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      setTimeout(() => {
-        osc.stop();
-        void ctx.close();
-      }, 550);
-      setSpeakerTested(true);
-    } catch {
-      setSpeakerTested(false);
-    }
+  // ---- join gate ----------------------------------------------------------
+  // Single source of truth for whether joining is allowed. Camera state is
+  // deliberately not part of it.
+  const gate = {
+    meetingReady: Boolean(view?.canJoin && accessToken),
+    verificationComplete: Boolean(turnstileToken),
+    micState: check.micState,
+    speakerState: check.speakerState,
+    deviceChanged: check.deviceChanged,
+    joining,
   };
+  const canJoin = canJoinConsultation(gate);
+  const blockReason = joinBlockReasons(gate)[0] ?? null;
+  const checklist = buildChecklist(gate);
 
   // ---- join ---------------------------------------------------------------
   const join = async () => {
-    if (!accessToken || !turnstileToken) {
-      setError(t('meeting.schedule.errTurnstile'));
+    // Belt and braces: the button is disabled, and the handler re-checks.
+    if (!canJoin || !accessToken || !turnstileToken) {
+      if (!turnstileToken) setError(t('meeting.schedule.errTurnstile'));
       return;
     }
+    const micDeviceId = check.selectedMicId;
     setJoining(true);
     setError(null);
     try {
       const joinResponse = await joinMeeting(meetingReference, accessToken, turnstileToken);
-      // release lobby preview tracks; the room re-acquires them
+      // Release every temporary lobby resource before the room acquires its
+      // own: preview camera tracks, and the device-check stream/AudioContext.
       lobbyStream?.getTracks().forEach((tr) => tr.stop());
       setLobbyStream(null);
-      void lobbyAudioCtx.current?.close().catch(() => undefined);
-      lobbyAudioCtx.current = null;
+      check.release();
       if (joinResponse.meeting) setView(joinResponse.meeting);
-      await meeting.connect(joinResponse, { camera: lobbyCamera, micMuted: lobbyMicMuted });
+      await meeting.connect(joinResponse, {
+        camera: lobbyCamera,
+        micMuted: lobbyMicMuted,
+        // The exact microphone the client just tested.
+        micDeviceId,
+      });
       setLiveSince(Date.now());
       setPhase('live');
       trackConsultation('consultation_joined', { kind: view?.meetingKind ?? 'instant' });
@@ -303,6 +302,23 @@ const AiConsultation: React.FC = () => {
       trackConsultation('consultation_completed');
     }
   }, [finalized]);
+
+  // Microphone publication: the client is told the moment their audio is not
+  // actually going out, and text chat stays available as the fallback. The
+  // meeting is never ended automatically.
+  const micPublication = meeting.micPublication;
+  const lastPublication = useRef<string>('unknown');
+  useEffect(() => {
+    if (phase !== 'live' || micPublication === lastPublication.current) return;
+    const previous = lastPublication.current;
+    lastPublication.current = micPublication;
+    if (micPublication === 'failed' || micPublication === 'lost') {
+      addSystemMessage(t('meeting.audioRecovery.systemNotice'));
+      trackConsultation('consultation_failed', { category: 'mic_publish_failed' });
+    } else if (micPublication === 'published' && (previous === 'failed' || previous === 'lost')) {
+      addSystemMessage(t('meeting.audioRecovery.restored'));
+    }
+  }, [micPublication, phase, addSystemMessage, t]);
 
   // Agent-dispatch timeout: if Buddy never arrives, offer clear fallbacks.
   const [agentTimedOut, setAgentTimedOut] = useState(false);
@@ -548,55 +564,17 @@ const AiConsultation: React.FC = () => {
               </dl>
             </div>
 
-            {/* device checks */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                {t('meeting.lobby.deviceCheck')}
-              </h2>
+            {/* mandatory 2-step audio setup */}
+            <div className="space-y-4">
+              <DeviceCheckPanel check={check} />
 
-              {/* mic test */}
-              <div className="mt-3">
-                <p className="flex items-center gap-2 text-sm text-gray-700">
-                  <Mic className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.lobby.micTest')}
-                </p>
-                {micDenied ? (
-                  <p className="mt-1 text-xs text-rose-600">{t('meeting.errors.mic_denied')}</p>
-                ) : (
-                  <div
-                    role="progressbar"
-                    aria-valuenow={Math.round(micLevel * 100)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={t('meeting.lobby.micTest')}
-                    className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200"
-                  >
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-[width] duration-100"
-                      style={{ width: `${Math.round(micLevel * 100)}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* speaker test */}
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={testSpeaker}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-                >
-                  <Speaker className="h-4 w-4" aria-hidden="true" /> {t('meeting.lobby.speakerTest')}
-                </button>
-                {speakerTested && (
-                  <span className="ms-2 inline-flex items-center gap-1 text-xs text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> {t('meeting.lobby.speakerOk')}
-                  </span>
-                )}
-              </div>
-
-              {/* camera preview */}
-              <div className="mt-4">
-                <div className="flex items-center gap-2">
+              {/* camera — OPTIONAL: it never gates the Join button */}
+              <section aria-labelledby="lobby-camera-heading" className="rounded-2xl border border-gray-200 bg-white p-5">
+                <h2 id="lobby-camera-heading" className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  {t('meeting.setup.cameraTitle')}
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">{t('meeting.setup.cameraOptional')}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => void toggleLobbyCamera()}
@@ -627,28 +605,41 @@ const AiConsultation: React.FC = () => {
                     style={{ transform: 'scaleX(-1)' }}
                   />
                 )}
-              </div>
+              </section>
 
-              <div className="mt-5">
+              {/* verification + join */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-5">
                 <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
+
+                {error && (
+                  <p role="alert" className="mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    {error}
+                  </p>
+                )}
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:items-start">
+                  <JoinChecklist items={checklist} />
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => void join()}
+                      disabled={!canJoin}
+                      aria-describedby="join-hint"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                    >
+                      {joining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
+                      {t('meeting.lobby.join')}
+                    </button>
+                    {/* why the button is disabled, announced as it changes */}
+                    <p id="join-hint" aria-live="polite" className="mt-2 text-center text-xs text-gray-600">
+                      {blockReason
+                        ? t(`meeting.setup.blocked.${blockReason}`)
+                        : t('meeting.setup.readyToJoin')}
+                    </p>
+                    <p className="mt-2 text-center text-xs text-gray-500">{t('meeting.lobby.privacyNote')}</p>
+                  </div>
+                </div>
               </div>
-
-              {error && (
-                <p role="alert" className="mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={() => void join()}
-                disabled={joining || !turnstileToken}
-                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
-              >
-                {joining ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
-                {t('meeting.lobby.join')}
-              </button>
-              <p className="mt-2 text-center text-xs text-gray-500">{t('meeting.lobby.privacyNote')}</p>
             </div>
           </div>
         </div>
@@ -852,6 +843,19 @@ const AiConsultation: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* audio recovery: the microphone is not actually being published */}
+          {(micPublication === 'failed' || micPublication === 'lost') && (
+            <AudioRecoveryBanner
+              status={micPublication}
+              retrying={meeting.retryingMic}
+              onRetry={() => void meeting.retryMicrophone()}
+              onOpenChat={() => {
+                setPanelOpen(true);
+                setPanelTab('chat');
+              }}
+            />
+          )}
 
           {/* failure / fallback banners */}
           {failureBanner}

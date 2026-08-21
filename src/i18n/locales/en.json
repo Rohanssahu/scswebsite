@@ -1472,6 +1472,110 @@
       "join": "Join consultation",
       "privacyNote": "No audio recording is stored. Your camera is optional and only used after you enable it."
     },
+    "setup": {
+      "title": "Audio setup",
+      "required": "Both checks are required before you can join. Your camera is optional.",
+      "step1": "Step 1 — Microphone",
+      "step2": "Step 2 — Speaker",
+      "readyToJoin": "All checks passed — you can join now.",
+      "cameraTitle": "Camera (optional)",
+      "cameraOptional": "The consultation works fine without video — the camera never blocks joining.",
+      "mic": {
+        "test": "Test microphone",
+        "retry": "Try again",
+        "prompt": "Please say “Hello Buddy” for a couple of seconds.",
+        "level": "Input level",
+        "using": "Using: {{device}}",
+        "selectorLabel": "Microphone",
+        "defaultDevice": "Browser default",
+        "deviceChanged": "Your microphone was disconnected or changed. Please test it again before joining.",
+        "states": {
+          "not_tested": "Not tested",
+          "requesting": "Requesting permission…",
+          "listening": "Listening — please say “Hello Buddy”",
+          "passed": "Microphone working",
+          "no_device": "No microphone detected",
+          "denied": "Permission denied",
+          "busy": "Microphone busy or unavailable",
+          "no_voice": "No voice detected",
+          "unsupported": "Browser unsupported"
+        },
+        "helpDenied": "Microphone access is blocked. Open your browser’s site settings, allow microphone access, then try again.",
+        "helpNoDevice": "No microphone was detected. Connect a microphone or headset, then try again.",
+        "helpNoAudio": "We found your microphone, but could not hear you. Check the input level and try speaking again.",
+        "helpBusy": "Your microphone may be in use by another application. Close the other application and try again.",
+        "helpUnsupported": "This browser cannot open a microphone. Please use a recent Chrome, Edge, Safari or Firefox."
+      },
+      "speaker": {
+        "play": "Play test sound",
+        "playAgain": "Play again",
+        "playing": "Playing…",
+        "caption": "Press play. If you can hear this message clearly, your speaker is working.",
+        "question": "Did you hear the test sound?",
+        "yes": "Yes, I can hear it",
+        "no": "No, I cannot hear it",
+        "outputLabel": "Speaker",
+        "defaultDevice": "System default",
+        "outputUnsupported": "Speaker selection is managed by your device or browser.",
+        "states": {
+          "not_tested": "Not tested",
+          "playing": "Playing test sound",
+          "awaiting_answer": "Waiting for your answer",
+          "passed": "Speaker confirmed",
+          "not_heard": "Sound not heard",
+          "failed": "Could not play the sound"
+        },
+        "errPlayback": "The test sound could not be played. Check that this browser is allowed to play audio, then try again.",
+        "helpNotHeard": "Raise your volume, unmute your device or choose another output, then play the sound again."
+      },
+      "checklist": {
+        "title": "Before you join",
+        "mic_detected": "Microphone detected",
+        "voice_confirmed": "Voice input confirmed",
+        "speaker_confirmed": "Speaker confirmed",
+        "verification": "Security verification complete",
+        "status": {
+          "pending": "Pending",
+          "testing": "Testing…",
+          "passed": "Passed",
+          "failed": "Action needed"
+        }
+      },
+      "blocked": {
+        "meeting": "This meeting cannot be joined yet.",
+        "verification": "Complete the human-verification check.",
+        "microphone": "Test your microphone to continue.",
+        "speaker": "Play the test sound and confirm you heard it.",
+        "device_changed": "Your microphone changed — test it again.",
+        "joining": "Joining your consultation…"
+      },
+      "help": {
+        "title": "Microphone blocked? How to allow it",
+        "intro": "We cannot change your browser permissions — only you can. These steps stay on your device:",
+        "general1": "Click the lock or settings icon beside the address bar.",
+        "general2": "Set Microphone to Allow.",
+        "general3": "Select the correct input device.",
+        "general4": "Reload the page, or run the test again.",
+        "chromeTitle": "Chrome / Edge (desktop)",
+        "chrome": "Click the icon at the left of the address bar → Site settings → Microphone → Allow, then reload the page.",
+        "safariTitle": "Safari (macOS / iPhone)",
+        "safari": "macOS: Safari menu → Settings for This Website → Microphone → Allow. iPhone or iPad: Settings → Safari → Microphone, or the “aA” menu → Website Settings.",
+        "firefoxTitle": "Firefox",
+        "firefox": "Click the microphone or lock icon in the address bar, remove the “Blocked” permission, then run the test again.",
+        "androidTitle": "Chrome on Android",
+        "android": "Tap the lock icon beside the address → Permissions → Microphone → Allow, then reload the page.",
+        "noBypass": "If access stays blocked, you can still use text chat inside the meeting, or the guided requirement form."
+      }
+    },
+    "audioRecovery": {
+      "failedTitle": "Your microphone is not being sent",
+      "lostTitle": "Your microphone was disconnected",
+      "text": "Buddy cannot hear you right now. Retry your microphone, or keep going in text chat — Buddy reads every message.",
+      "retryMic": "Retry microphone",
+      "audioSettings": "Open audio settings",
+      "systemNotice": "Your microphone is not being sent. You can retry it, or type instead — Buddy reads text chat.",
+      "restored": "Your microphone is live again."
+    },
     "access": {
       "title": "Open your consultation",
       "intro": "Paste the access key from your confirmation to open this meeting. The reference alone does not grant access.",
@@ -1540,7 +1644,7 @@
       "selectTime": "Select a time",
       "timezoneNote": "Times shown in your timezone ({{timezone}}).",
       "yourDetails": "Your details",
-    "yourProject": "4. Your project",
+      "yourProject": "4. Your project",
       "name": "Full name",
       "email": "Email",
       "phone": "Phone (optional)",
@@ -1551,7 +1655,7 @@
       "transcriptConsent": "Optional: store the meeting chat/transcript with my request.",
       "privacyNote": "No audio recording is stored. Without transcript consent, only the structured requirement summary and proposal are kept.",
       "startNow": "Start AI consultation",
-    "confirm": "Request my free consultation call",
+      "confirm": "Request my free consultation call",
       "aiDisclosure": "Buddy is an AI consultant. Every estimate is preliminary and reviewed by a human before any final quotation.",
       "errName": "Please enter your name.",
       "errEmail": "Please enter a valid email address.",

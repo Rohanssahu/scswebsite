@@ -37,13 +37,27 @@ export function resolveSttProvider(envValue?: string | null): SttProvider {
   );
 }
 
-function createOpenAiStt(): stt.STT {
+/**
+ * Options callers may pin per conversation mode.
+ *
+ * The general website voice flow stays multilingual (auto language detection);
+ * consultation meetings pin `language: 'en'` because Buddy is English-only
+ * there, which also stops the transcriber from hallucinating another language
+ * out of accented English.
+ */
+export interface SttOptions {
+  /** BCP-47 code to force. Omit for automatic detection. */
+  language?: string;
+}
+
+function createOpenAiStt(options: SttOptions): stt.STT {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY is required for the openai STT provider');
   }
+  const pinned = options.language?.trim();
   return new openai.STT({
     model: 'gpt-4o-transcribe',
-    detectLanguage: true,
+    ...(pinned ? { language: pinned, detectLanguage: false } : { detectLanguage: true }),
   });
 }
 
@@ -57,7 +71,7 @@ function createGeminiStt(): stt.STT {
   );
 }
 
-export function createStt(): stt.STT {
+export function createStt(options: SttOptions = {}): stt.STT {
   const provider = resolveSttProvider(process.env.BUDDY_STT_PROVIDER);
-  return provider === 'gemini' ? createGeminiStt() : createOpenAiStt();
+  return provider === 'gemini' ? createGeminiStt() : createOpenAiStt(options);
 }

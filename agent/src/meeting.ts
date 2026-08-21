@@ -25,8 +25,12 @@ import {
   type MeetingContext,
 } from './backend.js';
 import {
-  ENDPOINTING_MAX_DELAY_MS,
-  ENDPOINTING_MIN_DELAY_MS,
+  CONSULTATION_LANGUAGE,
+  VAD_ACTIVATION_THRESHOLD,
+  VAD_MIN_SILENCE_MS,
+  VAD_MIN_SPEECH_MS,
+  loadConsultationTurnTaking,
+  loadConsultationVoiceSettings,
   loadSessionLimits,
 } from './config.js';
 import {
@@ -45,12 +49,11 @@ import {
   spellPhoneForReadback,
 } from './guards.js';
 import { loadKnowledge } from './knowledge.js';
-import {
-  CONSULTATION_GREETING_GENERAL,
-  CONSULTATION_GREETING_WITH_ANALYSIS,
-  buildConsultationPrompt,
-} from './prompts.js';
+import { CONSULTATION_GREETING_SPOKEN, buildConsultationPrompt } from './prompts.js';
 import { createGreetingGate } from './greeting.js';
+import { createOpeningRouter, type OpeningRouter } from './opening.js';
+import { createSilenceReminder } from './silence.js';
+import { buildConsultationTurnHandling, isConfirmedClientTurn } from './turn_taking.js';
 import { createLlm } from './providers/llm.js';
 import { createStt } from './providers/stt.js';
 import {
@@ -62,7 +65,6 @@ import {
   onJobShutdownSignal,
 } from './session_lifecycle.js';
 import {
-  CONSULTATION_LANGUAGES,
   applyUpdate,
   buildSummary,
   computeProgress,
@@ -74,6 +76,10 @@ import {
 } from './state.js';
 
 const STATE_TOPIC = 'buddy.state';
+/** The agent framework's own chat topic (see @livekit/agents `TOPIC_CHAT`).
+ * Inbound it carries the client's typed messages; outbound Buddy uses it for
+ * detail that belongs in writing rather than in speech. */
+const CHAT_TOPIC = 'lk.chat';
 
 // =============================================================================
 // Pure helpers (unit-tested)
@@ -425,10 +431,12 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   const seeded = seedStateFromSnapshot(state, snapshot);
   state = seeded.state;
   const hasAnalysis = seeded.knownFields.length > 0 || Boolean(snapshot.mode);
-  const preferred = context?.preferredLanguage ?? meta.preferredLanguage;
-  if (preferred && (CONSULTATION_LANGUAGES as readonly string[]).includes(preferred)) {
-    state.language = preferred as ProjectState['language'];
-  }
+  // ENGLISH ONLY. A `preferredLanguage` may still be stored on the meeting row
+  // (the scheduler collects it, and the UI displays it), but the consultation
+  // conversation itself is English: Buddy neither asks for a language nor
+  // switches to one. Pinning the state here also makes the meeting UI show
+  // "English" as soon as the agent joins, without touching the UI.
+  state.language = CONSULTATION_LANGUAGE;
   state.transcriptConsent = context?.transcriptConsent ?? false;
   const consentAt = context?.consentAt ?? new Date().toISOString();
 
@@ -497,6 +505,18 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
       .catch(() => undefined);
   };
 
+  /**
+   * Publishes a text-only note on the framework's `lk.chat` topic so long lists
+   * land in the meeting chat instead of being read aloud. Buddy's SPOKEN words
+   * already reach the chat via the `lk.transcription` stream, so this topic
+   * never duplicates speech.
+   */
+  const sendChatNote = async (text: string): Promise<void> => {
+    const trimmed = text.trim().slice(0, 2000);
+    if (!trimmed) return;
+    await ctx.room.localParticipant?.sendText(trimmed, { topic: CHAT_TOPIC }).catch(() => undefined);
+  };
+
   const persistMessage = (sender: 'client' | 'buddy', content: string) => {
     // Consent gate is re-checked server-side; this is just to avoid the call.
     if (!client || !state.transcriptConsent || !content.trim()) return;
@@ -505,16 +525,25 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
 
   // ---- tools (STRICT schemas; server-side authorization inside each) ---------
   const tools = {
-    set_language: llm.tool({
+    // NOTE: there is deliberately NO set_language tool in a consultation
+    // meeting. Buddy is English-only here, so the model has no capability to
+    // switch languages and no reason to ask about one.
+
+    send_chat_note: llm.tool({
       description:
-        'Set the conversation language the client chose (en, hi, hinglish, mr = Marathi, ur = Urdu, ar = Arabic).',
-      parameters: z.object({ language: z.enum(CONSULTATION_LANGUAGES) }).strict(),
-      execute: async ({ language }) => {
-        state.language = language;
-        logEvent('language_selected', { language });
-        persistState();
-        publishState();
-        return `Language set to ${language}. Continue the conversation strictly in this language. Now summarize the attached analysis (or say none is attached) and start clarifying.`;
+        'Send a detailed list or block of text to the meeting CHAT instead of reading it aloud. Use for anything longer than about three items (feature lists, scope, milestones, technology options). Say one short sentence out loud about it; the detail goes here.',
+      parameters: z
+        .object({
+          title: z.string().trim().min(2).max(120),
+          lines: z.array(z.string().trim().min(1).max(300)).min(1).max(25),
+        })
+        .strict(),
+      execute: async ({ title, lines }) => {
+        const note = [`${title}:`, ...lines.map((line) => `- ${line}`)].join('\n').slice(0, 2000);
+        await sendChatNote(note);
+        persistMessage('buddy', note);
+        logEvent('chat_note_sent', { lines: lines.length });
+        return 'Sent to the meeting chat. Say ONE short sentence about it out loud — do not read the list.';
       },
     }),
 
@@ -713,20 +742,57 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   };
 
   // ---- voice pipeline ---------------------------------------------------------
+  //
+  // Deliberately slow and English-only. Every number below is a named constant
+  // in config.ts with a validated env override — nothing is tuned inline and no
+  // provider secret is read here.
+  const voiceSettings = loadConsultationVoiceSettings();
+  const turnTaking = loadConsultationTurnTaking();
+
+  // The prewarmed VAD is shared with the general voice flow AND with any later
+  // job that reuses this process, so retune it for this meeting instead of
+  // loading a second ONNX model, and restore the general defaults on teardown.
+  // `updateOptions` is the plugin's own API for exactly this; all values are
+  // MILLISECONDS except the 0..1 activation threshold.
+  const vad = ctx.proc.userData.vad as silero.VAD;
+  vad.updateOptions({
+    minSilenceDuration: turnTaking.vadMinSilenceMs,
+    minSpeechDuration: turnTaking.vadMinSpeechMs,
+    activationThreshold: turnTaking.vadActivationThreshold,
+  });
+  const restoreVad = () => {
+    try {
+      vad.updateOptions({
+        minSilenceDuration: VAD_MIN_SILENCE_MS,
+        minSpeechDuration: VAD_MIN_SPEECH_MS,
+        activationThreshold: VAD_ACTIVATION_THRESHOLD,
+      });
+    } catch {
+      // A disposed VAD on shutdown is not worth failing teardown over.
+    }
+  };
+
   const session = new voice.AgentSession({
-    vad: ctx.proc.userData.vad as silero.VAD,
-    // Six consultation languages; OpenAI STT's detectLanguage handles
-    // code-switching (see src/providers/stt.ts for why STT stays on OpenAI).
-    stt: createStt(),
+    vad,
+    // English only: the language is pinned so accented English is never
+    // transcribed as another language (see src/providers/stt.ts).
+    stt: createStt({ language: CONSULTATION_LANGUAGE }),
     llm: createLlm(),
     tts: new elevenlabs.TTS({
       model: process.env.ELEVENLABS_MODEL ?? 'eleven_turbo_v2_5',
       voiceId: process.env.ELEVENLABS_VOICE_ID,
+      // Enforce English for both the model and text normalization.
+      language: CONSULTATION_LANGUAGE,
+      // The only voice fields the installed plugin sends (VoiceSettings):
+      // slow speed, calm stability, high similarity, minimal style.
+      voiceSettings,
+      // Let ElevenLabs normalize numbers/dates so figures are spoken cleanly.
+      applyTextNormalization: 'auto',
     }),
-    turnHandling: {
-      // MILLISECONDS in @livekit/agents 1.7.x (defaults 500 / 3000).
-      endpointing: { minDelay: ENDPOINTING_MIN_DELAY_MS, maxDelay: ENDPOINTING_MAX_DELAY_MS },
-    },
+    // Endpointing floor/ceiling in MILLISECONDS, barge-in kept on with a
+    // higher noise floor, and preemptive (interim-driven) generation OFF.
+    // See src/turn_taking.ts.
+    turnHandling: buildConsultationTurnHandling(turnTaking),
     // Seconds (framework default 15).
     userAwayTimeout: limits.idleTimeoutSeconds,
     maxToolSteps: 5,
@@ -736,8 +802,23 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   const clientPresent = () =>
     hasClientParticipant(ctx.room.remoteParticipants.values(), ParticipantKind.AGENT, meta.clientIdentity);
 
+  // ---- the "no rush" reminder ------------------------------------------------
+  const silence = createSilenceReminder({
+    delayMs: turnTaking.silenceReminderMs,
+    canSpeak: () => canSpeak(session),
+    say: (text) => {
+      void session.say(text, { allowInterruptions: true });
+    },
+    onEvent: (event, data = {}) => {
+      logLifecycle(event, { mode: 'consultation', ...data });
+      logEvent('silence_reminder', { after_ms: turnTaking.silenceReminderMs });
+    },
+  });
+
   const greeting = createGreetingGate({
-    text: () => (hasAnalysis ? CONSULTATION_GREETING_WITH_ANALYSIS : CONSULTATION_GREETING_GENERAL),
+    // ONE English greeting, always the same words. The spoken form only adds
+    // paragraph breaks so ElevenLabs pauses after each sentence.
+    text: () => CONSULTATION_GREETING_SPOKEN,
     canSpeak: () => canSpeak(session),
     clientPresent,
     say: async (text, signal) => {
@@ -749,6 +830,8 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
       const onAbort = () => handle.interrupt();
       signal.addEventListener('abort', onAbort, { once: true });
       try {
+        // Awaited to completion: Buddy asks nothing else until the whole
+        // greeting has played and then simply waits for the client.
         await handle;
       } finally {
         signal.removeEventListener('abort', onAbort);
@@ -758,8 +841,37 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
       logLifecycle(event, { mode: 'consultation', ...data });
       if (event === 'greeting_finished' && data.outcome === 'spoken') {
         logEvent('greeting_spoken', { has_analysis: hasAnalysis });
+        // Buddy now holds the floor no longer: start the silence window.
+        silence.waitForClient();
       }
     },
+  });
+
+  // ---- the scripted opening: new project vs existing project ----------------
+  //
+  // The greeting's question has exactly three outcomes and three scripted
+  // replies, so it is answered HERE, deterministically, rather than by the LLM.
+  // It runs from `onUserTurnCompleted`, i.e. only on a CONFIRMED completed turn
+  // — interim transcripts never reach it.
+  const opening: OpeningRouter = createOpeningRouter({
+    canSpeak: () => canSpeak(session),
+    say: async (text) => {
+      // `addToChatCtx: false`: the scripted line is written into the chat
+      // context by onUserTurnCompleted below, together with the client's turn,
+      // in one update. Letting say() append it too would either duplicate it or
+      // be overwritten by that update.
+      await session.say(text, { allowInterruptions: true, addToChatCtx: false });
+      // ConversationItemAdded only fires for chat-context items, so the
+      // scripted lines are persisted here instead.
+      persistMessage('buddy', text);
+    },
+    setIntent: (intent) => {
+      if (!state.intent) state.intent = intent;
+      logEvent('opening_intent', { intent });
+      persistState();
+      publishState();
+    },
+    onEvent: (event, data = {}) => logLifecycle(event, { mode: 'consultation', ...data }),
   });
 
   /**
@@ -772,6 +884,28 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     override async onEnter(): Promise<void> {
       logLifecycle('agent_activity_entered', { mode: 'consultation' });
       await greeting.speak();
+    }
+
+    /**
+     * Called by the framework ONCE per confirmed client turn, before any LLM
+     * inference. Throwing `StopResponse` suppresses the LLM reply, which is how
+     * the scripted opening answer stays scripted; the client's message is added
+     * to the chat context by hand first, since the framework only does that on
+     * the normal generation path.
+     */
+    override async onUserTurnCompleted(chatCtx: llm.ChatContext, newMessage: llm.ChatMessage): Promise<void> {
+      if (!opening.active) return;
+      const text = newMessage.textContent ?? '';
+      const outcome = await opening.handleClientTurn(text);
+      if (!outcome.handled) return;
+      // The framework only records the client's message on the normal
+      // generation path, which StopResponse skips — so write both halves of
+      // this turn ourselves, or every later LLM turn would be missing the
+      // client's answer and Buddy's scripted reply.
+      chatCtx.insert(newMessage);
+      chatCtx.addMessage({ role: 'assistant', content: outcome.reply });
+      await this.updateChatCtx(chatCtx).catch(() => undefined);
+      throw new voice.StopResponse();
     }
   }
 
@@ -787,7 +921,11 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
 
   // ---- limits, auditing, transcript persistence ---------------------------------
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
-    if (!ev.isFinal) return;
+    // INTERIM transcripts are ignored outright: they never advance the turn
+    // count, never reach the router and never trigger a reply. Only a confirmed,
+    // non-empty final transcript counts as the client having spoken.
+    if (!isConfirmedClientTurn(ev)) return;
+    silence.clientSpoke();
     turnCount += 1;
     persistMessage('client', ev.transcript);
     const guard = screenUserInput(ev.transcript);
@@ -811,7 +949,24 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     }
   });
 
+  // The reminder may only run while Buddy is genuinely waiting: it is held
+  // whenever he is thinking or speaking, and re-armed when he goes back to
+  // listening. 'idle' is the pre-first-turn state and is left to the greeting.
+  session.on(voice.AgentSessionEventTypes.AgentStateChanged, (ev) => {
+    if (ev.newState === 'thinking' || ev.newState === 'speaking') {
+      silence.hold();
+      return;
+    }
+    if (ev.newState === 'listening') silence.waitForClient();
+  });
+
+  // While the client is actually speaking, no reminder — however long the
+  // sentence runs.
   session.on(voice.AgentSessionEventTypes.UserStateChanged, (ev) => {
+    if (ev.newState === 'speaking') {
+      silence.hold();
+      return;
+    }
     if (ev.newState === 'away') {
       logEvent('idle_timeout', { turns: turnCount });
       void endSession('idle_timeout');
@@ -836,7 +991,12 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   // disconnect, or on our own endSession — never merely because setup is done.
   const runGate = createRunGate((reason) => {
     clearTimeout(maxDurationTimer);
+    // Nothing may schedule speech after this point: the greeting is aborted,
+    // the reminder timer is dropped and the scripted opening stops routing.
     greeting.cancel();
+    silence.dispose();
+    opening.deactivate();
+    restoreVad();
     detachShutdownSignal();
     logLifecycle('cleanup', { mode: 'consultation', reason, turns: turnCount });
   });
@@ -894,9 +1054,12 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   ctx.room.on(RoomEvent.ParticipantDisconnected, () => {
     if (clientPresent()) return;
     logLifecycle('client_left', { mode: 'consultation', turns: turnCount });
-    // Aborts a greeting that is still queued/playing; the framework's RoomIO
-    // closes the session right after, which runs the full teardown above.
+    // Aborts a greeting that is still queued/playing and drops any pending
+    // reminder; the framework's RoomIO closes the session right after, which
+    // runs the full teardown above.
     greeting.cancel();
+    silence.dispose();
+    opening.deactivate();
   });
 
   ctx.addShutdownCallback(async () => {

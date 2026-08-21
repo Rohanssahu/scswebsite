@@ -20,6 +20,11 @@ Architecture summary:
 
 - `src/agent.ts` — entrypoint: VAD → STT → LLM → TTS pipeline, strict tools,
   session limits, audit events.
+- `src/meeting.ts` — AI consultation meeting mode (English only, slow pacing).
+- `src/prompts.ts` — system prompts and the single approved consultation greeting.
+- `src/opening.ts` — deterministic new / existing / unclear opening routing.
+- `src/silence.ts` — the one gentle "no rush" reminder after long silence.
+- `src/turn_taking.ts` — confirmed-turn guard + the session `turnHandling` object.
 - `src/providers/llm.ts` — LLM provider abstraction (Gemini by default, OpenAI
   as an alternative).
 - `src/providers/stt.ts` — STT provider abstraction (OpenAI only today; see

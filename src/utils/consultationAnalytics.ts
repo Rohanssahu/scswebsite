@@ -32,6 +32,11 @@ export type ConsultationEvent = (typeof CONSULTATION_EVENTS)[number];
 /** Coarse, non-identifying error categories. */
 export const ERROR_CATEGORIES = [
   'mic_denied',
+  // Coarse device-check outcomes. Never a device id, name or label.
+  'mic_unavailable',
+  'mic_no_voice',
+  'mic_publish_failed',
+  'speaker_unconfirmed',
   'camera_denied',
   'agent_unavailable',
   'agent_timeout',
