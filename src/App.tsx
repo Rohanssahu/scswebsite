@@ -6,7 +6,7 @@ import LanguageAnnouncer from "@/components/LanguageAnnouncer";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, BrowserRouter, useLocation } from "react-router-dom";
+import { Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 
 import Index from "./pages/Index";
 import About from "./pages/About";
@@ -23,7 +23,6 @@ import CareersPage from "./pages/CareersPage";
 import BlogPage from "./pages/BlogPage";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import ConsultationForm from "./pages/ConsultationForm";
 import ProductDetailsPage from "./pages/ProductDetailsPage";
 import ProductShowcase from "./pages/ProductShowcase";
 import ProjectAnalysis from "./pages/ProjectAnalysis";
@@ -47,6 +46,17 @@ const ScrollToTop = () => {
   return null;
 };
 
+// The global floating Buddy widget (bottom-right house) is fully unmounted on the
+// AI consultation routes, where the lobby/meeting renders its own Buddy participant.
+const isConsultationPath = (pathname: string) =>
+  pathname === '/ai-consultation' || pathname.startsWith('/ai-consultation/');
+
+const GlobalVirtualGuide = () => {
+  const { pathname } = useLocation();
+  if (isConsultationPath(pathname)) return null;
+  return <VirtualGuide />;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -57,7 +67,7 @@ const App = () => {
           <ScrollToTop />
           <LanguageAnnouncer />
           <RoutesComponent />
-          <VirtualGuide />
+          <GlobalVirtualGuide />
           <ScrollButtons />
         </BrowserRouter>
       </TooltipProvider>
@@ -76,7 +86,8 @@ const RoutesComponent = () => {
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
       <Route path="/TermsAndConditions" element={<TermsAndConditions />} />
       <Route path="/ProductDetailsPage" element={<ProductDetailsPage />} />
-      <Route path="/consultation-form" element={<ConsultationForm />} />
+      {/* Consultation and call booking are one page now — old links keep working. */}
+      <Route path="/consultation-form" element={<Navigate to="/schedule-call" replace />} />
       <Route path="/BlogPage" element={<BlogPage />} />
       <Route path="/ApplicationForm" element={<ApplicationForm />} />
       <Route path="/gig/web-development" element={<WebDevelopment />} />

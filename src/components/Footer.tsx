@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const services = [
   { nameKey: 'web-development', path: '/gig/web-development' },
@@ -143,8 +144,10 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-gray-800 pt-8 text-center">
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-gray-800 pt-8 text-center sm:flex-row sm:justify-between sm:text-start">
           <p className="text-sm text-gray-500">{t('footer.copyright')}</p>
+          {/* Language choice lives here so the navbar stays focused on the CTAs */}
+          <LanguageSwitcher />
         </div>
       </div>
     </footer>

@@ -40,12 +40,16 @@ function createOpenAiLlm(): llm.LLM {
   });
 }
 
+/** The single place Buddy's Gemini model name is hardcoded.
+ * `BUDDY_GEMINI_MODEL` overrides it. */
+export const DEFAULT_BUDDY_GEMINI_MODEL = 'gemini-3.6-flash';
+
 function createGeminiLlm(): llm.LLM {
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error('GOOGLE_API_KEY is required for the gemini provider');
   }
   return new google.LLM({
-    model: process.env.BUDDY_GEMINI_MODEL ?? 'gemini-2.5-flash',
+    model: process.env.BUDDY_GEMINI_MODEL?.trim() || DEFAULT_BUDDY_GEMINI_MODEL,
     apiKey: process.env.GOOGLE_API_KEY,
     temperature: 0.3,
   });

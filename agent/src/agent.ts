@@ -29,6 +29,7 @@ import {
 } from '@livekit/agents';
 import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
 import * as silero from '@livekit/agents-plugin-silero';
+import { ParticipantKind, RoomEvent } from '@livekit/rtc-node';
 import 'dotenv/config';
 import { z } from 'zod';
 import {
@@ -37,7 +38,12 @@ import {
   type ContactDetails,
   type SubmitLeadArgs,
 } from './backend.js';
-import { loadSessionLimits } from './config.js';
+import {
+  ENDPOINTING_MAX_DELAY_MS,
+  ENDPOINTING_MIN_DELAY_MS,
+  VAD_MIN_SILENCE_MS,
+  loadSessionLimits,
+} from './config.js';
 import {
   EstimateError,
   buildPreliminaryEstimate,
@@ -53,11 +59,20 @@ import {
   spellEmailForReadback,
   spellPhoneForReadback,
 } from './guards.js';
+import { createGreetingGate } from './greeting.js';
 import { loadKnowledge } from './knowledge.js';
 import { runConsultationMeeting } from './meeting.js';
 import { GREETING, buildSystemPrompt } from './prompts.js';
 import { createLlm } from './providers/llm.js';
 import { createStt } from './providers/stt.js';
+import {
+  assertSessionRunning,
+  canSpeak,
+  createRunGate,
+  hasClientParticipant,
+  logLifecycle,
+  onJobShutdownSignal,
+} from './session_lifecycle.js';
 import {
   VOICE_LANGUAGES,
   applyUpdate,
@@ -104,7 +119,14 @@ export default defineAgent({
     proc.userData.vad = await silero.VAD.load({
       // Slightly higher activation threshold = better background-noise tolerance.
       activationThreshold: 0.6,
-      minSilenceDuration: 0.55,
+      // MILLISECONDS (plugin default 550). This used to read `0.55`, i.e. it
+      // was written as if the option were seconds. 0.55 ms is below the
+      // streaming TurnDetector's 250 ms floor, so `AudioRecognition` threw
+      // inside `AgentActivity.start()`; `AgentSession.start()` swallows that
+      // rejection (Promise.allSettled) and leaves the activity permanently
+      // scheduling-paused, which surfaced later as the bogus
+      // "AgentSession is closing, cannot use say()".
+      minSilenceDuration: VAD_MIN_SILENCE_MS,
     });
   },
 
@@ -124,6 +146,7 @@ export default defineAgent({
       await runConsultationMeeting(ctx, {
         meetingId: meta.meetingId,
         preferredLanguage: meta.preferredLanguage,
+        clientIdentity: participant.identity,
       });
       return;
     }
@@ -383,14 +406,49 @@ export default defineAgent({
       // Natural turn handling with barge-in: interruptions enabled (default),
       // small endpointing delays so Buddy does not talk over slow speakers.
       turnHandling: {
-        endpointing: { minDelay: 0.6, maxDelay: 4.0 },
+        // MILLISECONDS in @livekit/agents 1.7.x (defaults 500 / 3000).
+        endpointing: { minDelay: ENDPOINTING_MIN_DELAY_MS, maxDelay: ENDPOINTING_MAX_DELAY_MS },
       },
-      // Idle visitors: mark away, then we close below.
+      // Idle visitors: mark away, then we close below. Seconds.
       userAwayTimeout: limits.idleTimeoutSeconds,
       maxToolSteps: 4,
     });
 
-    const agent = new voice.Agent({
+    // ---- greeting: exactly once, only on a running session ------------------
+    const clientPresent = () =>
+      hasClientParticipant(ctx.room.remoteParticipants.values(), ParticipantKind.AGENT, participant.identity);
+
+    const greeting = createGreetingGate({
+      text: () => GREETING,
+      canSpeak: () => canSpeak(session),
+      clientPresent,
+      say: async (text, signal) => {
+        const handle = session.say(text, { allowInterruptions: true });
+        if (signal.aborted) {
+          handle.interrupt();
+          return;
+        }
+        const onAbort = () => handle.interrupt();
+        signal.addEventListener('abort', onAbort, { once: true });
+        try {
+          await handle;
+        } finally {
+          signal.removeEventListener('abort', onAbort);
+        }
+      },
+      onEvent: (event, data = {}) => logLifecycle(event, { mode: 'voice', ...data }),
+    });
+
+    // onEnter runs from inside the AgentActivity once it resumes scheduling —
+    // the session is provably running there, so no sleep/poll is needed.
+    class BuddyAgent extends voice.Agent {
+      override async onEnter(): Promise<void> {
+        logLifecycle('agent_activity_entered', { mode: 'voice' });
+        await greeting.speak();
+      }
+    }
+
+    const agent = new BuddyAgent({
       instructions: buildSystemPrompt(knowledge),
       tools,
     });
@@ -406,9 +464,11 @@ export default defineAgent({
       }
       if (turnCount >= limits.maxLlmTurns) {
         logEvent('turn_limit_reached', { turns: turnCount });
-        void session.say(
-          'We have covered a lot — let me stop here. Please use the contact form or schedule a call to continue. Thank you!',
-        );
+        if (canSpeak(session)) {
+          void session.say(
+            'We have covered a lot — let me stop here. Please use the contact form or schedule a call to continue. Thank you!',
+          );
+        }
         void endSession('turn_limit');
       }
     });
@@ -440,11 +500,32 @@ export default defineAgent({
       if (total > 0) logEvent('usage', { tokens: total, turns: turnCount });
     });
 
-    let ended = false;
-    const endSession = async (reason: string) => {
-      if (ended) return;
-      ended = true;
+    // `sessionOver` keeps the job alive for the whole conversation; it settles
+    // on session close, room disconnect or our own endSession — never merely
+    // because setup finished.
+    const runGate = createRunGate((reason) => {
       clearTimeout(maxDurationTimer);
+      greeting.cancel();
+      detachShutdownSignal();
+      logLifecycle('cleanup', { mode: 'voice', reason, turns: turnCount });
+    });
+    // A worker drain must not wedge the entry function below.
+    const detachShutdownSignal = onJobShutdownSignal((reason) => runGate.end(reason));
+    const cleanup = runGate.end;
+
+    /** Single in-flight teardown; every close path awaits the same promise. */
+    let endPromise: Promise<void> | null = null;
+    const endSession = (reason: string): Promise<void> => {
+      if (endPromise) {
+        cleanup(reason);
+        return endPromise;
+      }
+      endPromise = doEndSession(reason);
+      return endPromise;
+    };
+
+    const doEndSession = async (reason: string) => {
+      cleanup(reason);
       if (backend && sessionId) {
         const status =
           reason === 'completed' || submittedReference ? 'completed' : reason === 'error' ? 'error' : 'abandoned';
@@ -467,14 +548,35 @@ export default defineAgent({
 
     const maxDurationTimer = setTimeout(() => {
       logEvent('duration_limit_reached', { seconds: limits.maxSessionSeconds });
-      void session.say('Our session time is up — thank you for talking with me! You can continue via the contact page.');
+      if (canSpeak(session)) {
+        void session.say(
+          'Our session time is up — thank you for talking with me! You can continue via the contact page.',
+        );
+      }
       setTimeout(() => void endSession('duration_limit'), 8000);
     }, limits.maxSessionSeconds * 1000);
+
+    session.on(voice.AgentSessionEventTypes.Close, (ev) => {
+      logLifecycle('session_closed', { mode: 'voice', reason: String(ev.reason) });
+      cleanup(`session_close:${String(ev.reason)}`);
+    });
+
+    ctx.room.on(RoomEvent.Disconnected, () => {
+      logLifecycle('room_disconnected', { mode: 'voice' });
+      cleanup('room_disconnected');
+    });
+
+    ctx.room.on(RoomEvent.ParticipantDisconnected, () => {
+      if (clientPresent()) return;
+      logLifecycle('client_left', { mode: 'voice', turns: turnCount });
+      greeting.cancel();
+    });
 
     ctx.addShutdownCallback(async () => {
       await endSession('shutdown');
     });
 
+    logLifecycle('session_starting', { mode: 'voice' });
     await session.start({
       agent,
       room: ctx.room,
@@ -483,6 +585,11 @@ export default defineAgent({
       // No recording of any kind: raw audio is never stored (privacy default).
       record: false,
     });
+    // start() resolves even when the AgentActivity failed to start (the
+    // framework swallows it with Promise.allSettled). Surface that here rather
+    // than letting the first say() report a bogus "session is closing".
+    assertSessionRunning(session, 'buddy entry');
+    logLifecycle('session_running', { mode: 'voice' });
 
     if (backend && sessionId) {
       await backend.sessionStatus(sessionId, 'active', { started: true }).catch(() => undefined);
@@ -490,7 +597,15 @@ export default defineAgent({
     }
     publishState();
 
-    await session.say(GREETING, { allowInterruptions: true });
+    // The greeting already ran (or was deliberately skipped) in
+    // BuddyAgent.onEnter — nothing to schedule here.
+    await runGate.finished;
+    await endSession('session_over');
+    logLifecycle('session_finished', {
+      mode: 'voice',
+      turns: turnCount,
+      greeting: greeting.outcome ?? 'none',
+    });
   },
 });
 

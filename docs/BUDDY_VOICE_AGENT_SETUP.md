@@ -44,8 +44,8 @@ Secret placement (never violate):
 2. Review Google's data-handling terms before use — see "Gemini free-tier vs paid-tier" below.
 3. Put it ONLY in the agent worker environment as `GOOGLE_API_KEY`, and as the
    `GOOGLE_API_KEY` Supabase Edge Function secret for `ai-estimate`.
-4. Optional: `BUDDY_GEMINI_MODEL` (agent, default `gemini-2.5-flash`) and
-   `GEMINI_MODEL` (ai-estimate, default `gemini-2.5-flash`).
+4. Optional: `BUDDY_GEMINI_MODEL` (agent, default `gemini-3.6-flash`) and
+   `GEMINI_MODEL` (ai-estimate, default `gemini-3.6-flash`).
 
 ### Gemini free-tier vs paid-tier
 
@@ -125,7 +125,7 @@ supabase secrets set EMAIL_FROM_ADDRESS="SCS Softwares <hello@scssoftwares.com>"
 
 # ai-estimate (Project Analysis document extract/analyze — Gemini)
 supabase secrets set GOOGLE_API_KEY="AIza..."
-supabase secrets set GEMINI_MODEL="gemini-2.5-flash"   # optional, this is the default
+supabase secrets set GEMINI_MODEL="gemini-3.6-flash"   # optional, this is the default
 supabase secrets set PUBLIC_SITE_URL="https://scssoftwares.com"
 
 # Deploy the functions

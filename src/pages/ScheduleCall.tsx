@@ -1,21 +1,46 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Clock, CheckCircle2, Video, Phone, MessageCircle, Sparkles } from 'lucide-react';
+import { CalendarDays, Clock, CheckCircle2, Video, Phone, MessageCircle, Bot, Loader2 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ConsultationScheduler from '@/components/consultation/ConsultationScheduler';
+import TurnstileWidget, { TurnstileWidgetHandle } from '../components/forms/TurnstileWidget';
+import HoneypotField from '../components/forms/HoneypotField';
+import { validateConsultationForm, FieldErrors } from '@/lib/leadValidation';
+import { buildConsultationRequest, submitLead, LeadSubmissionError } from '@/services/leadService';
+import { isLeadCaptureReady } from '@/services/supabaseClient';
 import { saveBooking } from '@/lib/analysisStore';
 import { formatDate } from '@/i18n/languageConfig';
-import { DemoBooking } from '@/types/projectAnalysis';
+import type { DemoBooking } from '@/types/projectAnalysis';
+import type { LeadProjectMode, PreferredContactMethod } from '@/types/leads';
+
+// Single consultation page: booking a free call and sending project details are
+// one flow here (they used to be two pages, /schedule-call and
+// /consultation-form, which visitors read as two different things). The slot
+// choice travels with the consultation lead, so one submit does both.
 
 const SLOTS = ['10:00 AM', '11:30 AM', '2:00 PM', '3:30 PM', '5:00 PM', '6:30 PM'];
 
-const MEETING_OPTIONS = [
-  { value: 'Google Meet', icon: Video },
-  { value: 'Phone call', icon: Phone },
-  { value: 'WhatsApp', icon: MessageCircle },
+// The meeting channel doubles as the lead's preferred contact method, so we
+// don't ask the visitor the same thing twice.
+const MEETING_OPTIONS: Array<{ value: string; icon: typeof Video; contactMethod: PreferredContactMethod }> = [
+  { value: 'Google Meet', icon: Video, contactMethod: 'email' },
+  { value: 'Phone call', icon: Phone, contactMethod: 'phone' },
+  { value: 'WhatsApp', icon: MessageCircle, contactMethod: 'whatsapp' },
 ];
+
+const SERVICES = [
+  'web-development',
+  'mobile-development',
+  'digital-marketing',
+  'ui-ux-design',
+  'cloud-solutions',
+  'devops-services',
+] as const;
+
+const BUDGET_RANGES = ['Under $1,000', '$1,000 – $5,000', '$5,000 – $15,000', '$15,000 – $50,000', '$50,000+'];
+const TIMELINES = ['ASAP', 'Within 1 month', '1–3 months', '3–6 months', 'Flexible'];
 
 interface DayOption {
   iso: string;
@@ -53,45 +78,129 @@ function isSlotAvailable(dateIso: string, slotIndex: number): boolean {
 
 const inputCls =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-pink-500 focus:outline-none';
+const labelCls = 'mb-1 block text-sm text-gray-700';
+const errorCls = 'mt-1 text-xs text-rose-600';
+const sectionCls = 'flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500';
+
+const emptyForm = {
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+  projectMode: '',
+  service: '',
+  budgetRange: '',
+  timeline: '',
+  meetingPreference: 'Google Meet',
+  requirement: '',
+  consent: false,
+};
+
+type FormState = typeof emptyForm;
 
 const ScheduleCall = () => {
   const { t, i18n } = useTranslation();
   const days = useMemo(() => nextDays(12, i18n.language), [i18n.language]);
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', meetingPreference: 'Google Meet', message: '' });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [confirmed, setConfirmed] = useState<DemoBooking | null>(null);
-  // Default to the AI consultation; the existing demo booking form stays
-  // available under the second tab.
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [honeypot, setHoneypot] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{ booking: DemoBooking; referenceCode: string } | null>(null);
+  // Every CTA promises a meeting that starts now, so the instant AI
+  // consultation is what opens; a human call stays one tab away for whoever
+  // wants a person instead.
   const [mode, setMode] = useState<'ai' | 'human'>('ai');
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const submit = (e: React.FormEvent) => {
+  const fieldError = (key: string) => (errors[key] ? t(errors[key]) : null);
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!date) errs.date = t('schedule.errDate');
-    if (!slot) errs.slot = t('schedule.errSlot');
-    if (!form.name.trim()) errs.name = t('schedule.errName');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = t('schedule.errEmail');
-    if (form.phone.trim().length < 7) errs.phone = t('schedule.errPhone');
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (loading) return; // duplicate-click guard
+    setSubmitError(null);
 
-    const booking: DemoBooking = {
-      date: date as string,
-      slot: slot as string,
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      meetingPreference: form.meetingPreference,
-      message: form.message.trim() || undefined,
+    const meeting = MEETING_OPTIONS.find((o) => o.value === form.meetingPreference) ?? MEETING_OPTIONS[0];
+    const nextErrors: FieldErrors = {
+      ...validateConsultationForm({ ...form, contactMethod: meeting.contactMethod }),
     };
-    saveBooking(booking);
-    setConfirmed(booking);
-    window.scrollTo({ top: 0 });
+    if (!date) nextErrors.date = 'schedule.errDate';
+    if (!slot) nextErrors.slot = 'schedule.errSlot';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    if (!isLeadCaptureReady) {
+      setSubmitError(t('leadForm.unavailable'));
+      return;
+    }
+    if (!turnstileToken) {
+      setSubmitError(t('leadForm.turnstileRequired'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // The requested slot rides along in the project summary — the lead wire
+      // format has no dedicated slot column, and the team reads this text.
+      const requirement = `Preferred call: ${date} at ${slot} (${form.meetingPreference})\n\n${form.requirement.trim()}`;
+      const request = buildConsultationRequest(
+        {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          company: form.company,
+          projectMode: form.projectMode as LeadProjectMode,
+          service: form.service,
+          requirement,
+          budgetRange: form.budgetRange,
+          timeline: form.timeline,
+          contactMethod: meeting.contactMethod,
+        },
+        turnstileToken,
+        { route: '/schedule-call', language: i18n.language },
+        honeypot,
+      );
+      const result = await submitLead(request);
+
+      const booking: DemoBooking = {
+        date: date as string,
+        slot: slot as string,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        meetingPreference: form.meetingPreference,
+        message: form.requirement.trim() || undefined,
+      };
+      saveBooking(booking);
+      setConfirmed({ booking, referenceCode: result.referenceCode });
+      setForm(emptyForm);
+      setDate(null);
+      setSlot(null);
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      const message =
+        err instanceof LeadSubmissionError
+          ? err.code === 'rate_limited'
+            ? t('leadForm.rateLimited')
+            : err.code === 'turnstile_failed'
+              ? t('leadForm.turnstileRequired')
+              : err.code === 'not_configured'
+                ? t('leadForm.unavailable')
+                : err.message
+          : t('leadForm.genericError');
+      setSubmitError(message);
+    } finally {
+      // Tokens are single-use — always ask for a fresh check.
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
+      setLoading(false);
+    }
   };
 
   return (
@@ -102,17 +211,23 @@ const ScheduleCall = () => {
         {confirmed ? (
           <div className="glow-card rounded-2xl border border-gray-200 bg-white p-8 text-center">
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" aria-hidden="true" />
-            <h1 className="mt-4 text-2xl font-bold sm:text-3xl">{t('schedule.confirmedTitle', { name: confirmed.name })}</h1>
+            <h1 className="mt-4 text-2xl font-bold sm:text-3xl">
+              {t('schedule.confirmedTitle', { name: confirmed.booking.name })}
+            </h1>
             <p className="mt-3 text-gray-600">
               {t('schedule.confirmedAt', {
-                date: formatDate(new Date(confirmed.date + 'T00:00:00'), i18n.language, {
+                date: formatDate(new Date(confirmed.booking.date + 'T00:00:00'), i18n.language, {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
                 }),
-                slot: confirmed.slot,
-                meeting: t(`schedule.meetings.${meetingSlug(confirmed.meetingPreference)}`),
+                slot: confirmed.booking.slot,
+                meeting: t(`schedule.meetings.${meetingSlug(confirmed.booking.meetingPreference)}`),
               })}
+            </p>
+            <p className="mt-4 text-sm text-gray-500">
+              {t('consultation.referenceLabel')}:{' '}
+              <span className="font-mono font-semibold text-gray-900">{confirmed.referenceCode}</span>
             </p>
             <p className="mx-auto mt-5 max-w-md rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               {t('schedule.confirmedNote')}
@@ -124,6 +239,14 @@ const ScheduleCall = () => {
               >
                 {t('schedule.analyzeMeanwhile')}
               </Link>
+              <a
+                href="https://wa.me/917828690192"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                {t('consultation.openWhatsApp')}
+              </a>
               <Link
                 to="/"
                 className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
@@ -138,13 +261,11 @@ const ScheduleCall = () => {
               <h1 className="text-3xl font-bold sm:text-4xl">
                 {t('schedule.title1')} <span className="text-gradient-ai">{t('schedule.title2')}</span>
               </h1>
-              <p className="mx-auto mt-3 max-w-xl text-gray-600">
-                {t('schedule.sub')}
-              </p>
+              <p className="mx-auto mt-3 max-w-xl text-gray-600">{t('schedule.sub')}</p>
             </div>
 
-            {/* Mode switch: AI consultation meeting (new) vs the existing
-                demo booking form. No duplicate CTA is added elsewhere. */}
+            {/* Mode switch: instant AI consultation vs. a call with the team.
+                Both live on this page — there is no second consultation page. */}
             <div role="tablist" aria-label={t('meeting.schedule.modeLabel')} className="mx-auto mt-8 flex max-w-md gap-2">
               <button
                 role="tab"
@@ -155,7 +276,7 @@ const ScheduleCall = () => {
                   mode === 'ai' ? 'border-pink-500 bg-pink-50 text-gray-900' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-400'
                 }`}
               >
-                <Sparkles className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabAi')}
+                <Bot className="h-4 w-4 text-pink-600" aria-hidden="true" /> {t('meeting.schedule.tabAi')}
               </button>
               <button
                 role="tab"
@@ -179,10 +300,19 @@ const ScheduleCall = () => {
             <form
               data-guide-id="schedule-form"
               onSubmit={submit}
+              noValidate
               className={`glow-card mt-10 rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 ${mode === 'ai' ? 'hidden' : ''}`}
             >
-              {/* Date */}
-              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              <HoneypotField value={honeypot} onChange={setHoneypot} />
+
+              {!isLeadCaptureReady && (
+                <p role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {t('leadForm.unavailable')}
+                </p>
+              )}
+
+              {/* 1 — Date */}
+              <h2 className={sectionCls}>
                 <CalendarDays className="h-4 w-4" aria-hidden="true" /> {t('schedule.selectDate')}
               </h2>
               <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -210,10 +340,10 @@ const ScheduleCall = () => {
                   );
                 })}
               </div>
-              {errors.date && <p role="alert" className="mt-2 text-sm text-rose-600">{errors.date}</p>}
+              {fieldError('date') && <p role="alert" className="mt-2 text-sm text-rose-600">{fieldError('date')}</p>}
 
-              {/* Slot */}
-              <h2 className="mt-8 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              {/* 2 — Slot */}
+              <h2 className={`mt-8 ${sectionCls}`}>
                 <Clock className="h-4 w-4" aria-hidden="true" /> {t('schedule.selectSlot')}
               </h2>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -240,31 +370,66 @@ const ScheduleCall = () => {
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-gray-500">
-                {date ? t('schedule.takenNote') : t('schedule.pickDateFirst')}
-              </p>
-              {errors.slot && <p role="alert" className="mt-2 text-sm text-rose-600">{errors.slot}</p>}
+              <p className="mt-2 text-xs text-gray-500">{date ? t('schedule.takenNote') : t('schedule.pickDateFirst')}</p>
+              {fieldError('slot') && <p role="alert" className="mt-2 text-sm text-rose-600">{fieldError('slot')}</p>}
 
-              {/* Details */}
-              <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-gray-500">{t('schedule.yourDetails')}</h2>
+              {/* 3 — Your details */}
+              <h2 className={`mt-8 ${sectionCls}`}>{t('schedule.yourDetails')}</h2>
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="sc-name" className="mb-1 block text-sm text-gray-700">{t('schedule.name')}</label>
-                  <input id="sc-name" value={form.name} onChange={set('name')} className={inputCls} placeholder={t('schedule.namePlaceholder')} />
-                  {errors.name && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.name}</p>}
+                  <label htmlFor="sc-name" className={labelCls}>{t('schedule.name')}</label>
+                  <input
+                    id="sc-name"
+                    value={form.name}
+                    onChange={(e) => set('name', e.target.value)}
+                    className={inputCls}
+                    placeholder={t('schedule.namePlaceholder')}
+                    aria-invalid={Boolean(errors.name)}
+                    aria-describedby={errors.name ? 'sc-name-error' : undefined}
+                  />
+                  {fieldError('name') && <p id="sc-name-error" role="alert" className={errorCls}>{fieldError('name')}</p>}
                 </div>
                 <div>
-                  <label htmlFor="sc-email" className="mb-1 block text-sm text-gray-700">{t('schedule.email')}</label>
-                  <input id="sc-email" type="email" value={form.email} onChange={set('email')} className={inputCls} placeholder={t('schedule.emailPlaceholder')} />
-                  {errors.email && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.email}</p>}
+                  <label htmlFor="sc-email" className={labelCls}>{t('schedule.email')}</label>
+                  <input
+                    id="sc-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => set('email', e.target.value)}
+                    className={inputCls}
+                    placeholder={t('schedule.emailPlaceholder')}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? 'sc-email-error' : undefined}
+                  />
+                  {fieldError('email') && <p id="sc-email-error" role="alert" className={errorCls}>{fieldError('email')}</p>}
                 </div>
                 <div>
-                  <label htmlFor="sc-phone" className="mb-1 block text-sm text-gray-700">{t('schedule.phone')}</label>
-                  <input id="sc-phone" value={form.phone} onChange={set('phone')} className={inputCls} placeholder={t('schedule.phonePlaceholder')} />
-                  {errors.phone && <p role="alert" className="mt-1 text-xs text-rose-600">{errors.phone}</p>}
+                  <label htmlFor="sc-phone" className={labelCls}>{t('schedule.phone')}</label>
+                  <input
+                    id="sc-phone"
+                    value={form.phone}
+                    onChange={(e) => set('phone', e.target.value)}
+                    className={inputCls}
+                    placeholder={t('schedule.phonePlaceholder')}
+                    aria-invalid={Boolean(errors.phone)}
+                    aria-describedby={errors.phone ? 'sc-phone-error' : undefined}
+                  />
+                  {fieldError('phone') && <p id="sc-phone-error" role="alert" className={errorCls}>{fieldError('phone')}</p>}
                 </div>
                 <div>
-                  <span className="mb-1 block text-sm text-gray-700">{t('schedule.meetingPreference')}</span>
+                  <label htmlFor="sc-company" className={labelCls}>{t('consultation.company')}</label>
+                  <input
+                    id="sc-company"
+                    value={form.company}
+                    onChange={(e) => set('company', e.target.value)}
+                    className={inputCls}
+                    aria-invalid={Boolean(errors.company)}
+                    aria-describedby={errors.company ? 'sc-company-error' : undefined}
+                  />
+                  {fieldError('company') && <p id="sc-company-error" role="alert" className={errorCls}>{fieldError('company')}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <span className={labelCls}>{t('schedule.meetingPreference')}</span>
                   <div className="flex gap-2">
                     {MEETING_OPTIONS.map((opt) => {
                       const selected = form.meetingPreference === opt.value;
@@ -273,7 +438,7 @@ const ScheduleCall = () => {
                           key={opt.value}
                           type="button"
                           aria-pressed={selected}
-                          onClick={() => setForm((f) => ({ ...f, meetingPreference: opt.value }))}
+                          onClick={() => set('meetingPreference', opt.value)}
                           className={`flex flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 ${
                             selected
                               ? 'border-pink-500 bg-pink-50 text-gray-900'
@@ -287,28 +452,136 @@ const ScheduleCall = () => {
                     })}
                   </div>
                 </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="sc-message" className="mb-1 block text-sm text-gray-700">{t('schedule.message')}</label>
-                  <textarea
-                    id="sc-message"
-                    value={form.message}
-                    onChange={set('message')}
-                    rows={3}
-                    className={`${inputCls} resize-y`}
-                    placeholder={t('schedule.messagePlaceholder')}
-                  />
+              </div>
+
+              {/* 4 — Your project (used to be the separate consultation form) */}
+              <h2 className={`mt-8 ${sectionCls}`}>{t('schedule.yourProject')}</h2>
+              <fieldset className="mt-3">
+                <legend className={labelCls}>{t('consultation.projectMode')}</legend>
+                <div className="flex gap-6">
+                  {(['new', 'existing'] as const).map((m) => (
+                    <label key={m} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="projectMode"
+                        value={m}
+                        checked={form.projectMode === m}
+                        onChange={() => set('projectMode', m)}
+                      />
+                      {m === 'new' ? t('consultation.modeNew') : t('consultation.modeExisting')}
+                    </label>
+                  ))}
+                </div>
+                {fieldError('projectMode') && <p role="alert" className={errorCls}>{fieldError('projectMode')}</p>}
+              </fieldset>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="sc-service" className={labelCls}>{t('consultation.service')}</label>
+                  <select
+                    id="sc-service"
+                    className={inputCls}
+                    value={form.service}
+                    onChange={(e) => set('service', e.target.value)}
+                    aria-invalid={Boolean(errors.service)}
+                    aria-describedby={errors.service ? 'sc-service-error' : undefined}
+                  >
+                    <option value="">{t('consultation.selectService')}</option>
+                    {SERVICES.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`services.names.${s === 'mobile-development' ? 'mobile-app-development' : s}`)}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldError('service') && <p id="sc-service-error" role="alert" className={errorCls}>{fieldError('service')}</p>}
+                </div>
+                <div>
+                  <label htmlFor="sc-budget" className={labelCls}>{t('consultation.budget')}</label>
+                  <select
+                    id="sc-budget"
+                    className={inputCls}
+                    value={form.budgetRange}
+                    onChange={(e) => set('budgetRange', e.target.value)}
+                    aria-invalid={Boolean(errors.budgetRange)}
+                    aria-describedby={errors.budgetRange ? 'sc-budget-error' : undefined}
+                  >
+                    <option value="">{t('consultation.selectBudget')}</option>
+                    {BUDGET_RANGES.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                  {fieldError('budgetRange') && <p id="sc-budget-error" role="alert" className={errorCls}>{fieldError('budgetRange')}</p>}
+                </div>
+                <div>
+                  <label htmlFor="sc-timeline" className={labelCls}>{t('consultation.timeline')}</label>
+                  <select
+                    id="sc-timeline"
+                    className={inputCls}
+                    value={form.timeline}
+                    onChange={(e) => set('timeline', e.target.value)}
+                    aria-invalid={Boolean(errors.timeline)}
+                    aria-describedby={errors.timeline ? 'sc-timeline-error' : undefined}
+                  >
+                    <option value="">{t('consultation.selectTimeline')}</option>
+                    {TIMELINES.map((tl) => (
+                      <option key={tl} value={tl}>{tl}</option>
+                    ))}
+                  </select>
+                  {fieldError('timeline') && <p id="sc-timeline-error" role="alert" className={errorCls}>{fieldError('timeline')}</p>}
                 </div>
               </div>
 
+              <div className="mt-4">
+                <label htmlFor="sc-brief" className={labelCls}>{t('consultation.projectBrief')}</label>
+                <textarea
+                  id="sc-brief"
+                  rows={4}
+                  className={`${inputCls} resize-y`}
+                  value={form.requirement}
+                  onChange={(e) => set('requirement', e.target.value)}
+                  placeholder={t('consultation.briefPlaceholder')}
+                  aria-invalid={Boolean(errors.requirement)}
+                  aria-describedby={errors.requirement ? 'sc-brief-error' : undefined}
+                />
+                {fieldError('requirement') && <p id="sc-brief-error" role="alert" className={errorCls}>{fieldError('requirement')}</p>}
+              </div>
+
+              <div className="mt-4">
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={form.consent}
+                    onChange={(e) => set('consent', e.target.checked)}
+                    aria-invalid={Boolean(errors.consent)}
+                    aria-describedby={errors.consent ? 'sc-consent-error' : undefined}
+                  />
+                  {t('leadForm.consentLabel')}
+                </label>
+                {fieldError('consent') && <p id="sc-consent-error" role="alert" className={errorCls}>{fieldError('consent')}</p>}
+              </div>
+
+              {isLeadCaptureReady && (
+                <div className="mt-4">
+                  <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} key={i18n.language} />
+                </div>
+              )}
+
+              {submitError && (
+                <p role="alert" className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {submitError}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="mt-8 w-full rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                disabled={loading || !isLeadCaptureReady}
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
               >
-                {t('schedule.confirm')}
+                {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                {loading ? t('common.sending') : t('schedule.confirm')}
               </button>
-              <p className="mt-3 text-center text-xs text-gray-500">
-                {t('schedule.demoNote')}
-              </p>
+              <p className="mt-3 text-center text-xs text-gray-500">{t('schedule.demoNote')}</p>
             </form>
           </>
         )}

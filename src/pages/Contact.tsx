@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Phone, MapPin, Send, Loader2, MessageCircle, Sparkles, ArrowRight, PhoneCall } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Loader2, MessageCircle, Sparkles, ArrowRight, Bot } from 'lucide-react';
 import emailjs from 'emailjs-com';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -14,8 +14,6 @@ import { isLeadCaptureReady } from '@/services/supabaseClient';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
-const secondaryBtn =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-7 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-200';
@@ -387,19 +385,15 @@ const Contact = () => {
         <div className="container mx-auto px-4">
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
-              <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
+              <Bot className="h-9 w-9 text-pink-600" aria-hidden="true" />
               <h2 className="text-2xl font-bold sm:text-3xl">{t('contact.ctaTitle')}</h2>
               <p className="max-w-xl text-gray-600">
                 {t('contact.ctaText')}
               </p>
-              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link to="/consultation-form" className={primaryBtn}>
-                  {t('contact.scheduleConsultation')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <Link to="/schedule-call" className={secondaryBtn}>
-                  {t('contact.bookFreeCall')}
-                </Link>
-              </div>
+              {/* One button, one page — the AI meeting starts immediately */}
+              <Link to="/schedule-call" className={primaryBtn}>
+                {t('common.startAiMeeting')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
           </Reveal>
         </div>

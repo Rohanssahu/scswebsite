@@ -15,7 +15,7 @@
 //
 // Secrets (Supabase Edge Function secrets — NEVER in the frontend):
 //   GOOGLE_API_KEY   required
-//   GEMINI_MODEL     optional, default gemini-2.5-flash
+//   GEMINI_MODEL     optional, default DEFAULT_GEMINI_MODEL (gemini-3.6-flash)
 //   ALLOWED_ORIGINS  optional comma-separated extra origins
 //
 // Privacy note: Gemini's free tier may use submitted content to improve
@@ -28,6 +28,7 @@
 import {
   categorizeError,
   createGeminiGenerate,
+  DEFAULT_GEMINI_MODEL,
   handleAnalyze,
   handleExtract,
   isOriginAllowed,
@@ -81,7 +82,9 @@ function requireApiKey(): string {
 }
 
 function resolveModel(): string {
-  return Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+  // The default lives in gemini.ts (DEFAULT_GEMINI_MODEL) so the model name is
+  // never hardcoded in more than one place.
+  return Deno.env.get('GEMINI_MODEL')?.trim() || DEFAULT_GEMINI_MODEL;
 }
 
 // --- request handler ------------------------------------------------------------------
@@ -131,7 +134,9 @@ Deno.serve(async (req) => {
       const docText = typeof body.docText === 'string' ? body.docText : undefined;
       const pdfBase64 = typeof body.pdfBase64 === 'string' ? body.pdfBase64 : undefined;
       const docName = typeof body.docName === 'string' ? body.docName.slice(0, 200) : 'document';
-      if (!docText?.trim() && !pdfBase64) {
+      // An empty / whitespace-only document never reaches Gemini: the request
+      // carries only metadata (name, MIME type) and cannot be extracted from.
+      if (!docText?.trim() && !pdfBase64?.trim()) {
         return json(400, { ok: false, error: 'no_document', message: 'docText or pdfBase64 is required' }, origin);
       }
       if (pdfBase64 && pdfBase64.length > MAX_PDF_BASE64_CHARS) {

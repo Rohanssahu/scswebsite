@@ -69,6 +69,28 @@ export const CONCERN_EXTRAS: Record<string, Partial<Record<RoleKey, number>>> = 
 
 export const MAX_MODULES = 20;
 
+// --- voice pipeline tuning -----------------------------------------------------
+
+/**
+ * Silero VAD silence window, in MILLISECONDS (plugin default 550).
+ *
+ * @livekit/agents' streaming TurnDetector refuses to start when the bound VAD
+ * reports a `minSilenceDuration` below 300 ms (250 ms floor + 50 ms margin).
+ * This was previously written as `0.55` — seconds — which put it 1000x under
+ * the floor: `AudioRecognition` threw inside `AgentActivity.start()`,
+ * `AgentSession.start()` swallowed the rejection with `Promise.allSettled`,
+ * and the permanently scheduling-paused activity made the first `say()` fail
+ * with "AgentSession is closing, cannot use say()".
+ */
+export const VAD_MIN_SILENCE_MS = 550;
+
+/** Framework floor the value above must clear. */
+export const VAD_MIN_SILENCE_FLOOR_MS = 300;
+
+/** Endpointing delays, MILLISECONDS (framework defaults 500 / 3000). */
+export const ENDPOINTING_MIN_DELAY_MS = 600;
+export const ENDPOINTING_MAX_DELAY_MS = 4000;
+
 // --- session / cost limits (env-overridable, safe defaults) --------------------------
 
 function intEnv(name: string, fallback: number, min: number, max: number): number {

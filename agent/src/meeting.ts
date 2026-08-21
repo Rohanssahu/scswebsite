@@ -16,6 +16,7 @@
 import { type JobContext, llm, voice } from '@livekit/agents';
 import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
 import type * as silero from '@livekit/agents-plugin-silero';
+import { ParticipantKind, RoomEvent } from '@livekit/rtc-node';
 import { z } from 'zod';
 import {
   ConsultationClient,
@@ -23,7 +24,11 @@ import {
   type ContactDetails,
   type MeetingContext,
 } from './backend.js';
-import { loadSessionLimits } from './config.js';
+import {
+  ENDPOINTING_MAX_DELAY_MS,
+  ENDPOINTING_MIN_DELAY_MS,
+  loadSessionLimits,
+} from './config.js';
 import {
   EstimateError,
   buildPreliminaryEstimate,
@@ -45,8 +50,17 @@ import {
   CONSULTATION_GREETING_WITH_ANALYSIS,
   buildConsultationPrompt,
 } from './prompts.js';
+import { createGreetingGate } from './greeting.js';
 import { createLlm } from './providers/llm.js';
 import { createStt } from './providers/stt.js';
+import {
+  assertSessionRunning,
+  canSpeak,
+  createRunGate,
+  hasClientParticipant,
+  logLifecycle,
+  onJobShutdownSignal,
+} from './session_lifecycle.js';
 import {
   CONSULTATION_LANGUAGES,
   applyUpdate,
@@ -376,6 +390,9 @@ export function buildFinalizePayload(args: FinalizeConsultationArgs): Record<str
 export interface ConsultationMeta {
   meetingId: string;
   preferredLanguage: string | null;
+  /** Identity of the human participant the job waited for. Used to detect a
+   * client that leaves before/while the greeting plays. */
+  clientIdentity?: string | null;
 }
 
 export async function runConsultationMeeting(ctx: JobContext, meta: ConsultationMeta): Promise<void> {
@@ -423,7 +440,6 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   let submittedReference: string | null = null;
   let alreadyFinalized = context?.finalized ?? false;
   let turnCount = 0;
-  let greeted = false;
 
   const publishState = (extra: Record<string, unknown> = {}) => {
     const progress = computeProgress(state);
@@ -708,13 +724,58 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
       voiceId: process.env.ELEVENLABS_VOICE_ID,
     }),
     turnHandling: {
-      endpointing: { minDelay: 0.6, maxDelay: 4.0 },
+      // MILLISECONDS in @livekit/agents 1.7.x (defaults 500 / 3000).
+      endpointing: { minDelay: ENDPOINTING_MIN_DELAY_MS, maxDelay: ENDPOINTING_MAX_DELAY_MS },
     },
+    // Seconds (framework default 15).
     userAwayTimeout: limits.idleTimeoutSeconds,
     maxToolSteps: 5,
   });
 
-  const agent = new voice.Agent({
+  // ---- greeting: exactly once, only on a running session --------------------
+  const clientPresent = () =>
+    hasClientParticipant(ctx.room.remoteParticipants.values(), ParticipantKind.AGENT, meta.clientIdentity);
+
+  const greeting = createGreetingGate({
+    text: () => (hasAnalysis ? CONSULTATION_GREETING_WITH_ANALYSIS : CONSULTATION_GREETING_GENERAL),
+    canSpeak: () => canSpeak(session),
+    clientPresent,
+    say: async (text, signal) => {
+      const handle = session.say(text, { allowInterruptions: true });
+      if (signal.aborted) {
+        handle.interrupt();
+        return;
+      }
+      const onAbort = () => handle.interrupt();
+      signal.addEventListener('abort', onAbort, { once: true });
+      try {
+        await handle;
+      } finally {
+        signal.removeEventListener('abort', onAbort);
+      }
+    },
+    onEvent: (event, data = {}) => {
+      logLifecycle(event, { mode: 'consultation', ...data });
+      if (event === 'greeting_finished' && data.outcome === 'spoken') {
+        logEvent('greeting_spoken', { has_analysis: hasAnalysis });
+      }
+    },
+  });
+
+  /**
+   * The greeting rides `onEnter` rather than a post-`start()` call: onEnter is
+   * invoked by the AgentActivity itself, right after it resumes scheduling, so
+   * the session is provably running and no sleep/poll is needed. It also runs
+   * once per activity, and the gate makes it once per job.
+   */
+  class ConsultationAgent extends voice.Agent {
+    override async onEnter(): Promise<void> {
+      logLifecycle('agent_activity_entered', { mode: 'consultation' });
+      await greeting.speak();
+    }
+  }
+
+  const agent = new ConsultationAgent({
     instructions: buildConsultationPrompt(knowledge, {
       clientName: context?.clientName ?? '',
       analysisSummary: hasAnalysis ? renderSnapshotSummary(snapshot) : '',
@@ -735,9 +796,11 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     }
     if (turnCount >= limits.maxLlmTurns) {
       logEvent('turn_limit_reached', { turns: turnCount });
-      void session.say(
-        'We have covered a lot — let me stop here. Your progress is saved; you can rejoin this meeting or use the contact form to continue. Thank you!',
-      );
+      if (canSpeak(session)) {
+        void session.say(
+          'We have covered a lot — let me stop here. Your progress is saved; you can rejoin this meeting or use the contact form to continue. Thank you!',
+        );
+      }
       void endSession('turn_limit');
     }
   });
@@ -767,11 +830,33 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     if (total > 0) logEvent('usage', { tokens: total, turns: turnCount });
   });
 
-  let ended = false;
-  const endSession = async (reason: string) => {
-    if (ended) return;
-    ended = true;
+  // ---- teardown -------------------------------------------------------------
+  // `meetingOver` is what keeps the job (and therefore the entry function)
+  // alive for the whole meeting: it settles on session close, on room
+  // disconnect, or on our own endSession — never merely because setup is done.
+  const runGate = createRunGate((reason) => {
     clearTimeout(maxDurationTimer);
+    greeting.cancel();
+    detachShutdownSignal();
+    logLifecycle('cleanup', { mode: 'consultation', reason, turns: turnCount });
+  });
+  // A worker drain must not wedge the entry function below.
+  const detachShutdownSignal = onJobShutdownSignal((reason) => runGate.end(reason));
+  const cleanup = runGate.end;
+
+  /** Single in-flight teardown; every close path awaits the same promise. */
+  let endPromise: Promise<void> | null = null;
+  const endSession = (reason: string): Promise<void> => {
+    if (endPromise) {
+      cleanup(reason);
+      return endPromise;
+    }
+    endPromise = doEndSession(reason);
+    return endPromise;
+  };
+
+  const doEndSession = async (reason: string) => {
+    cleanup(reason);
     persistState();
     if (client) {
       // A finalized meeting is 'completed'; otherwise it stays 'in_progress'
@@ -786,16 +871,39 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
 
   const maxDurationTimer = setTimeout(() => {
     logEvent('duration_limit_reached', { seconds: limits.maxSessionSeconds });
-    void session.say(
-      'Our meeting time is up — thank you for the conversation! Your progress is saved and you can rejoin from the same link.',
-    );
+    if (canSpeak(session)) {
+      void session.say(
+        'Our meeting time is up — thank you for the conversation! Your progress is saved and you can rejoin from the same link.',
+      );
+    }
     setTimeout(() => void endSession('duration_limit'), 8000);
   }, limits.maxSessionSeconds * 1000);
+
+  // The framework closes the session on client disconnect / unrecoverable
+  // provider errors; mirror that into our own teardown exactly once.
+  session.on(voice.AgentSessionEventTypes.Close, (ev) => {
+    logLifecycle('session_closed', { mode: 'consultation', reason: String(ev.reason) });
+    cleanup(`session_close:${String(ev.reason)}`);
+  });
+
+  ctx.room.on(RoomEvent.Disconnected, () => {
+    logLifecycle('room_disconnected', { mode: 'consultation' });
+    cleanup('room_disconnected');
+  });
+
+  ctx.room.on(RoomEvent.ParticipantDisconnected, () => {
+    if (clientPresent()) return;
+    logLifecycle('client_left', { mode: 'consultation', turns: turnCount });
+    // Aborts a greeting that is still queued/playing; the framework's RoomIO
+    // closes the session right after, which runs the full teardown above.
+    greeting.cancel();
+  });
 
   ctx.addShutdownCallback(async () => {
     await endSession('shutdown');
   });
 
+  logLifecycle('session_starting', { mode: 'consultation', has_analysis: hasAnalysis });
   await session.start({
     agent,
     room: ctx.room,
@@ -805,16 +913,25 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
     // No recording of any kind: raw audio is never stored (privacy default).
     record: false,
   });
+  // start() resolves even when the AgentActivity failed to start (the
+  // framework swallows it with Promise.allSettled). Surface that here instead
+  // of letting the first say() report a bogus "session is closing".
+  assertSessionRunning(session, 'runConsultationMeeting');
+  logLifecycle('session_running', { mode: 'consultation' });
 
   logEvent('agent_joined', { rejoin: Boolean(context && Object.keys(context.requirements).length > 0) });
   publishState();
 
-  // Spoken greeting — automatic, exactly once, without waiting for the client.
-  if (!greeted) {
-    greeted = true;
-    logEvent('greeting_spoken', { has_analysis: hasAnalysis });
-    await session.say(hasAnalysis ? CONSULTATION_GREETING_WITH_ANALYSIS : CONSULTATION_GREETING_GENERAL, {
-      allowInterruptions: true,
-    });
-  }
+  // The greeting already ran (or was deliberately skipped) inside
+  // ConsultationAgent.onEnter — nothing to schedule here.
+
+  // Hold the job open for the meeting itself, then finish our own teardown
+  // before the entry function returns.
+  await runGate.finished;
+  await endSession('meeting_over');
+  logLifecycle('meeting_finished', {
+    mode: 'consultation',
+    turns: turnCount,
+    greeting: greeting.outcome ?? 'none',
+  });
 }

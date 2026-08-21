@@ -74,6 +74,10 @@ export class MeetingSession {
   private clientSpeaking = false;
   private audioElements = new Map<string, HTMLAudioElement>();
   private chatCounter = 0;
+  /** In-flight or completed connect. Guarantees ONE room (and therefore one
+   * agent dispatch) per session instance even if join is triggered twice —
+   * a second room would make LiveKit dispatch a second consultation job. */
+  private connecting: Promise<void> | null = null;
 
   constructor(private callbacks: MeetingSessionCallbacks) {}
 
@@ -81,8 +85,27 @@ export class MeetingSession {
     return this.agentPresent;
   }
 
-  /** Ask for the mic first so denial is caught before connecting. */
+  /**
+   * Connects once. Concurrent or repeated calls join the first attempt instead
+   * of opening a second room; call `dispose()`/`end()` before reconnecting.
+   */
   async connect(join: MeetingJoinResponse, options: { camera: boolean; micMuted: boolean }): Promise<void> {
+    if (this.connecting) return this.connecting;
+    const attempt = this.connectOnce(join, options);
+    this.connecting = attempt;
+    try {
+      await attempt;
+    } catch (error) {
+      // A failed attempt must not latch — the lobby offers a retry.
+      this.connecting = null;
+      throw error;
+    }
+  }
+
+  private async connectOnce(
+    join: MeetingJoinResponse,
+    options: { camera: boolean; micMuted: boolean },
+  ): Promise<void> {
     this.callbacks.onConnection('connecting');
     let micStream: MediaStream;
     try {
@@ -268,6 +291,7 @@ export class MeetingSession {
   }
 
   async end(): Promise<void> {
+    this.connecting = null;
     this.stopLevelPolling();
     await this.room?.disconnect();
     this.cleanupAudio();
@@ -276,6 +300,7 @@ export class MeetingSession {
   }
 
   async dispose(): Promise<void> {
+    this.connecting = null;
     this.stopLevelPolling();
     await this.room?.disconnect();
     this.cleanupAudio();

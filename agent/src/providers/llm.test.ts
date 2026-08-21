@@ -70,12 +70,12 @@ describe('createLlm', () => {
     expect(instance.apiKey).toBe('test-key-not-real');
   });
 
-  it('defaults the Gemini model to gemini-2.5-flash when unset', async () => {
+  it('defaults the Gemini model to gemini-3.6-flash when unset', async () => {
     process.env.BUDDY_LLM_PROVIDER = 'gemini';
     process.env.GOOGLE_API_KEY = 'test-key-not-real';
     const { createLlm } = await import('./llm.js');
     const instance = createLlm() as unknown as Record<string, unknown>;
-    expect(instance.model).toBe('gemini-2.5-flash');
+    expect(instance.model).toBe('gemini-3.6-flash');
   });
 
   it('constructs an OpenAI LLM when OPENAI_API_KEY is present', async () => {

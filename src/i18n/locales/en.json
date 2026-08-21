@@ -2,6 +2,8 @@
   "common": {
     "getEstimate": "Get Estimate",
     "scheduleCall": "Schedule a call",
+    "startAiMeeting": "Start AI Meeting Now",
+    "startAiMeetingShort": "AI Meeting Now",
     "contactUs": "Contact us",
     "startManually": "Start Manually",
     "analyzeMyProject": "Analyze My Project",
@@ -188,9 +190,9 @@
       "q3": "Their upfront estimate matched the final delivery almost exactly — no surprises, just steady weekly progress."
     },
     "call": {
-      "title": "Prefer to talk it through?",
-      "text": "Book a free 30-minute call. We'll review your idea or existing project, answer questions and confirm a real quote — no obligation.",
-      "cta": "Schedule a Call"
+      "title": "Want to talk it through right now?",
+      "text": "No waiting for a callback: Buddy, our AI consultant, joins your meeting instantly, reviews your idea and prepares a preliminary estimate. A human SCS consultant follows up afterwards.",
+      "cta": "Start AI Meeting Now"
     },
     "finalCta": {
       "title1": "Stop guessing.",
@@ -292,7 +294,7 @@
     "whatsappNote": "Available anytime on chat",
     "chatOnWhatsApp": "Chat on WhatsApp",
     "ctaTitle": "Ready to start your project?",
-    "ctaText": "Schedule a free consultation with our experts to discuss your requirements and get a personalized quote.",
+    "ctaText": "Meet our AI consultant right now — Buddy goes through your requirements instantly and prepares a preliminary quote. A human consultant reviews it before any final offer.",
     "scheduleConsultation": "Schedule Consultation",
     "bookFreeCall": "Book a free call"
   },
@@ -496,12 +498,13 @@
     "ctaStart": "Start Your Project Today"
   },
   "schedule": {
-    "title1": "Schedule a",
-    "title2": "free review call",
-    "sub": "Pick a slot that suits you and an SCS Softwares consultant will walk through your project and estimate.",
+    "title1": "Meet our AI consultant",
+    "title2": "right now",
+    "sub": "Buddy, our AI project consultant, joins instantly — no waiting for a callback. Discuss your project, get a preliminary estimate, and a human SCS Softwares consultant reviews everything afterwards.",
     "selectDate": "1. Select a date",
     "selectSlot": "2. Select a time slot (IST)",
     "yourDetails": "3. Your details",
+    "yourProject": "4. Your project",
     "name": "Name *",
     "namePlaceholder": "Your full name",
     "email": "Email *",
@@ -516,8 +519,8 @@
     },
     "message": "Message (optional)",
     "messagePlaceholder": "Anything we should know before the call?",
-    "confirm": "Confirm demo booking",
-    "demoNote": "Demo scheduling — your booking is saved in this browser only.",
+    "confirm": "Request my free consultation call",
+    "demoNote": "Your details are submitted securely to SCS Softwares. The time you pick is a request; we confirm it by email.",
     "pickDateFirst": "Pick a date to see available slots.",
     "takenNote": "Struck-through slots are already taken (demo availability).",
     "errDate": "Please pick a date.",
@@ -527,7 +530,7 @@
     "errPhone": "Enter a valid phone / WhatsApp number.",
     "confirmedTitle": "Your call request is noted, {{name}}!",
     "confirmedAt": "{{date}} at {{slot}} · {{meeting}}",
-    "confirmedNote": "Demo booking saved locally. Calendar integration will be connected later — no real appointment has been created yet.",
+    "confirmedNote": "Your request has reached our team. A consultant confirms the exact call time by email — nothing is auto-booked on a calendar yet.",
     "analyzeMeanwhile": "Analyze a project meanwhile"
   },
   "notFound": {
@@ -1508,8 +1511,8 @@
     },
     "schedule": {
       "modeLabel": "Consultation type",
-      "tabAi": "AI consultation",
-      "tabHuman": "Request a call",
+      "tabAi": "AI meeting — start now",
+      "tabHuman": "Request a human call",
       "analysisAttached": "Your completed project analysis will be attached to this consultation — Buddy will not ask you to repeat it.",
       "noAnalysis": "No project analysis found, so this will be a general consultation.",
       "runAnalysis": "Run the analysis first",
@@ -1524,6 +1527,7 @@
       "selectTime": "Select a time",
       "timezoneNote": "Times shown in your timezone ({{timezone}}).",
       "yourDetails": "Your details",
+    "yourProject": "4. Your project",
       "name": "Full name",
       "email": "Email",
       "phone": "Phone (optional)",
@@ -1534,7 +1538,7 @@
       "transcriptConsent": "Optional: store the meeting chat/transcript with my request.",
       "privacyNote": "No audio recording is stored. Without transcript consent, only the structured requirement summary and proposal are kept.",
       "startNow": "Start AI consultation",
-      "confirm": "Confirm consultation",
+    "confirm": "Request my free consultation call",
       "aiDisclosure": "Buddy is an AI consultant. Every estimate is preliminary and reviewed by a human before any final quotation.",
       "errName": "Please enter your name.",
       "errEmail": "Please enter a valid email address.",

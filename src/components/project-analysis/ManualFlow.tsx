@@ -4,7 +4,14 @@ import { ArrowLeft, ArrowRight, Check, Sparkles, MessageSquare, Plus, X } from '
 import { getQuestions } from '@/data/analysisQuestions';
 import { AnswerMap, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
 import FileDropzone from './FileDropzone';
-import { extractFromDocument, isAiAnalysisReady, isReadableDocument, readDocument } from '@/services/aiAnalysis';
+import {
+  documentContextFor,
+  extractFromDocument,
+  extractionFormStatus,
+  isAiAnalysisReady,
+  isReadableDocument,
+  readDocument,
+} from '@/services/aiAnalysis';
 
 interface ManualFlowProps {
   mode: ProjectMode;
@@ -88,24 +95,22 @@ const ManualFlow = ({
       setDocStatus(`Reading "${file.name}" with AI…`);
       try {
         const doc = await readDocument(file);
-        const { answers: extracted, docSummary } = await extractFromDocument(mode, doc);
-        currentFiles = currentFiles.map((f) => (f.name === file.name ? { ...f, text: docSummary } : f));
+        const extraction = await extractFromDocument(mode, doc);
+        // Only carry the document forward when something was actually understood.
+        const documentContext = documentContextFor(extraction);
+        currentFiles = currentFiles.map((f) => (f.name === file.name ? { ...f, text: documentContext || undefined } : f));
         onFilesChange(currentFiles);
         let filled = 0;
         for (const q of questions) {
           const value = currentAnswers[q.id];
           const empty = value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
-          if (empty && extracted[q.id] !== undefined) {
-            currentAnswers = { ...currentAnswers, [q.id]: extracted[q.id] };
+          if (empty && extraction.answers[q.id] !== undefined) {
+            currentAnswers = { ...currentAnswers, [q.id]: extraction.answers[q.id] };
             filled += 1;
           }
         }
         if (filled > 0) onAnswersChange(currentAnswers);
-        setDocStatus(
-          filled > 0
-            ? `Read "${file.name}" and auto-filled ${filled} unanswered question${filled === 1 ? '' : 's'}.`
-            : `Read "${file.name}" — its content will be used in the analysis.`,
-        );
+        setDocStatus(extractionFormStatus(file.name, filled, extraction.status));
       } catch {
         setDocStatus(`Couldn't read "${file.name}" — it stays attached as a reference.`);
       }

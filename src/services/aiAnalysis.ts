@@ -59,31 +59,104 @@ export async function readDocument(file: File): Promise<ReadDocument> {
   throw new UnsupportedDocumentError('Only PDF and text documents (txt, md, csv, json…) can be read');
 }
 
+/**
+ * What actually came back from the extraction, so the UI can tell the visitor
+ * the truth instead of always claiming the document was read:
+ *   - `answers`      → questionnaire fields were pre-filled
+ *   - `summary-only` → the document was understood but nothing mapped
+ *   - `empty`        → nothing usable came back; keep asking the questions
+ * A provider failure throws instead (callers keep their existing fallback).
+ */
+export type ExtractionStatus = 'answers' | 'summary-only' | 'empty';
+
 export interface ExtractionResult {
   /** Auto-filled questionnaire answers (only fields the AI was confident about). */
   answers: AnswerMap;
   /** Short summary of the document, reused later by the analyze task. */
   docSummary: string;
+  /** Number of questionnaire fields the document actually filled. */
+  extractedFieldsCount: number;
+  /** Useful project details that map to no questionnaire field. */
+  unmappedImportantDetails: string[];
+  /** Which of the three honest outcomes above this extraction is. */
+  status: ExtractionStatus;
+}
+
+const MAX_UNMAPPED_DETAILS = 10;
+const MAX_UNMAPPED_DETAIL_CHARS = 300;
+
+function readUnmappedDetails(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    .map((v) => v.trim().slice(0, MAX_UNMAPPED_DETAIL_CHARS))
+    .slice(0, MAX_UNMAPPED_DETAILS);
+}
+
+/**
+ * The document text the analysis should carry forward: the summary plus any
+ * detail that mapped to no questionnaire field. Empty when the extraction
+ * produced nothing meaningful, so a failed read never masquerades as content.
+ */
+export function documentContextFor(result: ExtractionResult): string {
+  return [result.docSummary, ...result.unmappedImportantDetails].filter(Boolean).join('\n').slice(0, MAX_STORED_SUMMARY_CHARS);
 }
 
 /** Ask the AI to read a document and auto-fill the questionnaire. */
 export async function extractFromDocument(mode: ProjectMode, doc: ReadDocument): Promise<ExtractionResult> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('AI backend is not configured');
+  // Never spend a provider call on metadata alone: without real content the
+  // request would carry only the file name and size.
+  if (!doc.text?.trim() && !doc.pdfBase64?.trim()) {
+    throw new UnsupportedDocumentError('The file is empty');
+  }
   const { data, error } = await supabase.functions.invoke('ai-estimate', {
     body: {
       task: 'extract',
       mode,
       docName: doc.name,
+      // `docText` / `pdfBase64` are the exact property names the ai-estimate
+      // Edge Function reads (supabase/functions/ai-estimate/index.ts).
       docText: doc.text,
       pdfBase64: doc.pdfBase64,
     },
   });
   if (error || !data?.ok) throw new Error(error?.message ?? 'Document extraction failed');
+  const answers = (data.answers ?? {}) as AnswerMap;
+  const docSummary = typeof data.docSummary === 'string' ? data.docSummary.slice(0, MAX_STORED_SUMMARY_CHARS) : '';
+  const extractedFieldsCount = Object.keys(answers).length;
   return {
-    answers: (data.answers ?? {}) as AnswerMap,
-    docSummary: typeof data.docSummary === 'string' ? data.docSummary.slice(0, MAX_STORED_SUMMARY_CHARS) : '',
+    answers,
+    docSummary,
+    extractedFieldsCount,
+    unmappedImportantDetails: readUnmappedDetails(data.unmappedImportantDetails),
+    status: extractedFieldsCount > 0 ? 'answers' : docSummary.trim() ? 'summary-only' : 'empty',
   };
+}
+
+/** Conversational status line for the chat flow — one per honest outcome. */
+export function extractionChatNotice(fileName: string, filled: number, status: ExtractionStatus): string {
+  if (filled > 0) {
+    return `I read "${fileName}" and pre-filled ${filled} answer${filled === 1 ? '' : 's'}. Use "Back / edit answer" to change anything — I just need the remaining details.`;
+  }
+  // Nothing was pre-filled: only claim the document was understood when the
+  // server actually returned a summary for it.
+  if (status !== 'empty') {
+    return `I understood "${fileName}" and will use it in the analysis, but it didn't answer any of the questionnaire fields — I still need to ask you a few clarification questions.`;
+  }
+  return `I couldn't analyze "${fileName}" — nothing usable came back from it. Let's continue with the questions instead.`;
+}
+
+/** Compact status line for the manual form — one per honest outcome. */
+export function extractionFormStatus(fileName: string, filled: number, status: ExtractionStatus): string {
+  if (filled > 0) {
+    return `Read "${fileName}" and pre-filled ${filled} unanswered question${filled === 1 ? '' : 's'}.`;
+  }
+  if (status !== 'empty') {
+    return `Understood "${fileName}" and will use it in the analysis — no questionnaire field could be pre-filled, so please answer the questions below.`;
+  }
+  return `Couldn't analyze "${fileName}" — please answer the questions below. It stays attached as a reference.`;
 }
 
 function isStringArray(v: unknown): v is string[] {

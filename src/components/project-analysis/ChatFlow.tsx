@@ -4,7 +4,9 @@ import { Bot, Send, ArrowLeft, SkipForward, ClipboardList, Sparkles, Plus, X, Pa
 import { getQuestions } from '@/data/analysisQuestions';
 import { AnswerMap, AnswerValue, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
 import {
+  documentContextFor,
   extractFromDocument,
+  extractionChatNotice,
   isAiAnalysisReady,
   readDocument,
   UnsupportedDocumentError,
@@ -114,24 +116,24 @@ const ChatFlow = ({ mode, answers, files, onAnswersChange, onFilesChange, onSwit
     setDocStage('reading');
     try {
       const doc = await readDocument(file);
-      const { answers: extracted, docSummary } = await extractFromDocument(mode, doc);
+      const extraction = await extractFromDocument(mode, doc);
       const valid: AnswerMap = {};
       for (const q of questions) {
-        if (extracted[q.id] !== undefined) valid[q.id] = extracted[q.id];
+        if (extraction.answers[q.id] !== undefined) valid[q.id] = extraction.answers[q.id];
       }
       const merged = { ...answers, ...valid };
       onAnswersChange(merged);
+      // Only carry the document forward when something was actually understood.
+      const documentContext = documentContextFor(extraction);
       onFilesChange(
-        [...files.filter((f) => f.name !== file.name), { name: file.name, size: file.size, text: docSummary }].slice(0, 5),
+        [
+          ...files.filter((f) => f.name !== file.name),
+          { name: file.name, size: file.size, text: documentContext || undefined },
+        ].slice(0, 5),
       );
       const nextIdx = questions.findIndex((q) => merged[q.id] === undefined);
       setIndex(nextIdx === -1 ? questions.length : nextIdx);
-      const filled = Object.keys(valid).length;
-      setDocNotice(
-        filled > 0
-          ? `I read "${file.name}" and auto-filled ${filled} answer${filled === 1 ? '' : 's'}. Use "Back / edit answer" to change anything — I just need the remaining details.`
-          : `I read "${file.name}" and will use it in the analysis, but I couldn't confidently pre-fill any answers — let's go through the questions.`,
-      );
+      setDocNotice(extractionChatNotice(file.name, Object.keys(valid).length, extraction.status));
     } catch (e) {
       setDocNotice(
         e instanceof UnsupportedDocumentError

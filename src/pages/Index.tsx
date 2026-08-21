@@ -144,6 +144,10 @@ const Index = () => {
               <Link to="/project-analysis?method=manual" className={secondaryBtn}>
                 <ClipboardList className="h-4 w-4" aria-hidden="true" /> {t('common.startManually')}
               </Link>
+              {/* Visitors who would rather talk it through start here — instantly */}
+              <Link to="/schedule-call" className={`${secondaryBtn} border-pink-400 bg-white text-pink-700 hover:bg-pink-50 hover:text-pink-800`}>
+                <Bot className="h-4 w-4" aria-hidden="true" /> {t('common.startAiMeeting')}
+              </Link>
             </div>
           </Reveal>
           <Reveal delay={0.4}>
@@ -453,7 +457,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <Reveal>
             <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
-              <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
+              <Bot className="h-9 w-9 text-pink-600" aria-hidden="true" />
               <h2 className="text-2xl font-bold sm:text-3xl">{t('home.call.title')}</h2>
               <p className="max-w-xl text-gray-600">
                 {t('home.call.text')}
