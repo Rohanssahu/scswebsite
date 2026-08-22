@@ -25,7 +25,7 @@ application code; the rest of `.env.example` is currently unused by `src/`.
 | `VITE_SUPABASE_URL` | **yes** | `src/services/supabaseClient.ts`, `src/services/admin/adminClient.ts` | Project URL. Public by design. |
 | `VITE_SUPABASE_ANON_KEY` | **yes** | `src/services/supabaseClient.ts`, `src/services/admin/adminClient.ts` | Publishable key (`sb_publishable_…`). Public by design. |
 | `VITE_TURNSTILE_SITE_KEY` | **yes** | `src/services/supabaseClient.ts` (Turnstile widget on the lead forms) | Site key (`0x4AAA…`). Public by design. |
-| `VITE_GA_MEASUREMENT_ID` | no | *nothing* | Listed in `.env.example` but unused — the GA4 id is hard-coded in `index.html`. Either wire it up or drop it from the example file. |
+| `VITE_GA_MEASUREMENT_ID` | no | *nothing* | Listed in `.env.example` but unused — the GA4 id (`G-RMGB9J9TT5`) is hard-coded in `index.html` and pinned by a test. Either wire it up or drop it from the example file. |
 | `VITE_WHATSAPP_NUMBER` | no | *nothing* | Unused by `src/`. |
 | `VITE_CALCOM_URL` | no | *nothing* | Unused by `src/`. |
 
@@ -121,12 +121,23 @@ demand. That is the expected idle state, not a fault.
 
 ### 1.6 Git state warning
 
-At the time of writing the repository is **7 commits ahead of `origin/main`** and
-the working tree is dirty. `dist/` is **tracked in git**, so every build produces
-a large diff of generated files alongside the source changes.
+The repository is **8 commits ahead of `origin/main`** and nothing has been
+pushed. `dist/` is **tracked in git**, so every build produces a large diff of
+generated files alongside the source changes.
 
-Do not deploy from an unreviewed tree. Follow §4 to create a source checkpoint
-first, then deploy.
+Commit `ef12a61` ("feat: launch international SEO, market pages and analytics")
+captured most of the Phase 4 work. What is still uncommitted afterwards is the
+GA4 measurement-id correction:
+
+| File | Change |
+|---|---|
+| `index.html` | measurement id `G-1VQ1H1Y6S1` → `G-RMGB9J9TT5` |
+| `src/utils/analytics.test.ts` | test pinning that id |
+| `PRODUCTION_LAUNCH.md` | this document |
+| `dist/` (78 files) | rebuild carrying the new id |
+
+Do not deploy from an unreviewed tree. Follow §4 to check the remaining work in,
+then deploy.
 
 ### 1.7 Production build command
 
@@ -248,7 +259,8 @@ confirm the admin dashboard no longer lists them.
 
 ### 3.5 Analytics
 
-- [ ] GA4 **Realtime** shows one page view when you load the homepage
+- [ ] GA4 → property **G-RMGB9J9TT5** → **Realtime** shows one page view when
+      you load the homepage (the stream should stop saying "No data received")
 - [ ] Navigating homepage → `/services` → `/locations/turkey` produces exactly
       **three** page views, not six
 - [ ] A contact submission produces one `contact_submitted` event
@@ -274,9 +286,9 @@ git diff --check                           # whitespace / conflict markers
 **2. Create a final source checkpoint commit**
 
 ```bash
-git add index.html src PRODUCTION_LAUNCH.md
+git add index.html src/utils/analytics.test.ts PRODUCTION_LAUNCH.md
 git status --short                          # confirm ONLY source is staged
-git commit -m "SEO Phase 4: TypeScript fixes, country-copy corrections, GA4 conversion tracking"
+git commit -m "fix(analytics): tag the site with the live GA4 stream G-RMGB9J9TT5"
 ```
 
 To include the rebuilt output in the same checkpoint (optional — `dist` is
@@ -291,7 +303,7 @@ git commit -m "chore: rebuild dist for launch"
 
 ```bash
 git fetch origin
-git log --oneline origin/main..HEAD         # review the 7+ commits going up
+git log --oneline origin/main..HEAD         # review the 9 commits going up
 git push origin main                        # plain fast-forward push, no --force
 ```
 
@@ -415,6 +427,31 @@ content is fixed — a long-lived blanket disallow costs rankings.
 ---
 
 ## 8. Analytics configuration note
+
+### Measurement ID
+
+The site is tagged **`G-RMGB9J9TT5`**, matching the GA4 web stream the owner reads.
+
+Until Phase 4 it was tagged `G-1VQ1H1Y6S1` — an id that has never matched that
+stream, which is why the property reported *"Data collection isn't active for your
+website"* and *"No data received"*. Any historical data collected under
+`G-1VQ1H1Y6S1` stays in that property and does not carry across; this is a fresh
+start on `G-RMGB9J9TT5`.
+
+The id lives in exactly one place, `index.html`, and is pinned by
+`src/utils/analytics.test.ts` so it cannot drift again unnoticed.
+
+### Two GA4 stream settings to correct
+
+1. **Stream URL** is `http://www.scssoftwares.com`. Change it to
+   `https://scssoftwares.com` — the apex over HTTPS is the canonical origin, and
+   `www` only exists as a 301 redirect. This field does not gate collection, but
+   a wrong value misleads the GA4 setup helper.
+2. **Redact data** shows *URL query parameter keys: inactive*. Turn it on as
+   defence in depth. `RouteAnalytics` already strips the query string before
+   sending, so this is a second layer rather than a fix.
+
+### Page views
 
 Page views are now sent **only** by `src/components/RouteAnalytics.tsx`, once per
 route navigation. `index.html` configures the tag with `send_page_view: false`,
