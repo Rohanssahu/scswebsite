@@ -4,15 +4,9 @@ import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'luc
 import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-
-const services = [
-  { nameKey: 'web-development', path: '/gig/web-development' },
-  { nameKey: 'mobile-app-development', path: '/gig/mobile-development' },
-  { nameKey: 'digital-marketing', path: '/gig/digital-marketing' },
-  { nameKey: 'ui-ux-design', path: '/gig/ui-ux-design' },
-  { nameKey: 'cloud-solutions', path: '/gig/cloud-solutions' },
-  { nameKey: 'devops-services', path: '/gig/devops-services' },
-];
+// One shared service list with the header, so the footer can never keep
+// advertising a service URL the navigation has already retired.
+import { ALL_SERVICE_NAV } from '@/data/serviceNav';
 
 const quickLinks = [
   { key: 'nav.home', path: '/' },
@@ -82,9 +76,9 @@ const Footer = () => {
           {/* Services */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.ourServices')}</h3>
-            {/* Two columns so six links take three rows instead of six */}
+            {/* Two columns so nine links stay compact instead of running down the page */}
             <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
-              {services.map((service) => (
+              {ALL_SERVICE_NAV.map((service) => (
                 <li key={service.path}>
                   <Link to={service.path} className={footerLinkCls}>
                     {t(`services.names.${service.nameKey}`)}

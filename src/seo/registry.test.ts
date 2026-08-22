@@ -13,6 +13,7 @@ import {
   type RouteSeo,
 } from './registry';
 import { POSITIONING, SITE_ORIGIN } from './site';
+import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
 
 const APP_SOURCE = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
@@ -130,6 +131,23 @@ describe('canonical discipline', () => {
     expect(route.canonical).toBe(`${SITE_ORIGIN}/schedule-call`);
   });
 
+  it('forwards the two migrated gig paths to their canonical service pages', () => {
+    const migrations: [string, string][] = [
+      ['/gig/web-development', '/services/web-application-development'],
+      ['/gig/mobile-development', '/services/mobile-app-development'],
+    ];
+    for (const [from, to] of migrations) {
+      const route = ROUTE_SEO[from];
+      expect(route.indexability, from).toBe('redirect');
+      expect(route.robots, from).toBe('noindex,follow');
+      expect(route.prerender, from).toBe(true);
+      expect(route.redirectTo, from).toBe(to);
+      expect(route.canonical, from).toBe(`${SITE_ORIGIN}${to}`);
+      // Still routable, still absent from the sitemap.
+      expect(indexableRoutes().map((r) => r.canonicalPath)).not.toContain(from);
+    }
+  });
+
   it('emits no canonical where a single document answers many URLs', () => {
     for (const pattern of ['*', '/ai-consultation/:meetingReference', '/admin', '/admin/login', '/admin/leads/:id']) {
       expect(ROUTE_SEO[pattern].canonical, pattern).toBeNull();
@@ -205,6 +223,8 @@ describe('sitemap route matching', () => {
     for (const excluded of [
       '/admin',
       '/admin/login',
+      '/gig/web-development',
+      '/gig/mobile-development',
       '/ai-consultation/:meetingReference',
       '/project-analysis/result',
       '/ApplicationForm',
@@ -229,12 +249,15 @@ describe('sitemap route matching', () => {
         '/gig/cloud-solutions',
         '/gig/devops-services',
         '/gig/digital-marketing',
-        '/gig/mobile-development',
         '/gig/ui-ux-design',
-        '/gig/web-development',
         '/products',
         '/project-analysis',
         '/schedule-call',
+        '/services/custom-software-development',
+        '/services/mobile-app-development',
+        '/services/saas-development',
+        '/services/software-modernization',
+        '/services/web-application-development',
       ].sort(),
     );
   });
@@ -267,26 +290,87 @@ describe('structured data', () => {
     }
   });
 
-  it('puts a Service node on each of the six real service pages', () => {
-    const servicePages = ALL_ROUTES.filter((route) => route.canonicalPath.startsWith('/gig/'));
-    expect(servicePages).toHaveLength(6);
-    for (const route of servicePages) {
+  it('puts a Service node on each of the four remaining gig pages', () => {
+    const gigPages = ALL_ROUTES.filter(
+      (route) => route.canonicalPath.startsWith('/gig/') && route.indexability === 'indexable',
+    );
+    expect(gigPages).toHaveLength(4);
+    for (const route of gigPages) {
       expect(route.jsonLd.map((node) => node['@type'])).toEqual(['Service']);
       expect(route.jsonLd[0].url).toBe(route.canonical);
     }
   });
 
-  it('emits no BreadcrumbList, because no page renders a visible breadcrumb trail', () => {
+  it('puts a Service and a BreadcrumbList node on each canonical service page', () => {
+    const servicePages = ALL_ROUTES.filter((route) => route.canonicalPath.startsWith('/services/'));
+    expect(servicePages).toHaveLength(SERVICE_CONTENT.length);
+    for (const route of servicePages) {
+      expect(route.jsonLd.map((node) => node['@type']), route.canonicalPath).toEqual(['Service', 'BreadcrumbList']);
+      expect(route.jsonLd[0].url).toBe(route.canonical);
+    }
+  });
+
+  it('matches every Service node to the page copy it describes', () => {
+    for (const service of SERVICE_CONTENT) {
+      const route = ROUTE_SEO[service.path];
+      expect(route.title).toBe(service.metaTitle);
+      expect(route.description).toBe(service.metaDescription);
+      const node = route.jsonLd[0] as { name: string; serviceType: string; description: string };
+      expect(node.name).toBe(service.serviceName);
+      expect(node.serviceType).toBe(service.serviceType);
+      expect(node.description).toBe(service.metaDescription);
+    }
+  });
+
+  it('gives every BreadcrumbList the same trail the page renders, ending on itself', () => {
+    for (const service of SERVICE_CONTENT) {
+      const crumbs = serviceBreadcrumb(service);
+      const node = ROUTE_SEO[service.path].jsonLd[1] as {
+        itemListElement: { position: number; name: string; item: string }[];
+      };
+      expect(node.itemListElement).toHaveLength(crumbs.length);
+      node.itemListElement.forEach((element, index) => {
+        expect(element.position).toBe(index + 1);
+        expect(element.name).toBe(crumbs[index].name);
+        expect(element.item).toBe(
+          crumbs[index].path === '/' ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}${crumbs[index].path}`,
+        );
+      });
+      expect(node.itemListElement[0].name).toBe('Home');
+      expect(node.itemListElement.at(-1)?.item).toBe(ROUTE_SEO[service.path].canonical);
+    }
+  });
+
+  it('emits a BreadcrumbList only where a visible breadcrumb trail is rendered', () => {
     for (const route of ALL_ROUTES) {
-      expect(route.jsonLd.map((node) => node['@type'])).not.toContain('BreadcrumbList');
+      const hasBreadcrumb = route.jsonLd.some((node) => node['@type'] === 'BreadcrumbList');
+      expect(hasBreadcrumb, route.routePattern).toBe(route.canonicalPath.startsWith('/services/'));
     }
   });
 
   it('contains no rating, review, award or headcount claim', () => {
-    const serialized = JSON.stringify(ALL_ROUTES.map((route) => route.jsonLd));
-    for (const forbidden of ['aggregateRating', 'AggregateRating', 'review', 'Review', 'award', 'numberOfEmployees', 'hasCredential']) {
-      expect(serialized).not.toContain(forbidden);
-    }
+    // Property names and @type values only: a description may legitimately use
+    // the English word "review" (a security review is a service we perform),
+    // but the markup must never carry a `review` or `aggregateRating` node.
+    const forbidden = ['aggregateRating', 'review', 'reviews', 'award', 'awards', 'numberOfEmployees', 'hasCredential'];
+    const walk = (node: unknown, where: string): void => {
+      if (Array.isArray(node)) {
+        node.forEach((child, index) => walk(child, `${where}[${index}]`));
+        return;
+      }
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        expect(forbidden, `${where}.${key}`).not.toContain(key.toLowerCase().replace(/^@/, ''));
+        if (key === '@type') {
+          expect(
+            ['AggregateRating', 'Review', 'Rating'].includes(String(value)),
+            `${where} declares @type ${String(value)}`,
+          ).toBe(false);
+        }
+        walk(value, `${where}.${key}`);
+      }
+    };
+    for (const route of ALL_ROUTES) walk(route.jsonLd, route.routePattern);
   });
 
   it('uses only the verified contact details', () => {

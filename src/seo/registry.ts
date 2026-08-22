@@ -21,12 +21,14 @@ import {
   normalizeCanonicalPath,
 } from './site';
 import {
+  breadcrumbJsonLd,
   contactPageJsonLd,
   organizationJsonLd,
   serviceJsonLd,
   webSiteJsonLd,
   type JsonLd,
 } from './jsonld';
+import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
 
 export type RobotsDirective = 'index,follow' | 'noindex,follow' | 'noindex,nofollow';
 
@@ -158,24 +160,15 @@ function buildRoute(spec: RouteSpec): RouteSeo {
   };
 }
 
-/** The six service pages that actually exist under `src/pages/gigs`. */
+/**
+ * The four remaining `/gig/*` pages under `src/pages/gigs`.
+ *
+ * Web and mobile development used to live here too. Both moved to the
+ * canonical `/services/*` pages below; their old paths stay alive as noindex
+ * forwarding stubs (see LEGACY_SERVICE_REDIRECTS). UI/UX, cloud, DevOps and
+ * digital marketing are unchanged and are scheduled for a later phase.
+ */
 const SERVICE_PAGES: { path: string; name: string; serviceType: string; description: string; title: string }[] = [
-  {
-    path: '/gig/web-development',
-    name: 'Web Development',
-    serviceType: 'Web Application Development',
-    description:
-      'Custom web application development in React, Node.js, Python and PHP — responsive front ends, API and database work, and ongoing maintenance from our Indore, India team.',
-    title: 'Web Development Services | SCS Softwares',
-  },
-  {
-    path: '/gig/mobile-development',
-    name: 'Mobile App Development',
-    serviceType: 'Mobile Application Development',
-    description:
-      'Native and cross-platform mobile app development for iOS and Android, built and maintained by an India-based team, with API integration and app store release support.',
-    title: 'Mobile App Development Services | SCS Softwares',
-  },
   {
     path: '/gig/digital-marketing',
     name: 'Digital Marketing',
@@ -227,6 +220,67 @@ const SERVICE_ROUTES: RouteSpec[] = SERVICE_PAGES.map((service) => ({
     }),
   ],
 }));
+
+/**
+ * The five canonical software-development service pages.
+ *
+ * Title, description, Service JSON-LD and the BreadcrumbList all come from the
+ * same content module the page body renders, so the metadata and the visible
+ * page cannot describe different things.
+ */
+const CANONICAL_SERVICE_ROUTES: RouteSpec[] = SERVICE_CONTENT.map((service) => ({
+  path: service.path,
+  title: service.metaTitle,
+  description: service.metaDescription,
+  shareTitle: service.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: service.priority,
+  jsonLd: [
+    serviceJsonLd({
+      name: service.serviceName,
+      serviceType: service.serviceType,
+      description: service.metaDescription,
+      path: service.path,
+    }),
+    breadcrumbJsonLd(serviceBreadcrumb(service)),
+  ],
+}));
+
+/**
+ * Old service URLs, kept alive so existing links and bookmarks still resolve.
+ *
+ * Each one prerenders to the same forwarding stub `/consultation-form` uses: a
+ * 200 response carrying `noindex,follow`, a canonical pointing at the
+ * replacement, a meta refresh for clients without JavaScript, and a script
+ * redirect for everyone else. They are excluded from the sitemap because
+ * `indexableRoutes()` only accepts `indexability: 'indexable'`.
+ */
+const LEGACY_SERVICE_REDIRECTS: RouteSpec[] = [
+  {
+    path: '/gig/mobile-development',
+    title: 'Mobile App Development Has Moved | SCS Softwares',
+    description:
+      'Our mobile app development service now lives at /services/mobile-app-development. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/mobile-app-development',
+    canonical: '/services/mobile-app-development',
+  },
+  {
+    path: '/gig/web-development',
+    title: 'Web Development Has Moved | SCS Softwares',
+    description:
+      'Our web development service now lives at /services/web-application-development. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/web-application-development',
+    canonical: '/services/web-application-development',
+  },
+];
 
 const ROUTE_SPECS: RouteSpec[] = [
   {
@@ -311,6 +365,7 @@ const ROUTE_SPECS: RouteSpec[] = [
     prerender: true,
     priority: 0.6,
   },
+  ...CANONICAL_SERVICE_ROUTES,
   ...SERVICE_ROUTES,
   {
     path: '/PrivacyPolicy',
@@ -374,6 +429,8 @@ const ROUTE_SPECS: RouteSpec[] = [
     // Point crawlers at the page that replaced this one, not back at itself.
     canonical: '/schedule-call',
   },
+
+  ...LEGACY_SERVICE_REDIRECTS,
 
   // ---- Dynamic / private: served by the 404.html SPA fallback ----
   {

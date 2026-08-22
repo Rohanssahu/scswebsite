@@ -36,6 +36,8 @@
   "nav": {
     "home": "Home",
     "services": "Services",
+    "softwareDevelopment": "Software development",
+    "moreServices": "More services",
     "products": "Products",
     "projectEstimate": "Project Estimate",
     "about": "About",
@@ -49,6 +51,10 @@
   "services": {
     "names": {
       "web-development": "Web Development",
+      "custom-software-development": "Custom Software Development",
+      "web-application-development": "Web Application Development",
+      "saas-development": "SaaS Development",
+      "software-modernization": "Software Modernization",
       "mobile-app-development": "Mobile App Development",
       "mobile-apps": "Mobile Apps",
       "digital-marketing": "Digital Marketing",
@@ -455,7 +461,12 @@
         "description": "Manage builds, servers, and deployments."
       }
     },
-    "discuss": "Discuss this product"
+    "discuss": "Discuss this product",
+    "buildCustom": {
+      "eyebrow": "Build from scratch",
+      "title": "Need something these products do not cover?",
+      "text": "Every product above can be tailored, but plenty of projects need software designed around your own process instead. These are the services that start there."
+    }
   },
   "blog": {
     "eyebrow": "Insights",
@@ -1215,6 +1226,45 @@
         "limitations": [
           "Very unusual workflows may need custom work on top",
           "Final pricing depends on customisation scope"
+        ]
+      },
+      "custom-software-development": {
+        "blurb": "End-to-end custom software: new products, business-process automation, internal tools, customer platforms and third-party integrations, plus AI-assisted features where they remove manual work.",
+        "forWho": "Businesses and founders who need software shaped around their own process rather than an off-the-shelf tool.",
+        "benefits": [
+          "Built around your workflow, not a template",
+          "One team from discovery through to launch and support",
+          "You own the code, designs and infrastructure"
+        ],
+        "limitations": [
+          "Larger platforms need a discovery phase before a firm price",
+          "Third-party costs such as hosting and gateways are separate"
+        ]
+      },
+      "saas-development": {
+        "blurb": "SaaS product development from a first release to a multi-tenant platform: signup and onboarding, subscriptions and plans, roles and permissions, dashboards, usage tracking and integrations.",
+        "forWho": "Founders and product teams building or growing a subscription software product.",
+        "benefits": [
+          "An MVP scoped around one complete workflow",
+          "Tenancy, billing and permissions designed in from the start",
+          "Usage tracking so the roadmap follows real behaviour"
+        ],
+        "limitations": [
+          "We do not provide compliance certification such as SOC 2 or ISO 27001",
+          "Scaling decisions are revisited as real usage arrives"
+        ]
+      },
+      "software-modernization": {
+        "blurb": "Assessment and incremental modernization of software you already run: legacy interfaces, performance, API upgrades, security review, bug fixing, cloud readiness and ongoing maintenance.",
+        "forWho": "Teams with an existing application that has become slow, fragile or expensive to change.",
+        "benefits": [
+          "A written assessment before any rebuild is proposed",
+          "Released in small steps, so the system keeps running",
+          "Documentation recovered where none exists"
+        ],
+        "limitations": [
+          "Not every legacy system can be migrated without risk",
+          "Lost source code or unsupported components may force replacement"
         ]
       }
     }

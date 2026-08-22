@@ -16,6 +16,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import VisualPlaceholder from '../components/VisualPlaceholder';
+import { CORE_SERVICE_NAV } from '@/data/serviceNav';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -216,6 +217,31 @@ const ProductShowcase = () => {
                 </Reveal>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Build something custom instead ===== */}
+      <section className="border-t border-gray-200 py-16">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+              {t('products.buildCustom.eyebrow')}
+            </span>
+            <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">{t('products.buildCustom.title')}</h2>
+            <p className="mt-4 text-gray-600">{t('products.buildCustom.text')}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {CORE_SERVICE_NAV.map((service, i) => (
+              <Reveal key={service.path} delay={i * 0.05}>
+                <Link
+                  to={service.path}
+                  className="group flex h-full items-center justify-center rounded-2xl border border-gray-200 bg-white p-5 text-center text-sm font-medium text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                >
+                  {t(`services.names.${service.nameKey}`)}
+                </Link>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>

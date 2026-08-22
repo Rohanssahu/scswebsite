@@ -36,8 +36,14 @@ export interface PageInfo {
 }
 
 export const PAGE_INFO: Record<string, PageInfo> = {
-  '/gig/web-development': { nameKey: 'web-development', pageKey: 'web-development' },
-  '/gig/mobile-development': { nameKey: 'mobile-app-development', pageKey: 'mobile-development' },
+  '/services/custom-software-development': {
+    nameKey: 'custom-software-development',
+    pageKey: 'custom-software-development',
+  },
+  '/services/web-application-development': { nameKey: 'web-application-development', pageKey: 'web-development' },
+  '/services/mobile-app-development': { nameKey: 'mobile-app-development', pageKey: 'mobile-development' },
+  '/services/saas-development': { nameKey: 'saas-development', pageKey: 'saas-development' },
+  '/services/software-modernization': { nameKey: 'software-modernization', pageKey: 'software-modernization' },
   '/gig/ui-ux-design': { nameKey: 'ui-ux-design', pageKey: 'ui-ux-design' },
   '/gig/cloud-solutions': { nameKey: 'cloud-solutions', pageKey: 'cloud-solutions' },
   '/gig/devops-services': { nameKey: 'devops-services', pageKey: 'devops-services' },
@@ -46,7 +52,7 @@ export const PAGE_INFO: Record<string, PageInfo> = {
   '/ProductDetailsPage': { nameKey: 'this-product', pageKey: 'product-details' },
 };
 
-/** Longest-prefix lookup so /gig/web-development matches its entry. */
+/** Longest-prefix lookup so /services/saas-development matches its entry. */
 export function getPageInfo(pathname: string): PageInfo | null {
   const keys = Object.keys(PAGE_INFO).sort((a, b) => b.length - a.length);
   const hit = keys.find((k) => pathname.toLowerCase().startsWith(k.toLowerCase()));
@@ -56,7 +62,7 @@ export function getPageInfo(pathname: string): PageInfo | null {
 /** Route-aware quick actions shown above the chat composer. */
 export function getRouteQuickActions(pathname: string): GuideAction[] {
   const p = pathname.toLowerCase();
-  if (p.startsWith('/gig/')) {
+  if (p.startsWith('/services/') || p.startsWith('/gig/')) {
     return [
       { label: 'Explain this service', kind: 'send', message: 'Explain this service' },
       { label: 'Is it right for me?', kind: 'send', message: 'Is this service right for me?' },

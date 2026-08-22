@@ -5,19 +5,15 @@ import { Menu, X, ChevronDown, Sparkles, Bot, ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
+import { CORE_SERVICE_NAV, OTHER_SERVICE_NAV, isServicePath } from '@/data/serviceNav';
 
 // Service names come from the shared services.names.* i18n table so they stay
 // consistent with Buddy and the footer. Layout uses logical properties so the
 // navbar mirrors correctly in RTL (Arabic/Urdu).
-
-const services = [
-  { nameKey: 'web-development', path: '/gig/web-development' },
-  { nameKey: 'mobile-app-development', path: '/gig/mobile-development' },
-  { nameKey: 'digital-marketing', path: '/gig/digital-marketing' },
-  { nameKey: 'ui-ux-design', path: '/gig/ui-ux-design' },
-  { nameKey: 'cloud-solutions', path: '/gig/cloud-solutions' },
-  { nameKey: 'devops-services', path: '/gig/devops-services' },
-];
+//
+// The menu is grouped: the canonical software-development pages under
+// /services/*, then the remaining /gig/* services. Both lists come from
+// src/data/serviceNav.ts, so the header, drawer and footer cannot drift.
 
 // One highest-intent action on the site: an AI meeting that starts immediately.
 // "Book a free call" read like "someone will phone me later", so the label says
@@ -95,7 +91,7 @@ const Header = () => {
             >
               <button
                 className={`flex items-center gap-1 whitespace-nowrap rounded-lg px-1 py-1 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 xl:text-sm ${
-                  location.pathname.startsWith('/gig/') ? 'text-pink-600 font-semibold' : 'text-gray-700 hover:text-pink-600'
+                  isServicePath(location.pathname) ? 'text-pink-600 font-semibold' : 'text-gray-700 hover:text-pink-600'
                 }`}
                 aria-expanded={isServicesOpen}
                 onClick={() => setIsServicesOpen((o) => !o)}
@@ -107,9 +103,27 @@ const Header = () => {
                 />
               </button>
               {isServicesOpen && (
-                <div className="absolute start-0 top-full z-50 w-64 pt-2">
+                <div className="absolute start-0 top-full z-50 w-72 pt-2">
                   <div className="glow-card overflow-hidden rounded-2xl border border-gray-200 bg-white py-2">
-                    {services.map((service) => (
+                    <span className="block px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
+                      {t('nav.softwareDevelopment')}
+                    </span>
+                    {CORE_SERVICE_NAV.map((service) => (
+                      <Link
+                        key={service.path}
+                        to={service.path}
+                        className={`block px-4 py-2.5 text-sm transition-colors hover:bg-pink-50 hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pink-400 ${
+                          isActive(service.path) ? 'font-semibold text-pink-600' : 'text-gray-700'
+                        }`}
+                        onClick={() => setIsServicesOpen(false)}
+                      >
+                        {t(`services.names.${service.nameKey}`)}
+                      </Link>
+                    ))}
+                    <span className="mt-2 block border-t border-gray-200 px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
+                      {t('nav.moreServices')}
+                    </span>
+                    {OTHER_SERVICE_NAV.map((service) => (
                       <Link
                         key={service.path}
                         to={service.path}
@@ -238,9 +252,25 @@ const Header = () => {
                 ))}
 
                 <div className="mt-3 border-t border-gray-200 pt-4">
-                  <span className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.services')}</span>
+                  <span className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.softwareDevelopment')}</span>
                   <div className="mt-2 flex flex-col gap-1">
-                    {services.map((service) => (
+                    {CORE_SERVICE_NAV.map((service) => (
+                      <Link
+                        key={service.path}
+                        to={service.path}
+                        className={`rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                          isActive(service.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-600 hover:bg-gray-50 hover:text-pink-600'
+                        }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {t(`services.names.${service.nameKey}`)}
+                      </Link>
+                    ))}
+                  </div>
+
+                  <span className="mt-4 block px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.moreServices')}</span>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {OTHER_SERVICE_NAV.map((service) => (
                       <Link
                         key={service.path}
                         to={service.path}

@@ -8,6 +8,10 @@ import {
   Palette,
   Cloud,
   Settings,
+  Boxes,
+  Layers,
+  LayoutDashboard,
+  RefreshCw,
   ArrowRight,
   CheckCircle,
   Sparkles,
@@ -30,6 +34,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import VisualPlaceholder from '../components/VisualPlaceholder';
+import { CORE_SERVICE_NAV, OTHER_SERVICE_NAV } from '@/data/serviceNav';
 
 const DEMO_TEAM = [
   { slug: 'requirement-analyst', rate: 5 },
@@ -39,14 +44,35 @@ const DEMO_TEAM = [
   { slug: 'qa-tester', rate: 10 },
 ];
 
-const SERVICES = [
-  { icon: Code, nameKey: 'services.names.web-development', path: '/gig/web-development' },
-  { icon: Smartphone, nameKey: 'services.names.mobile-apps', path: '/gig/mobile-development' },
-  { icon: Palette, nameKey: 'services.names.ui-ux-design', path: '/gig/ui-ux-design' },
-  { icon: Cloud, nameKey: 'services.names.cloud-solutions', path: '/gig/cloud-solutions' },
-  { icon: Settings, nameKey: 'services.names.devops', path: '/gig/devops-services' },
-  { icon: TrendingUp, nameKey: 'services.names.digital-marketing', path: '/gig/digital-marketing' },
-];
+// The five canonical software-development pages lead the section; the four
+// services still on their original /gig/ URLs follow. Paths come from the same
+// shared nav list the header and footer use.
+const CORE_SERVICE_ICONS: Record<string, React.ElementType> = {
+  'custom-software-development': Boxes,
+  'mobile-app-development': Smartphone,
+  'web-application-development': LayoutDashboard,
+  'saas-development': Layers,
+  'software-modernization': RefreshCw,
+};
+
+const CORE_SERVICES = CORE_SERVICE_NAV.map((service) => ({
+  icon: CORE_SERVICE_ICONS[service.nameKey] ?? Code,
+  nameKey: `services.names.${service.nameKey}`,
+  path: service.path,
+}));
+
+const OTHER_SERVICE_ICONS: Record<string, React.ElementType> = {
+  'ui-ux-design': Palette,
+  'cloud-solutions': Cloud,
+  'devops-services': Settings,
+  'digital-marketing': TrendingUp,
+};
+
+const OTHER_SERVICES = OTHER_SERVICE_NAV.map((service) => ({
+  icon: OTHER_SERVICE_ICONS[service.nameKey] ?? Code,
+  nameKey: `services.names.${service.nameKey}`,
+  path: service.path,
+}));
 
 // Category tiles instead of the stock photos that used to be hotlinked from
 // Unsplash and another company's blog CDN — none of them showed our work.
@@ -373,8 +399,29 @@ const Index = () => {
       <section id="services" data-guide-id="home-services" className="border-t border-gray-200 py-20">
         <div className="container mx-auto px-4">
           <SectionHeading eyebrow={t('home.servicesSection.eyebrow')} title={t('home.servicesSection.title')} />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {SERVICES.map((s, i) => (
+
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+            {t('nav.softwareDevelopment')}
+          </h3>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {CORE_SERVICES.map((s, i) => (
+              <Reveal key={s.path} delay={i * 0.05}>
+                <Link
+                  to={s.path}
+                  className="group flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center transition-colors hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  <s.icon className="h-7 w-7 text-pink-600 transition-transform group-hover:scale-110" aria-hidden="true" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{t(s.nameKey)}</span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+
+          <h3 className="mb-4 mt-10 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+            {t('nav.moreServices')}
+          </h3>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {OTHER_SERVICES.map((s, i) => (
               <Reveal key={s.path} delay={i * 0.05}>
                 <Link
                   to={s.path}

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { indexableRoutes, prerenderRoutes, ROUTE_SEO } from './registry';
 import { SITE_ORIGIN } from './site';
+import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
 
 /**
  * Assertions about the deployable artifact.
@@ -112,6 +113,65 @@ describe.skipIf(!built)('prerender output', () => {
       const html = read(route.canonicalPath);
       expect(html).not.toContain('www.scssoftwares.com');
       expect(html).not.toContain('github.io');
+    }
+  });
+
+  it('turns each migrated gig path into a noindex canonical-forwarding stub', () => {
+    const migrations: [string, string][] = [
+      ['/gig/web-development', '/services/web-application-development'],
+      ['/gig/mobile-development', '/services/mobile-app-development'],
+    ];
+    for (const [from, to] of migrations) {
+      const html = read(from);
+      expect(html, from).toContain('http-equiv="refresh"');
+      expect(html, from).toContain(`content="0; url=${to}"`);
+      expect(canonicalOf(html), from).toBe(`${SITE_ORIGIN}${to}`);
+      expect(metaContent(html, 'robots'), from).toBe('noindex,follow');
+      // The replacement is a real prerendered page, not another stub.
+      expect(resolveDist(to), to).not.toBeNull();
+    }
+  });
+
+  it('ships a visible breadcrumb and matching JSON-LD on every canonical service page', () => {
+    for (const service of SERVICE_CONTENT) {
+      const html = read(service.path);
+      expect(html, service.path).toContain('aria-label="Breadcrumb"');
+
+      const blocks = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((m) =>
+        JSON.parse(m[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&')),
+      );
+      const types = blocks.map((node) => node['@type']);
+      expect(types, service.path).toContain('Service');
+      expect(types, service.path).toContain('BreadcrumbList');
+
+      const serviceNode = blocks.find((node) => node['@type'] === 'Service');
+      expect(serviceNode.url, service.path).toBe(canonicalOf(html));
+      expect(serviceNode.name, service.path).toBe(service.serviceName);
+
+      const crumbNode = blocks.find((node) => node['@type'] === 'BreadcrumbList');
+      const crumbs = serviceBreadcrumb(service);
+      expect(crumbNode.itemListElement, service.path).toHaveLength(crumbs.length);
+      // Every crumb name is on the page a visitor sees, not only in the markup.
+      for (const crumb of crumbs) expect(html, `${service.path}: ${crumb.name}`).toContain(crumb.name);
+      expect(crumbNode.itemListElement.at(-1).item, service.path).toBe(canonicalOf(html));
+    }
+  });
+
+  it('renders the FAQ answers into the HTML, not behind JavaScript', () => {
+    for (const service of SERVICE_CONTENT) {
+      const html = read(service.path);
+      for (const faq of service.faqs) {
+        expect(html, `${service.path}: ${faq.question}`).toContain(faq.question.replace(/&/g, '&amp;'));
+      }
+    }
+  });
+
+  it('links every canonical service page to the estimate, call and contact pages', () => {
+    for (const service of SERVICE_CONTENT) {
+      const html = read(service.path);
+      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+        expect(html, `${service.path} -> ${target}`).toContain(`href="${target}"`);
+      }
     }
   });
 

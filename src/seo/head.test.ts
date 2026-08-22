@@ -118,7 +118,11 @@ describe('head tag construction', () => {
 
   it('carries one JSON-LD tag per structured-data node', () => {
     expect(buildHeadTags(ROUTE_SEO['/']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(2);
-    expect(buildHeadTags(ROUTE_SEO['/gig/web-development']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(1);
+    expect(buildHeadTags(ROUTE_SEO['/gig/ui-ux-design']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(1);
+    // A canonical service page carries both its Service and its BreadcrumbList.
+    expect(
+      buildHeadTags(ROUTE_SEO['/services/custom-software-development']).filter((tag) => tag.kind === 'jsonld'),
+    ).toHaveLength(2);
     expect(buildHeadTags(ROUTE_SEO['/careers']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(0);
   });
 });

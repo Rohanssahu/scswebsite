@@ -2,7 +2,7 @@
 /**
  * Post-build gate for `dist/`.
  *
- * Runs five scans and one live check, and exits non-zero on any failure:
+ * Runs five scans and two live checks, and exits non-zero on any failure:
  *
  *   1. broken internal links   — every internal href resolves to a real file
  *   2. missing local assets    — every src/href asset exists in dist
@@ -12,6 +12,12 @@
  *   6. static-server check     — serve dist with GitHub Pages path resolution
  *                                and GET every generated route, asserting the
  *                                status, title, canonical and robots directive
+ *   7. service-page check      — the five canonical /services/* pages: physical
+ *                                HTML with real copy, unique metadata, correct
+ *                                canonical, sitemap membership, a visible
+ *                                breadcrumb, matching Service and
+ *                                BreadcrumbList JSON-LD, the three CTAs — plus
+ *                                the old /gig URLs still forwarding as noindex
  *
  * Usage: node scripts/verify-dist.mjs
  */
@@ -272,6 +278,133 @@ async function serveAndCheck() {
 }
 
 // ---------------------------------------------------------------------------
+// 7: the Phase 2A service pages, served through the static server
+// ---------------------------------------------------------------------------
+
+/** Canonical service URLs and the old paths that now forward to them. */
+const SERVICE_PATHS = [
+  '/services/custom-software-development',
+  '/services/mobile-app-development',
+  '/services/web-application-development',
+  '/services/saas-development',
+  '/services/software-modernization',
+];
+
+const LEGACY_SERVICE_FORWARDS = [
+  ['/gig/web-development', '/services/web-application-development'],
+  ['/gig/mobile-development', '/services/mobile-app-development'],
+];
+
+function jsonLdBlocks(html) {
+  return [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].flatMap((match) => {
+    const raw = match[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&');
+    try {
+      return [JSON.parse(raw)];
+    } catch {
+      fail('structured-data', `unparseable JSON-LD block: ${raw.slice(0, 80)}`);
+      return [];
+    }
+  });
+}
+
+async function checkServicePages(sitemapLocs) {
+  const server = await startServer();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const titles = new Map();
+  const descriptions = new Map();
+
+  try {
+    for (const urlPath of SERVICE_PATHS) {
+      const response = await fetch(`${base}${urlPath}`);
+      const html = await response.text();
+      if (response.status !== 200) {
+        fail('service-pages', `GET ${urlPath} -> ${response.status}`);
+        continue;
+      }
+
+      // --- physical HTML with meaningful copy before JavaScript ------------
+      const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
+      const words = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' ').length;
+      if (words < 800) fail('service-pages', `${urlPath}: only ${words} words of prerendered copy`);
+      const h1s = html.match(/<h1[\s>]/g) ?? [];
+      if (h1s.length !== 1) fail('service-pages', `${urlPath}: ${h1s.length} <h1> elements`);
+
+      // --- unique metadata, correct canonical, indexable -------------------
+      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+      const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
+      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+      if (titles.has(title)) fail('service-pages', `${urlPath}: title duplicates ${titles.get(title)}`);
+      titles.set(title, urlPath);
+      if (descriptions.has(description)) {
+        fail('service-pages', `${urlPath}: description duplicates ${descriptions.get(description)}`);
+      }
+      descriptions.set(description, urlPath);
+      if (canonical !== `${ORIGIN}${urlPath}`) fail('service-pages', `${urlPath}: canonical is "${canonical}"`);
+      if (robots !== 'index,follow') fail('service-pages', `${urlPath}: robots="${robots}"`);
+      for (const key of ['og:title', 'og:description', 'og:url', 'twitter:title', 'twitter:description']) {
+        if (!new RegExp(`<meta (?:name|property)="${key}" content="[^"]+"`).test(html)) {
+          fail('service-pages', `${urlPath}: missing ${key}`);
+        }
+      }
+
+      // --- sitemap ----------------------------------------------------------
+      if (!sitemapLocs.includes(`${ORIGIN}${urlPath}`)) {
+        fail('service-pages', `${urlPath} is missing from sitemap.xml`);
+      }
+
+      // --- visible breadcrumb ----------------------------------------------
+      if (!html.includes('aria-label="Breadcrumb"')) fail('service-pages', `${urlPath}: no visible breadcrumb`);
+      if (!html.includes('aria-current="page"')) fail('service-pages', `${urlPath}: breadcrumb marks no current page`);
+
+      // --- Service + BreadcrumbList structured data, matching the page ------
+      const blocks = jsonLdBlocks(html);
+      const service = blocks.find((node) => node['@type'] === 'Service');
+      const breadcrumb = blocks.find((node) => node['@type'] === 'BreadcrumbList');
+      if (!service) fail('structured-data', `${urlPath}: no Service JSON-LD`);
+      else if (service.url !== canonical) fail('structured-data', `${urlPath}: Service.url is "${service.url}"`);
+      if (!breadcrumb) fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
+      else {
+        const items = breadcrumb.itemListElement ?? [];
+        if (items.length < 2) fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s)`);
+        if (items.at(-1)?.item !== canonical) {
+          fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
+        }
+        // Every crumb name must be readable on the page a visitor sees.
+        const text = html.replace(/<[^>]+>/g, ' ');
+        for (const item of items) {
+          if (!text.includes(item.name)) {
+            fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
+          }
+        }
+      }
+
+      // --- the three required calls to action -------------------------------
+      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+        if (!html.includes(`href="${target}"`)) fail('service-pages', `${urlPath}: no link to ${target}`);
+      }
+    }
+
+    // --- old gig URLs still answer, still noindex, still forward ------------
+    for (const [from, to] of LEGACY_SERVICE_FORWARDS) {
+      const response = await fetch(`${base}${from}`);
+      const html = await response.text();
+      if (response.status !== 200) fail('legacy-forwards', `GET ${from} -> ${response.status}`);
+      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1];
+      if (robots !== 'noindex,follow') fail('legacy-forwards', `${from}: robots="${robots}"`);
+      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+      if (canonical !== `${ORIGIN}${to}`) fail('legacy-forwards', `${from}: canonical is "${canonical}"`);
+      if (!html.includes(`content="0; url=${to}"`)) fail('legacy-forwards', `${from}: no meta refresh to ${to}`);
+      if (sitemapLocs.includes(`${ORIGIN}${from}`)) fail('legacy-forwards', `${from} is still in the sitemap`);
+    }
+
+    notes.push(`verified ${SERVICE_PATHS.length} service pages and ${LEGACY_SERVICE_FORWARDS.length} legacy forwards`);
+  } finally {
+    server.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   if (!fss.existsSync(DIST)) {
@@ -281,8 +414,9 @@ async function main() {
   }
   await scanDocuments();
   await scanSecrets();
-  await scanSitemapAndRobots();
+  const sitemapLocs = await scanSitemapAndRobots();
   await serveAndCheck();
+  await checkServicePages(sitemapLocs);
 
   for (const note of notes) console.log(`  · ${note}`);
   if (failures.length > 0) {
@@ -291,7 +425,9 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  console.log('\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes.');
+  console.log(
+    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards.',
+  );
 }
 
 main().catch((error) => {

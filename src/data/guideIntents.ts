@@ -67,7 +67,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
     responseKey: 'guide.intents.need-website',
     actions: [
       { label: 'Start requirement flow', kind: 'flow-new' },
-      { label: 'See web development service', kind: 'navigate', to: '/gig/web-development' },
+      { label: 'See web development service', kind: 'navigate', to: '/services/web-application-development' },
     ],
   },
   {

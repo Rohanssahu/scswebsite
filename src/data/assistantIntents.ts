@@ -62,10 +62,10 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     id: 'services',
     keywords: [['service'], ['what', 'do', 'you', 'do'], ['offer'], ['portfolio'], ['work', 'done']],
     response:
-      'SCS Softwares offers web development, mobile app development, UI/UX design, cloud solutions, DevOps and digital marketing. You can browse each service or jump straight to a project estimate.',
+      'SCS Softwares offers custom software development, mobile app development, web application development, SaaS development and software modernization, plus UI/UX design, cloud solutions, DevOps and digital marketing. You can browse each service or jump straight to a project estimate.',
     actions: [
-      { label: 'Web development', to: '/gig/web-development' },
-      { label: 'Mobile development', to: '/gig/mobile-development' },
+      { label: 'Custom software', to: '/services/custom-software-development' },
+      { label: 'Mobile app development', to: '/services/mobile-app-development' },
       { label: 'All services', to: '/#services' },
     ],
   },
