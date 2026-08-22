@@ -17,12 +17,17 @@ import {
   Clock,
   PhoneCall,
   Globe2,
+  MapPin,
+  Lightbulb,
+  PackageCheck,
+  Handshake,
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import { LOCATIONS_HUB } from '@/data/locationNav';
 import { aboutRemoteDeliverySection } from '@/content/locations';
+import { founderSection } from '@/content/founder';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -78,6 +83,13 @@ const APPROACH = [
   { icon: Rocket, titleKey: 'about.approach.s4Title', textKey: 'about.approach.s4Text' },
 ];
 
+/**
+ * One icon per founding reason, positional. The copy itself lives in
+ * `@/content/founder` so the story and the tests read the same words; only the
+ * decoration is chosen here.
+ */
+const FOUNDING_REASON_ICONS = [Lightbulb, PackageCheck, Handshake];
+
 const WHY_SCS = [
   { icon: BadgeCheck, titleKey: 'home.why.estimateTitle', textKey: 'home.why.estimateText' },
   { icon: ShieldCheck, titleKey: 'home.why.ownTitle', textKey: 'home.why.ownText' },
@@ -128,39 +140,113 @@ const About = () => {
         </div>
       </section>
 
-      {/* ===== Story ===== */}
-      <section className="border-t border-gray-200 py-20">
+      {/* ===== Founder & company story =====
+          The section that answers "who founded SCS Softwares". Everything
+          rendered here is real HTML text, not baked into the photograph, and
+          every sentence comes from `@/content/founder` — the single owner-
+          verified source the Person JSON-LD and the tests also read. The `id`
+          is the fragment the Person node's @id and url point at, so the
+          identifier a crawler follows lands on this story. */}
+      <section id="founder" className="border-t border-gray-200 py-20 scroll-mt-24">
         <div className="container mx-auto px-4">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
+          <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
             <Reveal>
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('about.story.eyebrow')}</span>
-                <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
-                  {t('about.story.title1')} <span className="text-gradient-ai">{t('about.story.title2')}</span>
-                </h2>
-                <p className="mt-6 leading-relaxed text-gray-600">
-                  {t('about.story.p1')}
-                </p>
-                <p className="mt-4 leading-relaxed text-gray-600">
-                  {t('about.story.p2')}
-                </p>
-                <p className="mt-4 leading-relaxed text-gray-600">
-                  {t('about.story.p3')}
-                </p>
-              </div>
-            </Reveal>
-            <Reveal delay={0.1}>
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
                 <img
-                  src="/images/inside.jpeg"
-                  alt={t('about.story.imageAlt')}
+                  src={founderSection.imageSrc}
+                  alt={founderSection.imageAlt}
                   loading="lazy"
-                  width={828}
-                  height={833}
-                  className="h-72 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-96"
+                  width={founderSection.imageWidth}
+                  height={founderSection.imageHeight}
+                  className="h-72 w-full object-cover sm:h-80"
                 />
+                <div className="p-6">
+                  {/* Name and designation as plain text, so a crawler and a
+                      screen reader read exactly what a visitor sees. */}
+                  <p className="text-lg font-bold text-gray-900">{founderSection.name}</p>
+                  <p className="text-sm font-semibold text-pink-600">{founderSection.jobTitle}</p>
+                  <p className="mt-3 flex items-start gap-2 text-sm text-gray-600">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
+                    <span>{founderSection.origin}</span>
+                  </p>
+                  <ul className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                    {founderSection.credentials.map((credential) => (
+                      <li key={credential} className="flex items-start gap-2 text-sm text-gray-600">
+                        <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
+                        <span>{credential}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </Reveal>
+
+            <Reveal delay={0.1}>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+                  {founderSection.eyebrow}
+                </span>
+                <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
+                  {founderSection.heading}
+                </h2>
+                {founderSection.story.map((paragraph) => (
+                  <p key={paragraph.slice(0, 40)} className="mt-5 leading-relaxed text-gray-600">
+                    {paragraph}
+                  </p>
+                ))}
+
+                <dl className="mt-8 grid gap-4 sm:grid-cols-3">
+                  {founderSection.trackRecord.map((fact) => (
+                    /* `flex-col-reverse` puts the figure above its label
+                       visually while keeping the <dt> before its <dd> in the
+                       DOM, which is the order a definition list requires. */
+                    <div
+                      key={fact.label}
+                      className="flex flex-col-reverse rounded-2xl border border-gray-200 bg-white px-4 py-5"
+                    >
+                      <dt className="mt-1 text-xs leading-relaxed text-gray-500">{fact.label}</dt>
+                      <dd className="text-2xl font-bold text-gray-900">{fact.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <p className="mt-8 leading-relaxed text-gray-600">{founderSection.ctaText}</p>
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <Link to={founderSection.primaryCta.path} className={primaryBtn}>
+                    {founderSection.primaryCta.label} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link to={founderSection.secondaryCta.path} className={secondaryBtn}>
+                    {founderSection.secondaryCta.label}
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* ===== Why SCS Softwares was founded =====
+              A subsection of the founder story, so it stays at H3 under the
+              section's single H2. */}
+          <div className="mt-16 border-t border-gray-200 pt-12">
+            <Reveal>
+              <div className="mx-auto max-w-2xl text-center">
+                <h3 className="text-2xl font-bold text-gray-900 sm:text-3xl">{founderSection.whyHeading}</h3>
+                <p className="mt-4 text-gray-600">{founderSection.whyIntro}</p>
+              </div>
+            </Reveal>
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {founderSection.reasons.map((reason, i) => {
+                const Icon = FOUNDING_REASON_ICONS[i] ?? Lightbulb;
+                return (
+                  <Reveal key={reason.title} delay={i * 0.08}>
+                    <div className="glow-card h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
+                      <Icon className="h-7 w-7 text-pink-600" aria-hidden="true" />
+                      <h4 className="mt-4 font-semibold text-gray-900">{reason.title}</h4>
+                      <p className="mt-2 text-sm leading-relaxed text-gray-600">{reason.body}</p>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

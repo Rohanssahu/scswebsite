@@ -34,8 +34,62 @@ export const SITE_LEGAL_NAME = 'SCS Softwares';
 export const POSITIONING =
   'India-based mobile app, web application, custom software and AI development company specializing in AI/ML, AI voice agents, AI video consultation agents and business automation.';
 
-/** Founding year — matches the About page story copy (`about.story.p1`). */
-export const FOUNDING_YEAR = 2018;
+/**
+ * Founding year — 2022, the year Rohan Sahu started the company in Indore.
+ * Owner-verified, and the only founding year the site may state anywhere.
+ *
+ * It must not be confused with the founder's own experience: Rohan has more
+ * than eight years in software development, four of them working directly with
+ * freelance and international clients, and that history predates the company.
+ * The company itself has been operating since 2022 and nothing on the site may
+ * imply a longer trading history.
+ */
+export const FOUNDING_YEAR = 2022;
+
+/**
+ * Where the company was founded, and the only place it has ever been based.
+ * Matches `CONTACT` below — one company, one city, one address.
+ */
+export const FOUNDING_LOCATION = {
+  city: 'Indore',
+  region: 'Madhya Pradesh',
+  /** ISO 3166-1 alpha-2, as schema.org's `addressCountry` expects. */
+  country: 'IN',
+  /** The human-readable form the pages render. */
+  label: 'Indore, Madhya Pradesh, India',
+} as const;
+
+/**
+ * The founder, as a named person the site is allowed to describe.
+ *
+ * Only owner-verified fields live here. There is deliberately no education,
+ * award, certification, personal profile or date of birth: none of that has
+ * been supplied, so none of it may be rendered or marked up. `imagePath` points
+ * at the real photograph already shipped in `public/images`.
+ *
+ * `sameAs` is empty on purpose. The repository contains a company LinkedIn page
+ * (see `SOCIAL_PROFILES`) but no personal profile for Rohan, and a company URL
+ * is not a `sameAs` for a person. Add entries here only when a real, verified
+ * personal profile URL is supplied.
+ */
+export const FOUNDER = {
+  name: 'Rohan Sahu',
+  jobTitle: 'Founder & CEO',
+  /**
+   * The owner-supplied founder photograph, shipped from `public/images` so the
+   * path is stable and `assetUrl()` can turn it into the absolute URL the
+   * `Person.image` markup needs. Re-encoded to 768x768 JPEG (132 KB) from the
+   * 1024x1024 PNG original in `src/asset`, which was 1.8 MB — the card renders
+   * it at 352 CSS pixels, so 768 covers a 2x display with room to spare.
+   */
+  imagePath: '/images/rohan-sahu-founder-scs-softwares.jpg',
+  imageWidth: 768,
+  imageHeight: 768,
+  imageAlt: 'Rohan Sahu, Founder and CEO of SCS Softwares',
+  /** The `/about` section that carries the founder story, used as the URL. */
+  sectionId: 'founder',
+  sameAs: [] as readonly string[],
+} as const;
 
 /** Verified contact details, identical to the ones rendered in the footer. */
 export const CONTACT = {

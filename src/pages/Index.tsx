@@ -44,6 +44,8 @@ import VisualPlaceholder from '../components/VisualPlaceholder';
 import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
 import { LOCATION_NAV, LOCATIONS_HUB } from '@/data/locationNav';
 import { homeInternationalSection } from '@/content/locations';
+import { homeFounderLink } from '@/content/founder';
+import { FOUNDING_YEAR } from '@/seo/site';
 
 const DEMO_TEAM = [
   { slug: 'requirement-analyst', rate: 5 },
@@ -193,9 +195,10 @@ const Index = () => {
                   the About page, the six service pages, the product catalogue
                   and the three shipped locales. The previous set (500+ clients,
                   1000+ projects, 10+ years, 98% satisfaction) had no evidence
-                  behind it and contradicted the 2018 founding date. */}
+                  behind it. The year is `FOUNDING_YEAR`, so it cannot drift
+                  from the founder story on /about or the Organization markup. */}
               {[
-                { value: '2018', labelKey: 'home.stats.founded' },
+                { value: String(FOUNDING_YEAR), labelKey: 'home.stats.founded' },
                 { value: '6', labelKey: 'home.stats.services' },
                 { value: '16', labelKey: 'home.stats.products' },
                 { value: '3', labelKey: 'home.stats.languages' },
@@ -416,6 +419,20 @@ const Index = () => {
               </Reveal>
             ))}
           </div>
+          {/* One sentence on where the company came from, linking through to
+              the full story. Deliberately a plain, readable line rather than a
+              keyword-stuffed one — /about is the page that carries the detail. */}
+          <Reveal delay={0.35}>
+            <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-gray-600">
+              {homeFounderLink.sentence}{' '}
+              <Link
+                to={homeFounderLink.path}
+                className="rounded font-semibold text-pink-700 underline decoration-pink-300 underline-offset-4 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+              >
+                {homeFounderLink.linkLabel}
+              </Link>
+            </p>
+          </Reveal>
         </div>
       </section>
 

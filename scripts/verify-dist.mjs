@@ -1140,6 +1140,19 @@ async function checkLocationPages(sitemapLocs) {
  * exemption is a negation within 140 characters in front of the match, or a
  * match inside a question the page then answers.
  */
+/**
+ * The client and project figures the owner has verified, in the exact phrasing
+ * the site is allowed to use. Mirrors `VERIFIED_COUNT_CLAIMS` in
+ * `src/content/founder.ts` — this file is plain JavaScript and cannot import
+ * the TypeScript module, so the two are kept in step by the assertion in
+ * `src/pages/about.test.tsx`.
+ *
+ * Only `/about` may state them, because that is the page that says where they
+ * come from. Any other figure, and these figures anywhere else, still fail.
+ */
+const VERIFIED_COUNT_CLAIMS = ['50+ clients', '150+ projects', '50 clients', '150 projects'];
+const VERIFIED_COUNT_PATHS = ['/about'];
+
 const UNSUPPORTED_CLAIM_PATTERNS = [
   [/\bleading (?:software|AI|IT|digital|design|cloud|DevOps|marketing|development|technology) (?:company|agency|provider|partner|firm|studio)\b/i, 'a "leading company" claim'],
   [/\bindustry[- ]leading\b/i, 'an industry-leading claim'],
@@ -1157,7 +1170,7 @@ const UNSUPPORTED_CLAIM_PATTERNS = [
   [/\bwe guarantee\b/i, 'a guarantee'],
   [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Germany|Netherlands|Singapore|Turkey|Dubai|London|New York|Toronto|Sydney)\b/i, 'a foreign office'],
   [/\bour (?:US|USA|UK|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean|German|Dutch|Turkish) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a foreign local team'],
-  [/\b\d{2,}\+? (?:happy )?(?:clients|customers|projects|users)\b/i, 'a fabricated client or project count'],
+  [/\b\d{2,}\+? (?:happy )?(?:clients|customers|projects|users)\b/i, 'a fabricated client or project count', 'count'],
   [/\b\d+% (?:satisfaction|success|accuracy|uptime|growth|retention)\b/i, 'a performance percentage'],
   [/\b\d+\+ years\b/i, 'a years-in-business claim'],
   [/\btrusted by \d/i, 'a trusted-by count'],
@@ -1194,7 +1207,7 @@ async function checkSiteHonesty() {
       const html = await response.text();
       const { text } = prerenderedBody(html);
       scanned += 1;
-      for (const [pattern, label] of UNSUPPORTED_CLAIM_PATTERNS) {
+      for (const [pattern, label, kind] of UNSUPPORTED_CLAIM_PATTERNS) {
         const global = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
         for (const match of text.matchAll(global)) {
           const index = match.index ?? 0;
@@ -1202,6 +1215,14 @@ async function checkSiteHonesty() {
           // is answered honestly underneath.
           if (sentenceAround(text, index).endsWith('?')) continue;
           if (isDenied(text, index)) continue;
+          // The two owner-verified figures, on the one page that sources them.
+          if (
+            kind === 'count' &&
+            VERIFIED_COUNT_PATHS.includes(urlPath) &&
+            VERIFIED_COUNT_CLAIMS.includes(match[0].toLowerCase())
+          ) {
+            continue;
+          }
           const before = text.slice(Math.max(0, index - 90), index);
           fail('site-honesty', `${urlPath}: ${label} — "…${before.slice(-60)}${match[0]}"`);
         }

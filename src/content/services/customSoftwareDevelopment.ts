@@ -12,7 +12,7 @@ export const customSoftwareDevelopment: ServiceBody = {
     'We design, build and maintain software that fits how your business actually works — from a first product release to the internal systems your team uses every day.',
   heroHighlights: [
     'India-based, working remotely with international clients',
-    'Founded in 2018, Indore, India',
+    'Founded in 2022, Indore, India',
     'You own the source code, designs and infrastructure',
   ],
   intro: [

@@ -174,6 +174,20 @@ describe('the page-view source is single', () => {
     expect(indexHtml.match(/gtag\('config'/g)).toHaveLength(1);
   });
 
+  it('tags the site with the measurement id of the live GA4 stream', () => {
+    // Pinned deliberately. Until Phase 4 the site was tagged G-1VQ1H1Y6S1 while
+    // the GA4 stream the owner reads is G-RMGB9J9TT5, so the property reported
+    // "Data collection isn't active" and no page view ever arrived. A silent
+    // drift between these two is invisible in every other check in this repo —
+    // the site keeps building, the tag keeps loading, and the data goes to a
+    // property nobody opens. Changing this constant is therefore a deliberate
+    // act that has to be made here first.
+    const MEASUREMENT_ID = 'G-RMGB9J9TT5';
+    expect(indexHtml).toContain(`gtag/js?id=${MEASUREMENT_ID}`);
+    expect(indexHtml).toContain(`gtag('config', '${MEASUREMENT_ID}'`);
+    // And no second id anywhere in the document.
+    expect([...new Set(indexHtml.match(/G-[A-Z0-9]{8,}/g) ?? [])]).toEqual([MEASUREMENT_ID]);
+  });
   it('stops the tag from sending a page view of its own', () => {
     // Without this, every landing page is counted twice: once by the tag and
     // once by RouteAnalytics on its first render.

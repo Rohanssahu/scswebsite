@@ -6,13 +6,16 @@
  * actually built, and the social profiles the footer links to.
  *
  * Deliberately absent — and never to be added without real evidence:
- * aggregateRating, review, award, hasCredential, numberOfEmployees, extra
- * `location` entries, or any `foundingLocation` outside India.
+ * aggregateRating, review, award, hasCredential, alumniOf, knowsAbout,
+ * numberOfEmployees, extra `location` entries, or any `foundingLocation`
+ * outside Indore, India.
  */
 
 import {
   CONTACT,
   DEFAULT_SHARE_IMAGE,
+  FOUNDER,
+  FOUNDING_LOCATION,
   FOUNDING_YEAR,
   POSITIONING,
   SITE_LEGAL_NAME,
@@ -29,6 +32,16 @@ export type JsonLd = Record<string, unknown>;
 export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 export const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
 
+/**
+ * Stable @id for the single founder node.
+ *
+ * It resolves to the founder section on `/about` — a real fragment on a real
+ * indexable page, so the identifier a crawler follows lands on the visible
+ * story rather than a URL that answers nothing. There is no dedicated founder
+ * route, and one is not needed: the section carries the whole story.
+ */
+export const FOUNDER_ID = `${SITE_ORIGIN}/about#${FOUNDER.sectionId}`;
+
 export function organizationJsonLd(): JsonLd {
   return {
     '@context': 'https://schema.org',
@@ -44,6 +57,19 @@ export function organizationJsonLd(): JsonLd {
     image: DEFAULT_SHARE_IMAGE,
     description: POSITIONING,
     foundingDate: String(FOUNDING_YEAR),
+    foundingLocation: {
+      '@type': 'Place',
+      name: FOUNDING_LOCATION.label,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: FOUNDING_LOCATION.city,
+        addressRegion: FOUNDING_LOCATION.region,
+        addressCountry: FOUNDING_LOCATION.country,
+      },
+    },
+    // A reference, not an inline node: the Person is defined once, on /about,
+    // where the story a reader can actually verify is rendered.
+    founder: { '@id': FOUNDER_ID },
     email: CONTACT.email,
     telephone: CONTACT.phone,
     address: {
@@ -77,6 +103,36 @@ export function webSiteJsonLd(): JsonLd {
     description: POSITIONING,
     inLanguage: ['en', 'ar', 'ur'],
     publisher: { '@id': ORGANIZATION_ID },
+  };
+}
+
+/**
+ * The founder, as a `Person` node.
+ *
+ * Emitted on `/about` only — the one page that renders his name, designation,
+ * photograph and story as visible text, which is the condition for marking any
+ * of it up. `worksFor` points at the single Organization node defined on the
+ * homepage, and that node points back here through its `founder` property, so
+ * the two are linked in both directions without either being duplicated.
+ *
+ * The field list is closed on purpose. `sameAs` is emitted only when
+ * `FOUNDER.sameAs` holds a verified personal profile URL, which today it does
+ * not — the company LinkedIn page in `SOCIAL_PROFILES` belongs to the
+ * Organization, not to the person. Never add award, hasCredential, alumniOf,
+ * knowsAbout, birthDate, address, telephone or email to this node without
+ * owner-supplied evidence for that specific field.
+ */
+export function personJsonLd(): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': FOUNDER_ID,
+    name: FOUNDER.name,
+    jobTitle: FOUNDER.jobTitle,
+    url: FOUNDER_ID,
+    image: assetUrl(FOUNDER.imagePath),
+    worksFor: { '@id': ORGANIZATION_ID },
+    ...(FOUNDER.sameAs.length > 0 ? { sameAs: [...FOUNDER.sameAs] } : {}),
   };
 }
 

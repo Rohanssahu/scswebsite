@@ -12,7 +12,8 @@ import {
   prerenderRoutes,
   type RouteSeo,
 } from './registry';
-import { POSITIONING, SITE_ORIGIN } from './site';
+import { FOUNDER, FOUNDING_YEAR, POSITIONING, SITE_ORIGIN } from './site';
+import { FOUNDER_ID, ORGANIZATION_ID } from './jsonld';
 import { serviceBreadcrumb } from '@/content/services';
 import { SERVICE_CONTENT } from '@/content/services/all';
 import { LOCATIONS_HUB_PATH, locationBreadcrumb, locationsHubBreadcrumb } from '@/content/locations';
@@ -440,7 +441,173 @@ describe('structured data', () => {
     expect(organization.telephone).toBe('+917828690192');
     expect(organization.address.addressLocality).toBe('Indore');
     expect(organization.address.addressCountry).toBe('IN');
-    expect(organization.foundingDate).toBe('2018');
+    expect(organization.foundingDate).toBe('2022');
+  });
+
+  it('states one founding date and one founding location, everywhere', () => {
+    expect(FOUNDING_YEAR).toBe(2022);
+    const organization = ROUTE_SEO['/'].jsonLd[0] as {
+      foundingDate: string;
+      foundingLocation: {
+        '@type': string;
+        name: string;
+        address: { addressLocality: string; addressRegion: string; addressCountry: string };
+      };
+    };
+    expect(organization.foundingDate).toBe(String(FOUNDING_YEAR));
+    expect(organization.foundingLocation['@type']).toBe('Place');
+    expect(organization.foundingLocation.name).toBe('Indore, Madhya Pradesh, India');
+    expect(organization.foundingLocation.address).toEqual({
+      '@type': 'PostalAddress',
+      addressLocality: 'Indore',
+      addressRegion: 'Madhya Pradesh',
+      addressCountry: 'IN',
+    });
+
+    // No second founding date and no second founding location anywhere in the
+    // structured data — one company, one origin story.
+    const dates = new Set<string>();
+    const locations = new Set<string>();
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return void node.forEach(walk);
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        if (key === 'foundingDate') dates.add(String(value));
+        if (key === 'foundingLocation') locations.add(JSON.stringify(value));
+        walk(value);
+      }
+    };
+    for (const route of ALL_ROUTES) walk(route.jsonLd);
+    expect([...dates]).toEqual(['2022']);
+    expect(locations.size).toBe(1);
+  });
+});
+
+describe('founder structured data', () => {
+  const aboutRoute = () => ROUTE_SEO['/about'];
+  const person = () =>
+    aboutRoute().jsonLd[0] as {
+      '@type': string;
+      '@id': string;
+      name: string;
+      jobTitle: string;
+      url: string;
+      image: string;
+      worksFor: { '@id': string };
+      sameAs?: unknown;
+    };
+
+  it('puts exactly one Person node on /about and nowhere else', () => {
+    expect(aboutRoute().jsonLd.map((node) => node['@type'])).toEqual(['Person']);
+    for (const route of ALL_ROUTES) {
+      if (route.canonicalPath === '/about') continue;
+      expect(route.jsonLd.map((node) => node['@type']), route.routePattern).not.toContain('Person');
+    }
+  });
+
+  it('describes the verified founder and nothing more', () => {
+    expect(person().name).toBe('Rohan Sahu');
+    expect(person().jobTitle).toBe('Founder & CEO');
+    expect(person().image).toBe(`${SITE_ORIGIN}/images/rohan-sahu-founder-scs-softwares.jpg`);
+    // A closed field list: anything not listed here needs owner evidence first.
+    expect(Object.keys(person()).sort()).toEqual([
+      '@context',
+      '@id',
+      '@type',
+      'image',
+      'jobTitle',
+      'name',
+      'url',
+      'worksFor',
+    ]);
+  });
+
+  it('links Person to Organization in both directions, by @id', () => {
+    expect(person().worksFor).toEqual({ '@id': ORGANIZATION_ID });
+    const organization = ROUTE_SEO['/'].jsonLd[0] as { founder: { '@id': string } };
+    expect(organization.founder).toEqual({ '@id': FOUNDER_ID });
+    // And the reference resolves to the Person node's own identifier.
+    expect(person()['@id']).toBe(FOUNDER_ID);
+    expect(ORGANIZATION_ID).toBe(`${SITE_ORIGIN}/#organization`);
+  });
+
+  it('anchors the founder @id and url on the visible /about section', () => {
+    expect(FOUNDER_ID).toBe(`${SITE_ORIGIN}/about#founder`);
+    expect(person().url).toBe(FOUNDER_ID);
+    // The fragment hangs off the canonical /about URL, not a route of its own.
+    expect(FOUNDER_ID.startsWith(`${aboutRoute().canonical}#`)).toBe(true);
+  });
+
+  it('claims no unverified profile, award, education or credential for the founder', () => {
+    // No personal profile URL exists in the repository, so `sameAs` is absent
+    // rather than pointed at the company LinkedIn page.
+    expect(FOUNDER.sameAs).toHaveLength(0);
+    expect(person().sameAs).toBeUndefined();
+    const serialized = JSON.stringify(aboutRoute().jsonLd);
+    for (const forbidden of [
+      'sameAs',
+      'award',
+      'alumniOf',
+      'knowsAbout',
+      'hasCredential',
+      'aggregateRating',
+      'review',
+      'birthDate',
+      'honorificPrefix',
+      'linkedin.com',
+    ]) {
+      expect(serialized, forbidden).not.toContain(forbidden);
+    }
+  });
+});
+
+describe('/about metadata', () => {
+  const route = () => ROUTE_SEO['/about'];
+
+  it('carries the founder-aware title and description', () => {
+    expect(route().title).toBe('About SCS Softwares & Founder Rohan Sahu');
+    expect(route().description).toBe(
+      'Learn how Rohan Sahu founded SCS Softwares in Indore in 2022 to turn mobile, web, SaaS and AI ideas into production-ready products.',
+    );
+    expect(route().title.length).toBeLessThanOrEqual(60);
+    expect(route().description.length).toBeLessThanOrEqual(165);
+  });
+
+  it('self-canonicalises on /about and stays index,follow', () => {
+    expect(route().canonical).toBe(`${SITE_ORIGIN}/about`);
+    expect(route().canonicalPath).toBe('/about');
+    expect(route().robots).toBe('index,follow');
+    expect(canonicalFor('/about')).toBe(`${SITE_ORIGIN}/about`);
+    // The founder fragment resolves to the same canonical page.
+    expect(canonicalFor('/about#founder')).toBe(`${SITE_ORIGIN}/about`);
+  });
+
+  it('carries complete Open Graph and Twitter metadata', () => {
+    const { og, twitter } = route();
+    expect(og.title).toBe(route().title);
+    expect(og.description).toBe(route().description);
+    expect(og.url).toBe(`${SITE_ORIGIN}/about`);
+    expect(og.type).toBe('website');
+    expect(og.siteName).toBe('SCS Softwares');
+    expect(og.locale).toBe('en_IN');
+    expect(og.image.startsWith(`${SITE_ORIGIN}/`)).toBe(true);
+    expect(og.imageAlt.length).toBeGreaterThan(0);
+    expect(twitter.card).toBe('summary_large_image');
+    expect(twitter.title).toBe(route().title);
+    expect(twitter.description).toBe(route().description);
+    expect(twitter.image).toBe(og.image);
+    expect(twitter.site).toBe('@scssoftwares');
+  });
+
+  it('stays in the sitemap, and no founder page is added beside it', () => {
+    const paths = indexableRoutes().map((entry) => entry.canonicalPath);
+    expect(paths).toContain('/about');
+    expect(route().prerender).toBe(true);
+    // The story lives in one place: no /founder route, and no per-country copy.
+    for (const path of paths) {
+      expect(path, path).not.toMatch(/founder/i);
+      expect(path, path).not.toMatch(/rohan/i);
+    }
   });
 });
 

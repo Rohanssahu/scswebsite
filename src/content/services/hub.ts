@@ -29,7 +29,7 @@ export const servicesHub = {
   valueProp:
     'One India-based team covering the whole build: the product, the platform it runs on, and the AI inside it.',
   intro: [
-    'SCS Softwares is a software development company in Indore, India, working remotely with clients in other countries and time zones. We have delivered custom applications since 2018, and over the last few years a growing share of that work has involved AI — assistants, voice agents, document processing and the engineering that keeps model output under control.',
+    'SCS Softwares is a software development company in Indore, India, working remotely with clients in other countries and time zones. We have delivered custom applications since 2022, and a growing share of that work has involved AI — assistants, voice agents, document processing and the engineering that keeps model output under control.',
     'The services below are grouped the way projects actually arrive. Most start in one group and touch another: a SaaS product that needs an in-app assistant, an old system that needs an API before anything can automate around it, a mobile app whose real value is the AI feature inside it. Pick whichever page describes your starting point — each one links to the others it commonly pairs with.',
   ],
   groups: [

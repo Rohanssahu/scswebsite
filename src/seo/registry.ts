@@ -30,6 +30,7 @@ import {
   breadcrumbJsonLd,
   contactPageJsonLd,
   organizationJsonLd,
+  personJsonLd,
   regionalServiceJsonLd,
   serviceJsonLd,
   webSiteJsonLd,
@@ -360,14 +361,21 @@ const ROUTE_SPECS: RouteSpec[] = [
     jsonLd: [organizationJsonLd(), webSiteJsonLd()],
   },
   {
+    // The page that answers "who founded SCS Softwares". The title names the
+    // company and the founder because both are what people search for, and the
+    // page really does carry his name, designation, photograph and story as
+    // visible text — which is also what licenses the Person node below.
     path: '/about',
-    title: 'About SCS Softwares | Software & AI Development Team in Indore, India',
+    title: 'About SCS Softwares & Founder Rohan Sahu',
     description:
-      'SCS Softwares was founded in 2018 in Indore, India. Meet the team behind our mobile, web, custom software and AI development work, and see how we run a project.',
+      'Learn how Rohan Sahu founded SCS Softwares in Indore in 2022 to turn mobile, web, SaaS and AI ideas into production-ready products.',
     robots: 'index,follow',
     indexability: 'indexable',
     prerender: true,
     priority: 0.8,
+    // A `profile` card would be wrong: /about is about the company and its
+    // founder, not a personal profile page.
+    jsonLd: [personJsonLd()],
   },
   {
     path: '/contact',

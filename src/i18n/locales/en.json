@@ -217,15 +217,6 @@
     "heroSub": "We're a passionate team of developers, designers and digital strategists committed to transforming businesses through innovative technology solutions.",
     "workWithUs": "Work with us",
     "joinTeam": "Join the team",
-    "story": {
-      "eyebrow": "Our story",
-      "title1": "From a small team to a",
-      "title2": "trusted partner",
-      "p1": "Founded in 2018, SCS Softwares began as a small team of passionate developers who believed technology could solve complex business challenges. Today we are an India-based software and AI development company, working remotely with clients in other countries and time zones.",
-      "p2": "Our journey has been marked by continuous learning and a commitment to doing the work properly: a written scope before development starts, a named team rather than a rotating pool, and a build you can open and click every week.",
-      "p3": "At SCS Softwares, we don't just write code — we craft solutions that make a real difference in people's lives and businesses.",
-      "imageAlt": "Inside the SCS Softwares office"
-    },
     "values": {
       "eyebrow": "Mission & values",
       "title": "What we stand for",
@@ -243,8 +234,8 @@
       "eyebrow": "Our team",
       "title": "Meet the people behind SCS",
       "sub": "Our diverse team of experts brings together years of experience and a shared passion for excellence.",
-      "role1": "CEO & Founder",
-      "bio1": "Tech entrepreneur who founded SCS Softwares in Indore in 2018, working across software development and business strategy.",
+      "role1": "Founder & CEO",
+      "bio1": "Founder & CEO. He started SCS Softwares in Indore in 2022 after more than eight years in software development, and leads product direction and delivery.",
       "role2": "CTO",
       "bio2": "Expert in scalable architecture and emerging technologies with a passion for innovation.",
       "role3": "Project Manager",

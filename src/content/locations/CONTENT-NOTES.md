@@ -14,7 +14,7 @@ removed from `/locations` rather than left empty.
 | Claim | Where | Basis |
 | --- | --- | --- |
 | SCS Softwares operates from Indore, Madhya Pradesh, India | all nine country pages and the hub | The company's own registered address, already published on `/contact` and in the footer, and encoded once in `src/seo/site.ts` (`CONTACT`). |
-| Founded 2018 | not repeated on these pages | `FOUNDING_YEAR` in `src/seo/site.ts`, shown on `/about`. Left off the regional pages so a years-in-business claim cannot creep in. |
+| Founded 2022 | not repeated on these pages | `FOUNDING_YEAR` in `src/seo/site.ts`, shown on `/about` in the founder story. Left off the regional pages so a years-in-business claim cannot creep in. |
 | IST is 5:30 ahead of UTC | implied by every offset below | IANA time zone database, zone `Asia/Kolkata` (`+05:30`, no daylight saving). |
 | IST is 9h30–10h30 ahead of US Eastern | `/locations/united-states` | IANA zone `America/New_York`: `-05:00` standard, `-04:00` during daylight saving. 10:30 and 9:30 respectively. |
 | IST is 12h30–13h30 ahead of US Pacific | `/locations/united-states` | IANA zone `America/Los_Angeles`: `-08:00` / `-07:00`. |
