@@ -9,6 +9,12 @@
  *   - the metadata/canonical/noindex/sitemap unit tests
  *
  * Adding a route to `App.tsx` without adding it here fails `registry.test.ts`.
+ *
+ * Phase 3B note: this module reads the two *metadata manifests*
+ * (`@/content/services` and `@/content/locations`), never a page's body copy.
+ * That is what lets the service and regional pages be split into route-level
+ * chunks while their titles, descriptions, canonicals, JSON-LD and sitemap
+ * entries stay available synchronously to every route.
  */
 
 import {
@@ -29,11 +35,11 @@ import {
   webSiteJsonLd,
   type JsonLd,
 } from './jsonld';
-import { SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb, servicesHub } from '@/content/services';
+import { SERVICE_META, hubBreadcrumb, serviceBreadcrumb, servicesHubMeta } from '@/content/services';
 import {
-  LOCATION_CONTENT,
+  LOCATION_META,
   locationBreadcrumb,
-  locationsHub,
+  locationsHubMeta,
   locationsHubBreadcrumb,
 } from '@/content/locations';
 
@@ -173,10 +179,10 @@ function buildRoute(spec: RouteSpec): RouteSeo {
  * BreadcrumbList but no Service node — it describes no single service.
  */
 const SERVICES_HUB_ROUTE: RouteSpec = {
-  path: servicesHub.path,
-  title: servicesHub.metaTitle,
-  description: servicesHub.metaDescription,
-  shareTitle: servicesHub.shareTitle,
+  path: servicesHubMeta.path,
+  title: servicesHubMeta.metaTitle,
+  description: servicesHubMeta.metaDescription,
+  shareTitle: servicesHubMeta.shareTitle,
   robots: 'index,follow',
   indexability: 'indexable',
   prerender: true,
@@ -192,7 +198,7 @@ const SERVICES_HUB_ROUTE: RouteSpec = {
  * same content module the page body renders, so the metadata and the visible
  * page cannot describe different things.
  */
-const CANONICAL_SERVICE_ROUTES: RouteSpec[] = SERVICE_CONTENT.map((service) => ({
+const CANONICAL_SERVICE_ROUTES: RouteSpec[] = SERVICE_META.map((service) => ({
   path: service.path,
   title: service.metaTitle,
   description: service.metaDescription,
@@ -300,10 +306,10 @@ const LEGACY_SERVICE_REDIRECTS: RouteSpec[] = [
  * LocalBusiness anywhere near it.
  */
 const LOCATIONS_HUB_ROUTE: RouteSpec = {
-  path: locationsHub.path,
-  title: locationsHub.metaTitle,
-  description: locationsHub.metaDescription,
-  shareTitle: locationsHub.shareTitle,
+  path: locationsHubMeta.path,
+  title: locationsHubMeta.metaTitle,
+  description: locationsHubMeta.metaDescription,
+  shareTitle: locationsHubMeta.shareTitle,
   robots: 'index,follow',
   indexability: 'indexable',
   prerender: true,
@@ -312,7 +318,7 @@ const LOCATIONS_HUB_ROUTE: RouteSpec = {
 };
 
 /**
- * The regional landing pages (Phase 3A): one per active market.
+ * The regional landing pages: one per active market.
  *
  * Each carries a Service node whose `areaServed` is a schema.org `Country` and
  * whose `provider` references the one India-based Organization node, plus the
@@ -320,7 +326,7 @@ const LOCATIONS_HUB_ROUTE: RouteSpec = {
  * renders. No hreflang: these are separate regional service pages, not
  * translations of one localized page.
  */
-const LOCATION_ROUTES: RouteSpec[] = LOCATION_CONTENT.map((location) => ({
+const LOCATION_ROUTES: RouteSpec[] = LOCATION_META.map((location) => ({
   path: location.path,
   title: location.metaTitle,
   description: location.metaDescription,

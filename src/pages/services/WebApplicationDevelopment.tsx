@@ -1,7 +1,8 @@
 import React from 'react';
 import ServicePage from '@/components/services/ServicePage';
-import { webApplicationDevelopment } from '@/content/services';
+import { serviceContent } from '@/content/services';
+import { webApplicationDevelopment } from '@/content/services/webApplicationDevelopment';
 
-const WebApplicationDevelopment = () => <ServicePage content={webApplicationDevelopment} />;
+const WebApplicationDevelopment = () => <ServicePage content={serviceContent(webApplicationDevelopment)} />;
 
 export default WebApplicationDevelopment;

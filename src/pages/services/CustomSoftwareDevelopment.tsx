@@ -1,7 +1,8 @@
 import React from 'react';
 import ServicePage from '@/components/services/ServicePage';
-import { customSoftwareDevelopment } from '@/content/services';
+import { serviceContent } from '@/content/services';
+import { customSoftwareDevelopment } from '@/content/services/customSoftwareDevelopment';
 
-const CustomSoftwareDevelopment = () => <ServicePage content={customSoftwareDevelopment} />;
+const CustomSoftwareDevelopment = () => <ServicePage content={serviceContent(customSoftwareDevelopment)} />;
 
 export default CustomSoftwareDevelopment;

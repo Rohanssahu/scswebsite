@@ -1,4 +1,4 @@
-// Markup, honesty and uniqueness contracts for the Phase 3A regional pages.
+// Markup, honesty and uniqueness contracts for the regional pages.
 //
 // The project's test environment is node (no jsdom, no testing-library), so —
 // like servicePages.test.tsx — these render to static markup and assert on the
@@ -7,9 +7,11 @@
 //   1. structure: one H1, a visible breadcrumb, every required section, the
 //      three conversion CTAs and links to the real global service pages;
 //   2. honesty: SCS is in Indore, delivery is remote, no local office/entity/
-//      staff/phone/certification/guarantee is claimed anywhere;
-//   3. uniqueness: the three country pages share a React layout but no copy.
-//      A page produced by find-and-replacing the country name fails here.
+//      staff/phone/certification/guarantee is claimed anywhere, in any of the
+//      six markets;
+//   3. uniqueness: the six country pages share a React layout but no copy. A
+//      page produced by find-and-replacing the country name fails here, both on
+//      its raw text and on a country-name-neutralised version of it.
 
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -18,15 +20,14 @@ import i18n from '@/i18n/config';
 import LocationPage from '@/components/locations/LocationPage';
 import LocationsHub from './LocationsHub';
 import {
-  LOCATION_CONTENT,
   LOCATIONS_HUB_PATH,
   REQUIRED_SERVICE_LINKS,
   locationBreadcrumb,
-  locationsHub,
   locationsHubBreadcrumb,
 } from '@/content/locations';
 import type { LocationContent } from '@/content/locations';
-import { SERVICE_CONTENT_BY_PATH } from '@/content/services';
+import { LOCATION_CONTENT, locationsHub } from '@/content/locations/all';
+import { SERVICE_META_BY_PATH } from '@/content/services';
 
 const render = (content: LocationContent) =>
   renderToStaticMarkup(
@@ -118,11 +119,14 @@ function similarity(a: string, b: string): number {
 // ---------------------------------------------------------------------------
 
 describe('regional page structure', () => {
-  it('covers exactly the three active markets, at flat /locations/ URLs', () => {
+  it('covers exactly the six active markets, at flat /locations/ URLs', () => {
     expect(LOCATION_CONTENT.map((location) => location.path)).toEqual([
       '/locations/united-states',
       '/locations/united-kingdom',
       '/locations/united-arab-emirates',
+      '/locations/canada',
+      '/locations/australia',
+      '/locations/singapore',
     ]);
     for (const location of LOCATION_CONTENT) {
       expect(location.path.startsWith(`${LOCATIONS_HUB_PATH}/`), location.path).toBe(true);
@@ -225,7 +229,7 @@ describe('regional page structure', () => {
     }
   });
 
-  it('links every country page to at least the six required global service pages', () => {
+  it('links every country page to at least the eight required global service pages', () => {
     for (const [content, html] of RENDERED) {
       const linked = content.services.items.map((item) => item.path);
       for (const required of REQUIRED_SERVICE_LINKS) {
@@ -238,7 +242,7 @@ describe('regional page structure', () => {
   it('points every service link at a real global service page, with its real name', () => {
     for (const content of LOCATION_CONTENT) {
       for (const item of content.services.items) {
-        const service = SERVICE_CONTENT_BY_PATH[item.path];
+        const service = SERVICE_META_BY_PATH[item.path];
         expect(service, `${content.path} links to unknown service ${item.path}`).toBeDefined();
         expect(item.label, item.path).toBe(service.navLabel);
         expect(item.blurb.length, item.path).toBeGreaterThan(60);
@@ -246,24 +250,17 @@ describe('regional page structure', () => {
     }
   });
 
-  it('cross-links only the other two live markets, never itself or a country with no page', () => {
+  it('cross-links every other live market, never itself or a country with no page', () => {
     const live = new Set(LOCATION_CONTENT.map((location) => location.path));
     for (const [content, html] of RENDERED) {
-      expect(content.otherMarkets, content.path).toHaveLength(2);
+      expect(content.otherMarkets, content.path).toHaveLength(LOCATION_CONTENT.length - 1);
       for (const market of content.otherMarkets) {
         expect(market.path, `${content.path} links to itself`).not.toBe(content.path);
         expect(live.has(market.path), `${content.path} links to non-existent market ${market.path}`).toBe(true);
         expect(html, `${content.path} does not render its ${market.path} link`).toContain(`href="${market.path}"`);
       }
       // No page may link to a market we have not written.
-      for (const absent of [
-        '/locations/canada',
-        '/locations/australia',
-        '/locations/germany',
-        '/locations/netherlands',
-        '/locations/singapore',
-        '/locations/turkey',
-      ]) {
+      for (const absent of ['/locations/germany', '/locations/netherlands', '/locations/turkey']) {
         expect(html.includes(`href="${absent}"`), `${content.path} links to ${absent}`).toBe(false);
       }
     }
@@ -283,6 +280,9 @@ describe('regional page structure', () => {
       '🇺🇸',
       '🇬🇧',
       '🇦🇪',
+      '🇨🇦',
+      '🇦🇺',
+      '🇸🇬',
     ];
     for (const [content, html] of RENDERED.concat([[LOCATION_CONTENT[0], HUB_HTML]])) {
       for (const needle of banned) {
@@ -317,12 +317,16 @@ describe('regional page structure', () => {
  * Phrases that are only ever a lie on these pages, in any context.
  */
 const NEVER: [RegExp, string][] = [
-  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati) (?:office|team|staff|branch|headquarters)\b/i, 'a local office or team'],
-  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|Sharjah|London|New York)\b/i, 'a foreign office'],
-  [/\b(?:based|headquartered|located|registered) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i, 'a foreign base'],
-  [/\+1[\s-]?\(?\d{3}/, 'a US telephone number'],
+  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a local office or team'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth)\b/i, 'a foreign office'],
+  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth)\b/i, 'a foreign base'],
+  [/\+1[\s-]?\(?\d{3}/, 'a North American telephone number'],
   [/\+44[\s-]?\d{2}/, 'a UK telephone number'],
   [/\+971[\s-]?\d/, 'a UAE telephone number'],
+  [/\+61[\s-]?\d/, 'an Australian telephone number'],
+  [/\+65[\s-]?\d/, 'a Singapore telephone number'],
+  [/\b(?:PIPEDA|PDPA|Privacy Act|Australian Privacy Principles)[- ]?(?:certified|compliant|accredited|approved)\b/i, 'a named privacy-framework certification'],
+  [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|timezone|time[- ]zone)\b/i, 'a guaranteed outcome or coverage'],
   [/\bfully (?:compliant|certified|secure|GDPR)\b/i, 'an absolute compliance claim'],
   [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2) compliant\b/i, 'a compliance claim'],
   [/\bgovernment[- ](?:approved|certified|licensed)\b/i, 'a government approval'],
@@ -354,8 +358,11 @@ const ONLY_WHEN_DENIED: [RegExp, string][] = [
   [/\blocal team\b/i, 'a local team'],
   [/\blocal (?:employees|staff)\b/i, 'local employees'],
   [/\blocal (?:phone|telephone)\b/i, 'a local phone number'],
+  [/\blocal (?:entity|registration|licence|license)\b/i, 'a local entity or registration'],
+  [/\blocally based\b/i, 'a local presence'],
   [/\blocally registered\b/i, 'local registration'],
   [/\bregistered (?:entity|company|branch)\b/i, 'a registered foreign entity'],
+  [/\bgovernment (?:approval|approved|panel|framework)\b/i, 'a government approval'],
   [/\bguarantee[a-z]*\b/i, 'a guarantee'],
   [/\bcompliant\b/i, 'a compliance claim'],
   [/\bcertif(?:ied|ication)\b/i, 'a certification'],
@@ -514,6 +521,9 @@ describe('regional page copy is honest about location', () => {
         '/locations/united-states': /\b(?:United States|USA|US)\b/g,
         '/locations/united-kingdom': /\b(?:United Kingdom|UK)\b/g,
         '/locations/united-arab-emirates': /\b(?:United Arab Emirates|UAE)\b/g,
+        '/locations/canada': /\b(?:Canada|Canadian)\b/g,
+        '/locations/australia': /\b(?:Australia|Australian)\b/g,
+        '/locations/singapore': /\b(?:Singapore|Singaporean)\b/g,
       };
       const hits = (stripTags(html).match(abbreviations[content.path]) ?? []).length;
       // A regional page should name its market often enough to be about it, and
@@ -640,9 +650,10 @@ describe('regional page copy is unique per country', () => {
 
   it('keeps page-body similarity below the template threshold', () => {
     // Bigram Jaccard over each page's own copy (shared service names and paths
-    // excluded). Two pages generated by swapping a country name would score
-    // near 1.0; independently written pages on the same subject land well under
-    // 0.2 — 0.30 leaves headroom without letting a template through.
+    // excluded), for all fifteen pairs the six markets produce. Two pages
+    // generated by swapping a country name would score near 1.0; independently
+    // written pages on the same subject land well under 0.2 — 0.30 leaves
+    // headroom without letting a template through.
     for (let i = 0; i < LOCATION_CONTENT.length; i += 1) {
       for (let j = i + 1; j < LOCATION_CONTENT.length; j += 1) {
         const a = LOCATION_CONTENT[i];
@@ -659,9 +670,15 @@ describe('regional page copy is unique per country', () => {
     const neutralise = (content: LocationContent): string =>
       ownCopy(content)
         .join(' ')
-        .replace(/United Arab Emirates|United States|United Kingdom|Emirates|Emirati|American|British|USA|UAE|UK|US\b/g, 'COUNTRY')
-        .replace(/Gulf Standard Time|US Eastern|US Pacific|British Summer Time/g, 'ZONE')
-        .replace(/Dubai|Abu Dhabi|Sharjah|London|New York/g, 'CITY');
+        .replace(
+          /United Arab Emirates|United States|United Kingdom|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Canada|Australia|Singapore|USA|UAE|UK|US\b/g,
+          'COUNTRY',
+        )
+        .replace(
+          /Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia|the ACT/g,
+          'ZONE',
+        )
+        .replace(/Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Indore/g, 'CITY');
     for (let i = 0; i < LOCATION_CONTENT.length; i += 1) {
       for (let j = i + 1; j < LOCATION_CONTENT.length; j += 1) {
         const a = LOCATION_CONTENT[i];
@@ -708,7 +725,7 @@ describe('locations hub', () => {
     expect(locationsHub.howRemoteWorks.points.length).toBeGreaterThanOrEqual(6);
   });
 
-  it('links to exactly the three active markets and names each of them', () => {
+  it('links to exactly the six active markets and names each of them', () => {
     for (const location of LOCATION_CONTENT) {
       expect(HUB_HTML, `hub does not link to ${location.path}`).toContain(`href="${location.path}"`);
       expect(HUB_TEXT, `hub does not name ${location.navLabel}`).toContain(location.navLabel);
@@ -718,12 +735,15 @@ describe('locations hub', () => {
   });
 
   it('mentions the future markets as plain text and links to none of them', () => {
-    for (const country of ['Canada', 'Australia', 'Germany', 'Netherlands', 'Singapore', 'Turkey']) {
+    for (const country of ['Germany', 'Netherlands', 'Turkey']) {
       expect(HUB_TEXT, `hub does not mention ${country}`).toContain(country);
     }
-    for (const slug of ['canada', 'australia', 'germany', 'netherlands', 'singapore', 'turkey']) {
+    for (const slug of ['germany', 'netherlands', 'turkey']) {
       expect(HUB_HTML.includes(`href="/locations/${slug}"`), `hub links to /locations/${slug}`).toBe(false);
     }
+    // Canada, Australia and Singapore graduated to linked markets in Phase 3B,
+    // so they must no longer be described as countries without a page.
+    expect(locationsHub.futureMarkets.body).not.toMatch(/Canada|Australia|Singapore/);
   });
 
   it('writes its own market blurbs rather than reusing the country pages', () => {

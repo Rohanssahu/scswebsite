@@ -11,19 +11,10 @@
  * an Arabic-speaking team, a local number or any regulatory approval.
  */
 
-import type { LocationContent } from './types';
+import type { LocationBody } from './types';
 
-export const unitedArabEmirates: LocationContent = {
+export const unitedArabEmirates: LocationBody = {
   path: '/locations/united-arab-emirates',
-  countryName: 'United Arab Emirates',
-  navLabel: 'United Arab Emirates',
-  serviceName: 'Software and AI Development for United Arab Emirates Clients',
-  serviceType: 'Remote application and AI agent development',
-  metaTitle: 'Software Development Partner for UAE Businesses | SCS',
-  metaDescription:
-    'India-based software and AI development for businesses in the UAE: mobile-first apps, booking and service platforms, dashboards, AI assistants, and Arabic interfaces as a scoped service.',
-  shareTitle: 'Software & AI Development for UAE Businesses',
-  priority: 0.8,
   h1: 'Software and AI Development for Businesses in the United Arab Emirates',
   valueProp:
     'An India-based software and AI development partner serving businesses in the UAE — close enough in time to share a working day, and remote in every other respect.',
@@ -365,6 +356,24 @@ export const unitedArabEmirates: LocationContent = {
       label: 'United Kingdom',
       blurb:
         'A shared afternoon, documented requirements with acceptance criteria, and maintenance terms agreed before launch.',
+    },
+    {
+      path: '/locations/canada',
+      label: 'Canada',
+      blurb:
+        'Business platforms and portals where the first question is availability, and the second is what counts as accepted.',
+    },
+    {
+      path: '/locations/australia',
+      label: 'Australia',
+      blurb:
+        'Booking platforms, apps and dashboards, with test environments and a maintenance scope agreed ahead of go-live.',
+    },
+    {
+      path: '/locations/singapore',
+      label: 'Singapore',
+      blurb:
+        'Multi-entity operations platforms and document automation, run across the smallest clock gap of any market we serve.',
     },
   ],
   cta: {

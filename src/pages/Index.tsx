@@ -496,7 +496,8 @@ const Index = () => {
             title={homeInternationalSection.title}
             sub={homeInternationalSection.sub}
           />
-          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
+          {/* Six active markets: two rows of three on desktop, two columns on tablet. */}
+          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {LOCATION_NAV.map((market, i) => (
               <Reveal key={market.path} delay={i * 0.06}>
                 <Link

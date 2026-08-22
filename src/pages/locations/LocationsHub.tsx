@@ -5,8 +5,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Reveal from '@/components/Reveal';
 import Breadcrumbs from '@/components/services/Breadcrumbs';
-import { LOCATION_CONTENT_BY_PATH, locationsHub, locationsHubBreadcrumb } from '@/content/locations';
-import type { MarketEntry } from '@/content/locations';
+import { LOCATION_META_BY_PATH, locationsHubBreadcrumb } from '@/content/locations';
+import { locationsHub, type MarketEntry } from '@/content/locations/hub';
 
 /**
  * The `/locations` hub: one page that states where SCS Softwares actually is,
@@ -30,7 +30,7 @@ const MARKET_ACCENTS = ['from-orange-400 to-pink-500', 'from-pink-500 to-purple-
 
 const LocationsHub = () => {
   /** Display name for a market card, from the country page's own content. */
-  const nameFor = (market: MarketEntry): string => LOCATION_CONTENT_BY_PATH[market.path].navLabel;
+  const nameFor = (market: MarketEntry): string => LOCATION_META_BY_PATH[market.path].navLabel;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">

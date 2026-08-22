@@ -8,19 +8,10 @@
  * shared with the UK or UAE page.
  */
 
-import type { LocationContent } from './types';
+import type { LocationBody } from './types';
 
-export const unitedStates: LocationContent = {
+export const unitedStates: LocationBody = {
   path: '/locations/united-states',
-  countryName: 'United States',
-  navLabel: 'United States',
-  serviceName: 'Software and AI Development for United States Clients',
-  serviceType: 'Remote software and AI development',
-  metaTitle: 'Software Development Partner for US Businesses | SCS Softwares',
-  metaDescription:
-    'SCS Softwares is an India-based software and AI development partner for businesses in the United States: remote discovery, written scope, milestone demonstrations and human-reviewed AI.',
-  shareTitle: 'Software & AI Development for US Businesses',
-  priority: 0.8,
   h1: 'Software and AI Development for Businesses in the United States',
   valueProp:
     'An India-based software and AI development partner for United States businesses — engaged remotely, scoped in writing, and demonstrated to you every cycle.',
@@ -362,6 +353,24 @@ export const unitedStates: LocationContent = {
       label: 'United Arab Emirates',
       blurb:
         'Near-overlapping working days, mobile-first customer experiences, and Arabic interface work available as a scoped addition.',
+    },
+    {
+      path: '/locations/canada',
+      label: 'Canada',
+      blurb:
+        'The same continent and a different opening question: which hours we hold open, and what each milestone has to satisfy on paper.',
+    },
+    {
+      path: '/locations/australia',
+      label: 'Australia',
+      blurb:
+        'An afternoon-to-morning overlap, a test environment open throughout, and the release and support plan settled before launch.',
+    },
+    {
+      path: '/locations/singapore',
+      label: 'Singapore',
+      blurb:
+        'Head-office platforms designed for several markets at once, heavy on integrations and on a written decision trail.',
     },
   ],
   cta: {

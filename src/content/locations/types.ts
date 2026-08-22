@@ -1,5 +1,5 @@
 /**
- * Shape of one regional landing page (Phase 3A).
+ * Shape of one regional landing page, in two halves.
  *
  * These modules are plain data — no React, no icons — so three consumers read
  * them without pulling in the UI:
@@ -9,6 +9,10 @@
  *     Service JSON-LD (with `areaServed`) and BreadcrumbList from the same
  *     object
  *   - the nav/footer/homepage/About link lists read `path` and `navLabel`
+ *
+ * Phase 3B split the shape into `LocationMeta` (small, always in memory) and
+ * `LocationBody` (the copy, loaded as a route chunk), with `LocationContent`
+ * still the union of the two.
  *
  * A regional page is NOT a localized copy of a global service page and it is
  * NOT a template with the country name swapped. The layout is shared; every
@@ -85,7 +89,12 @@ export interface DeliveryDisclosure {
   points: string[];
 }
 
-export interface LocationContent {
+/**
+ * The lightweight half of a regional page: what the SEO registry, the sitemap,
+ * the navigation lists and the breadcrumbs need. Lives in `./manifest.ts`, the
+ * only locations module the main JavaScript bundle imports.
+ */
+export interface LocationMeta {
   /** Canonical path, e.g. `/locations/united-states`. */
   path: string;
   /** Full country name, exactly as schema.org `Country.name` will carry it. */
@@ -104,6 +113,18 @@ export interface LocationContent {
   shareTitle?: string;
   /** Sitemap priority. */
   priority: number;
+}
+
+/**
+ * The heavy half: one market's own copy, from the hero to the FAQs. One module
+ * per country, loaded as a route-level chunk when that page is opened.
+ *
+ * `path` is repeated here as the join key back to `LocationMeta`, so a body can
+ * never be composed against another country's metadata.
+ */
+export interface LocationBody {
+  /** Canonical path — the join key back into the manifest. */
+  path: string;
   /** The single H1. */
   h1: string;
   /** One-sentence positioning line, rendered under the H1. */
@@ -131,7 +152,14 @@ export interface LocationContent {
   /** How the commercial side is arranged. */
   engagement: LocationSectionHeader & { options: EngagementOption[] };
   faqs: LocationFaq[];
-  /** The other two active markets. Never a country without a live page. */
+  /** The other active markets. Never a country without a live page. */
   otherMarkets: OtherMarketLink[];
   cta: { title: string; body: string };
 }
+
+/**
+ * One whole regional page: its metadata and its copy. `./compose.ts` joins the
+ * two halves on `path`, so every consumer still sees the single object it saw
+ * before Phase 3B split the modules.
+ */
+export type LocationContent = LocationMeta & LocationBody;

@@ -1,0 +1,389 @@
+/**
+ * `/locations/canada` — written for this page only.
+ *
+ * The angle is the one Canadian enquiries actually open with: a business spread
+ * across several clock offsets that needs to know, concretely, when an outside
+ * engineering team will be reachable and what "done" will mean on paper. So
+ * this page leads on agreed collaboration hours, written acceptance criteria
+ * and where records are allowed to live — not on the time-zone arithmetic the
+ * United States page deals with, and not on the supplier-assurance framing the
+ * United Kingdom page uses.
+ *
+ * Language boundary stated plainly: delivery is in English. French localization
+ * is available only as separately scoped professional translation work, and no
+ * French-speaking staff are claimed.
+ */
+
+import type { LocationBody } from './types';
+
+export const canada: LocationBody = {
+  path: '/locations/canada',
+  h1: 'Software and AI Development for Canadian Businesses',
+  valueProp:
+    'An India-based software and AI development partner for businesses in Canada — collaboration hours agreed with each client, requirements and acceptance criteria written down first, and progress shown in a working build.',
+  heroHighlights: [
+    'Designed, built and supported from our office in Indore, India, for organisations across Canada',
+    'Collaboration hours fixed with you per engagement, rather than assumed from a map of provinces',
+    'Acceptance criteria written and approved before a milestone is treated as finished',
+    'English delivery; French localization available as separately scoped professional translation',
+  ],
+  intro: [
+    'A Canadian enquiry usually arrives with a system that has outgrown the way it is currently run, and a small internal technology group that cannot take it on this year. That might be an operations platform assembled out of shared drives and forms, a customer portal that was never finished, or a product idea with a budget attached and nobody free to build it. SCS Softwares takes that work on as an outside engineering team, working from Indore, India.',
+    'The first practical question is almost always the same, and it is a fair one: when will you actually be able to reach us? Canada covers six clock offsets, and the honest answer depends on which of them you work in. So we settle it per client. Before anything is scheduled we agree the hours we will be available to your team, write them into the engagement, and staff them — instead of implying we sit at a desk that answers whatever the hour is where you are.',
+    'The second question tends to be about paper. We write requirements and acceptance criteria before development opens, so "finished" is a condition someone signed rather than an opinion formed at the end of a milestone. Each milestone then ends in a demonstration of the running software against those criteria, and anything that changes is re-estimated and approved in writing before it is built.',
+    'The engineering itself covers custom software and internal business platforms, web and mobile applications, SaaS products, modernization of systems that already carry live work, and AI assistants, voice agents and workflow automation built into them. Where the data lives, who can reach it and what your privacy obligations require of us are settled during discovery, before an architecture is chosen. Delivery is in English; if a French interface is needed, that is scoped and quoted as professional translation work in its own right.',
+  ],
+  disclosure: {
+    title: 'Where the team building your software sits',
+    body:
+      'SCS Softwares operates from Indore, Madhya Pradesh, India. Work for Canadian organisations is delivered remotely from that office, and this page describes where a service is available rather than any presence in Canada.',
+    points: [
+      'There is no local office, no Canadian branch and no local phone number behind this page, and we do not represent one.',
+      'Delivery is remote at every stage: scoping calls, design review, milestone demonstrations, testing and handover all happen online.',
+      'Our company registration, registered address and telephone number are Indian, and they appear on each proposal, agreement and invoice we issue.',
+      'Nobody working on your project is employed in Canada, and we make no claim to Canadian incorporation, residency or on-site attendance.',
+      'We hold no certification under PIPEDA or any provincial privacy statute, and we give no legal, tax or regulatory advice for any province or territory.',
+      'We claim no Canadian government contract, framework listing or public-sector approval of any kind.',
+    ],
+  },
+  concerns: {
+    eyebrow: 'What gets asked first',
+    heading: 'The six questions Canadian buyers put to us early',
+    intro:
+      'These come up before anyone talks about technology, and they deserve a straight answer on the page rather than three meetings in.',
+    items: [
+      {
+        title: 'When will we actually be able to reach you',
+        body:
+          'During the hours we agree with you at kick-off, which are written into the engagement and staffed for the people on your project. We name a window rather than describing our availability in general terms, because a general description is what turns into a complaint later.',
+      },
+      {
+        title: 'What will "finished" mean for each milestone',
+        body:
+          'Whatever the acceptance criteria say. Each milestone is described as a list of conditions the software has to satisfy, agreed before the work starts, and the demonstration at the end of it walks through that list rather than through a slide deck.',
+      },
+      {
+        title: 'Where will our records be stored',
+        body:
+          'In the region you choose. Hosting location, backup location, who on our side holds access and what may be copied out of your environment are decided during discovery and recorded in the agreement, before any credential changes hands.',
+      },
+      {
+        title: 'What happens if we want to take the work elsewhere',
+        body:
+          'You take it. Repositories, design files, infrastructure accounts, environment configuration and the written documentation are yours throughout, and the handover pack is assembled as we go rather than reconstructed at the end.',
+      },
+      {
+        title: 'Can you deliver the product in French',
+        body:
+          'The build, the documentation and the meetings are in English. If a French interface is required we scope it as professional translation and localization work, quoted separately and reviewed by a qualified translator — we do not present ourselves as a French-language team.',
+      },
+      {
+        title: 'What happens when the requirement changes mid-build',
+        body:
+          'It gets priced. A change is written up, re-estimated against the original scope, and either approved or deferred before anyone opens an editor. Nothing is quietly absorbed and settled on the final invoice.',
+      },
+    ],
+  },
+  services: {
+    eyebrow: 'The underlying work',
+    heading: 'What a Canadian engagement is usually built from',
+    intro:
+      'Each of these pages describes the service itself, with no regional framing. This page covers the part that is specific to running one of them with a client in Canada.',
+    items: [
+      {
+        path: '/services/custom-software-development',
+        label: 'Custom Software Development',
+        blurb:
+          'The common starting point in this market: an internal business platform that replaces a set of spreadsheets, shared folders and manual approvals with one system of record.',
+      },
+      {
+        path: '/services/web-application-development',
+        label: 'Web Application Development',
+        blurb:
+          'Member portals, quoting tools, scheduling systems and reporting surfaces, together with the permissions model and administration screens your own staff will live in.',
+      },
+      {
+        path: '/services/mobile-app-development',
+        label: 'Mobile App Development',
+        blurb:
+          'iOS and Android applications for field crews, technicians and customers, including offline behaviour for the parts of the country where connectivity cannot be assumed.',
+      },
+      {
+        path: '/services/saas-development',
+        label: 'SaaS Development',
+        blurb:
+          'Subscription products taken from a pilot with a handful of accounts to a multi-tenant platform with plans, seats, billing and usage limits behind it.',
+      },
+      {
+        path: '/services/software-modernization',
+        label: 'Software Modernization',
+        blurb:
+          'For an application inherited from a supplier who has since moved on: an assessment first, then incremental change while the system keeps carrying its daily work.',
+      },
+      {
+        path: '/services/ai-development',
+        label: 'AI Development',
+        blurb:
+          'Assistants that answer from your own documents and structured AI steps inside existing processes, with the logging, cost limits and review points built in from the start.',
+      },
+      {
+        path: '/services/ai-voice-agent-development',
+        label: 'AI Voice Agent Development',
+        blurb:
+          'Spoken conversation inside your own product, with a defined set of actions it may take and a written rule for when a person is brought into the call.',
+      },
+      {
+        path: '/services/ai-video-consultation-agents',
+        label: 'AI Video Consultation Agents',
+        blurb:
+          'An avatar-led intake session that collects details in a structured form and produces a summary your team reviews before anything is acted on.',
+      },
+      {
+        path: '/services/ai-automation-integration',
+        label: 'AI Automation & Integration',
+        blurb:
+          'Document handling, structured extraction and workflow automation wired between the systems you already run, with an approval step and a trail of what happened.',
+      },
+    ],
+  },
+  projectTypes: {
+    eyebrow: 'Where this fits',
+    heading: 'The Canadian projects this arrangement suits',
+    intro:
+      'An outside engineering team is a good answer to some of these and a poor answer to others. This is the shape of work that has run well.',
+    items: [
+      {
+        title: 'An internal platform replacing a patchwork of tools',
+        body:
+          'Operations spread across spreadsheets, email approvals and a database somebody built years ago. The replacement gives the process one home, with roles, an approval chain and a record of who changed what.',
+      },
+      {
+        title: 'A member or customer portal with a real administrative side',
+        body:
+          'The public half is the easy half. The work is in the staff screens behind it — accounts, entitlements, documents, correspondence and the reporting a board or committee will ask for.',
+      },
+      {
+        title: 'An application for staff who are not at a desk',
+        body:
+          'Inspections, service calls, deliveries and site work, captured on a phone. Offline capture, sync rules and photo handling matter more here than visual polish, and they are what the estimate is mostly spent on.',
+      },
+      {
+        title: 'A subscription product moving past its pilot',
+        body:
+          'A tool that worked for a first group of accounts and now needs tenancy, plans, seat management, billing and the operational tooling to run all of it without a developer being involved.',
+      },
+      {
+        title: 'A system whose original supplier is gone',
+        body:
+          'Still running the business, still undocumented, and increasingly nobody wants to touch it. We assess it, write down what it actually does, and change it in steps rather than proposing a rewrite by reflex.',
+      },
+      {
+        title: 'An AI layer over a process that already works',
+        body:
+          'Drafting, classification, extraction or a question-answering assistant placed inside an existing workflow, with a person approving anything that reaches a customer or a record.',
+      },
+    ],
+  },
+  collaboration: {
+    eyebrow: 'The sequence',
+    heading: 'How a Canadian engagement is run, start to finish',
+    intro:
+      'Each stage below ends in a document you can read. That is deliberate: with part of the day unshared, the written output is what carries a decision across to the next morning.',
+    steps: [
+      {
+        title: 'Opening call and agreement on reachable hours',
+        body:
+          'A scheduled conversation about the problem, the constraint and the deadline — and, before it ends, the working hours we will hold open for you once the project starts.',
+        points: [
+          'Booked inside your own business day, not ours',
+          'The collaboration window agreed and confirmed in writing the same week',
+          'An early, direct answer if we are the wrong team for this build',
+        ],
+      },
+      {
+        title: 'Requirements and acceptance criteria',
+        body:
+          'Remote sessions to establish what the system must do, followed by a written specification in which every milestone carries the conditions it will be judged against.',
+        points: [
+          'Functional requirements, integrations, roles and edge cases in one document',
+          'Acceptance criteria written per milestone and approved before development',
+          'Data-location and privacy obligations captured at this stage, not after architecture',
+        ],
+      },
+      {
+        title: 'Estimate, agreement and environment setup',
+        body:
+          'An estimate expressed as a range with its assumptions listed, then the commercial terms, and only then access to anything that belongs to you.',
+        points: [
+          'Payment schedule, invoicing route and currency settled before kick-off',
+          'Repositories, environments and secret handling arranged in your accounts where possible',
+          'Named contacts and an escalation path on both sides, written down',
+        ],
+      },
+      {
+        title: 'Build cycles and milestone demonstrations',
+        body:
+          'Development runs in cycles, and each one closes with a live demonstration of the deployed build against the acceptance criteria for that milestone.',
+        points: [
+          'A deployed environment you can open and use between demonstrations',
+          'Each acceptance criterion walked through and marked met or outstanding',
+          'Change requests written up, re-estimated and approved before they enter a cycle',
+        ],
+      },
+      {
+        title: 'Release, documentation and the support decision',
+        body:
+          'Release is planned as a checklist with a rollback path. Afterwards you decide whether we stay on, and either answer is a normal one.',
+        points: [
+          'Deployment, store submission and rollback steps rehearsed before the date',
+          'Administration guide, architecture notes and credential handover delivered as part of the release',
+          'A support arrangement offered but never assumed — nothing about the handover depends on it',
+        ],
+      },
+    ],
+  },
+  communication: {
+    eyebrow: 'Availability',
+    heading: 'Agreeing collaboration hours across six clock offsets',
+    intro:
+      'Canada is not one time zone, and we would rather write down which hours we are holding for you than describe our availability in words that sound generous and mean nothing.',
+    points: [
+      'Indian Standard Time runs roughly eight to thirteen and a half hours ahead of local time in Canada, depending on the province and on whether daylight time is in effect.',
+      'Because that spread is so wide, we agree a recurring window with you at kick-off and record it in the engagement rather than publishing one here.',
+      'We do not offer coverage across every Canadian time zone, and we do not operate a desk that answers at any hour of the Canadian day.',
+      'Demonstrations, requirement sessions and approval meetings are scheduled inside your working hours, which usually means early morning for us.',
+      'Written notes, a change log and the current build status are posted after each cycle, so a colleague in another province can catch up without waiting for a call.',
+      'Urgent issues follow an escalation route named at kick-off, with a person to contact rather than a shared mailbox.',
+    ],
+    note:
+      'If your operation genuinely needs someone reachable across Pacific and Atlantic hours on the same day, say so in discovery. That is a staffing decision with a cost attached, and we would rather quote it honestly than agree to it in a meeting and miss it in month two.',
+  },
+  security: {
+    eyebrow: 'Data and privacy',
+    heading: 'Deciding where records live before the architecture is drawn',
+    intro:
+      'For most Canadian buyers this is a procurement question before it is a technical one, so it is answered during discovery and written into the agreement.',
+    points: [
+      'Hosting region and backup region are chosen with you and recorded before any infrastructure is created.',
+      'Whether personal information may leave your chosen region — and, if not, which components have to be redesigned — is settled at the same time.',
+      'Access is granted per person and per environment, reviewed during the project, and withdrawn as soon as someone leaves it.',
+      'Production data is not copied onto developer machines; test data is generated or masked instead.',
+      'Credentials move through a secret manager or your own vault, never through email or chat.',
+      'Confidentiality, intellectual-property assignment and any processing terms your counsel requires are signed before development begins.',
+    ],
+    note:
+      'We are not certified under PIPEDA, the provincial privacy statutes or any comparable framework, and we do not describe our software as compliant with them. What we can do is build to the controls your privacy officer or counsel specifies — residency, retention, logging, encryption, access review — and document what was implemented so they can assess it themselves.',
+  },
+  oversight: {
+    title: 'Who checks what the model produced',
+    body:
+      'An AI feature is a probabilistic component inside otherwise deterministic software, and the organisation using it carries the consequence when it is wrong. So the review step is designed at the same time as the feature, not added after a bad output.',
+    points: [
+      'A named person approves anything that changes a record, a payment, an entitlement or a document sent to a customer.',
+      'The system is built to return "not found" rather than to produce a confident answer it cannot support.',
+      'Prompts, tool definitions and source documents are versioned, so a wrong answer can be traced back to the change that caused it.',
+      'Confidence thresholds and the point at which a request is handed to a person are written into the specification.',
+      'The decisions the AI is not permitted to make alone are listed in the project documentation and reviewed at each release.',
+    ],
+  },
+  engagement: {
+    eyebrow: 'Commercial shapes',
+    heading: 'How Canadian engagements are usually arranged',
+    intro:
+      'Three arrangements cover nearly every project here. Which one fits depends on how well the requirement is understood on the day you ask.',
+    options: [
+      {
+        name: 'Milestone-priced build',
+        body:
+          'A defined scope broken into milestones, each with its own acceptance criteria and its own payment. Anything outside the written scope is quoted before it is built.',
+        bestFor: 'Suits a budget that has to be approved in advance and defended afterwards.',
+      },
+      {
+        name: 'Reserved engineering capacity',
+        body:
+          'An agreed number of people for an agreed number of months, working a backlog you own and reprioritise between cycles rather than a fixed specification.',
+        bestFor: 'Suits a roadmap that will move, or an internal team that needs a second one alongside it.',
+      },
+      {
+        name: 'Discovery and technical assessment',
+        body:
+          'A short, paid piece of work that produces a written assessment: what the system does, where the risk sits, and what the options would cost. No obligation to build with us afterwards.',
+        bestFor: 'Suits an inherited system, or a business case that needs an outside opinion before funding.',
+      },
+    ],
+  },
+  faqs: [
+    {
+      question: 'Does SCS Softwares have an office or entity in Canada?',
+      answer:
+        'No. We operate from Indore, India, and every Canadian project is delivered remotely from there. There is no Canadian address, no Canadian company registration and no local phone number attached to this page, and we would rather state that plainly than let a market page imply otherwise.',
+    },
+    {
+      question: 'How do you handle the fact that Canada spans several time zones?',
+      answer:
+        'By agreeing the hours per client instead of publishing a promise. At kick-off we fix a collaboration window that works for the people on your project, write it into the engagement and staff it. We deliberately do not claim coverage across every Canadian time zone, because holding Pacific and Atlantic hours on the same day is a staffing decision with a real cost, not a courtesy.',
+    },
+    {
+      question: 'Can you deliver the interface in French as well as English?',
+      answer:
+        'Delivery, documentation and meetings are in English. French localization is available, but only as separately scoped professional translation work: we build the application so that a second language can be added cleanly, then have the content translated and reviewed by a qualified translator and quoted as its own line. We do not present ourselves as a French-speaking team.',
+    },
+    {
+      question: 'Can our data stay in Canada?',
+      answer:
+        'Yes, if you choose a Canadian hosting region — the major cloud providers offer them, and the choice is made with you during discovery and recorded in the agreement before anything is provisioned. Where personal information may not leave that region, we design around it, including for backups, logs and any third-party service the application calls.',
+    },
+    {
+      question: 'Do you hold a PIPEDA certification?',
+      answer:
+        'We hold no certification under PIPEDA or any provincial privacy law, and we do not describe our work as certified against them. Compliance belongs to you as the organisation collecting the information; our part is to build what your privacy officer or counsel specifies and to document what we implemented so it can be reviewed. If a project cannot proceed without an accredited supplier, we will say so during discovery rather than after the contract.',
+    },
+    {
+      question: 'Who owns the code, the designs and the cloud accounts?',
+      answer:
+        'You do. Intellectual-property assignment is written into the agreement before development starts, infrastructure is created in your accounts wherever possible, and repositories, design files, documentation and credentials are handed over at the end. Nothing in the arrangement is designed to make leaving expensive.',
+    },
+    {
+      question: 'What does the first month look like in practice?',
+      answer:
+        'A scoping call, an agreed collaboration window, then remote requirement sessions and a written specification with acceptance criteria per milestone. Alongside it we settle hosting region, access and the commercial terms. Development starts once the specification is approved — and if the specification says the project is not worth doing, that is an acceptable outcome too.',
+    },
+  ],
+  otherMarkets: [
+    {
+      path: '/locations/united-states',
+      label: 'United States',
+      blurb:
+        'A comparable arrangement across a larger gap, with accountability, ownership and change control answered before signing.',
+    },
+    {
+      path: '/locations/united-kingdom',
+      label: 'United Kingdom',
+      blurb:
+        'Documented requirements and staged approvals, with supplier due diligence and a maintenance arrangement settled ahead of launch.',
+    },
+    {
+      path: '/locations/united-arab-emirates',
+      label: 'United Arab Emirates',
+      blurb:
+        'Mobile-first customer products delivered into a working day that already overlaps ours, with Arabic interface work scoped on its own.',
+    },
+    {
+      path: '/locations/australia',
+      label: 'Australia',
+      blurb:
+        'Scheduled collaboration windows, test environments and a release plan agreed before the first line of production code.',
+    },
+    {
+      path: '/locations/singapore',
+      label: 'Singapore',
+      blurb:
+        'Regional operations platforms and integration-heavy builds, run across the shortest working-day gap of any market we serve.',
+    },
+  ],
+  cta: {
+    title: 'Tell us what the system has to do and who has to sign it off',
+    body:
+      'Answer a few questions for an indicative estimate, talk the requirement through with our AI consultation agent, or send it straight to the team in Indore. All three arrive in the same place.',
+  },
+};

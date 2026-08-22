@@ -12,6 +12,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n/config';
 import ServicePage from '@/components/services/ServicePage';
+import { SERVICES_HUB_PATH, serviceBreadcrumb } from '@/content/services';
+import type { ServiceContent } from '@/content/services';
 import {
   AI_PILLAR_SERVICE,
   AI_SERVICE_CONTENT,
@@ -19,12 +21,9 @@ import {
   GROWTH_SERVICE_CONTENT,
   PILLAR_SERVICE,
   SERVICE_CONTENT,
-  SERVICES_HUB_PATH,
   SOFTWARE_SERVICE_CONTENT,
   SUPPORT_SERVICE_CONTENT,
-  serviceBreadcrumb,
-} from '@/content/services';
-import type { ServiceContent } from '@/content/services';
+} from '@/content/services/all';
 
 const render = (content: ServiceContent) =>
   renderToStaticMarkup(

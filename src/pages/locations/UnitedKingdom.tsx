@@ -1,7 +1,8 @@
 import React from 'react';
 import LocationPage from '@/components/locations/LocationPage';
-import { unitedKingdom } from '@/content/locations';
+import { locationContent } from '@/content/locations';
+import { unitedKingdom } from '@/content/locations/unitedKingdom';
 
-const UnitedKingdom = () => <LocationPage content={unitedKingdom} />;
+const UnitedKingdom = () => <LocationPage content={locationContent(unitedKingdom)} />;
 
 export default UnitedKingdom;

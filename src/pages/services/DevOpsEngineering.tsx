@@ -1,7 +1,8 @@
 import React from 'react';
 import ServicePage from '@/components/services/ServicePage';
-import { devopsEngineering } from '@/content/services';
+import { serviceContent } from '@/content/services';
+import { devopsEngineering } from '@/content/services/devopsEngineering';
 
-const DevOpsEngineering = () => <ServicePage content={devopsEngineering} />;
+const DevOpsEngineering = () => <ServicePage content={serviceContent(devopsEngineering)} />;
 
 export default DevOpsEngineering;

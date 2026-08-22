@@ -1,38 +1,42 @@
 /**
- * Every regional landing page, in the order navigation and the hub list them.
+ * The lightweight locations barrel.
  *
- * `src/seo/registry.ts`, the header, the footer, the homepage, the About page,
- * the hub and the page components all read this list, so a new market is added
- * in one place and reaches every surface. Adding a country here without also
- * writing its content module is a type error, which is deliberate: the
- * navigation must never link to a market page that does not exist.
+ * Everything here is small enough to live in the main JavaScript bundle: the
+ * metadata manifest, the required-service-link list, the breadcrumb builders,
+ * the two short site-wide blocks and the types. The `/locations` hub copy is in
+ * `./hub.ts` and each market's copy in its own module — both loaded as
+ * route-level chunks.
+ *
+ * Nothing in this file may import a country body module or the hub copy.
+ * `./all.ts` composes the full objects for tests and other build-time
+ * consumers.
  */
 
-import { locationsHub } from './hub';
-import { unitedArabEmirates } from './unitedArabEmirates';
-import { unitedKingdom } from './unitedKingdom';
-import { unitedStates } from './unitedStates';
-import type { LocationContent } from './types';
+export {
+  LOCATIONS_HUB_PATH,
+  LOCATION_META,
+  LOCATION_META_BY_PATH,
+  REQUIRED_SERVICE_LINKS,
+  locationsHubMeta,
+} from './manifest';
+export { locationContent } from './compose';
+export { aboutRemoteDeliverySection, homeInternationalSection } from './siteBlocks';
+export type {
+  CollaborationStep,
+  DeliveryDisclosure,
+  EngagementOption,
+  LocationBody,
+  LocationContent,
+  LocationFaq,
+  LocationMeta,
+  LocationSectionHeader,
+  OtherMarketLink,
+  ServiceLink,
+  TitledBlock,
+} from './types';
 
-/** The hub every country page's breadcrumb passes through. */
-export const LOCATIONS_HUB_PATH = locationsHub.path;
-
-/** The active markets. Exactly the countries with a written page. */
-export const LOCATION_CONTENT: LocationContent[] = [unitedStates, unitedKingdom, unitedArabEmirates];
-
-export const LOCATION_CONTENT_BY_PATH: Record<string, LocationContent> = Object.fromEntries(
-  LOCATION_CONTENT.map((location) => [location.path, location]),
-);
-
-/** Global service pages every country page has to link to (Phase 3A rule). */
-export const REQUIRED_SERVICE_LINKS = [
-  '/services/custom-software-development',
-  '/services/mobile-app-development',
-  '/services/web-application-development',
-  '/services/ai-development',
-  '/services/ai-voice-agent-development',
-  '/services/ai-video-consultation-agents',
-] as const;
+import { LOCATIONS_HUB_PATH, locationsHubMeta } from './manifest';
+import type { LocationMeta } from './types';
 
 export interface Crumb {
   name: string;
@@ -43,11 +47,14 @@ export interface Crumb {
  * Visible breadcrumb trail for a country page, and the source of its
  * BreadcrumbList JSON-LD: `Home › Locations › Country`. Both come from this one
  * function, so the trail and the markup cannot describe different paths.
+ *
+ * It takes only the metadata half, so the SEO registry builds every trail
+ * without loading a line of regional copy.
  */
-export function locationBreadcrumb(location: LocationContent): Crumb[] {
+export function locationBreadcrumb(location: Pick<LocationMeta, 'navLabel' | 'path'>): Crumb[] {
   return [
     { name: 'Home', path: '/' },
-    { name: locationsHub.navLabel, path: locationsHub.path },
+    { name: locationsHubMeta.navLabel, path: LOCATIONS_HUB_PATH },
     { name: location.navLabel, path: location.path },
   ];
 }
@@ -56,21 +63,6 @@ export function locationBreadcrumb(location: LocationContent): Crumb[] {
 export function locationsHubBreadcrumb(): Crumb[] {
   return [
     { name: 'Home', path: '/' },
-    { name: locationsHub.navLabel, path: locationsHub.path },
+    { name: locationsHubMeta.navLabel, path: LOCATIONS_HUB_PATH },
   ];
 }
-
-export { aboutRemoteDeliverySection, homeInternationalSection, locationsHub } from './hub';
-export { unitedArabEmirates, unitedKingdom, unitedStates };
-export type { LocationsHub, MarketEntry } from './hub';
-export type {
-  CollaborationStep,
-  DeliveryDisclosure,
-  EngagementOption,
-  LocationContent,
-  LocationFaq,
-  LocationSectionHeader,
-  OtherMarketLink,
-  ServiceLink,
-  TitledBlock,
-} from './types';

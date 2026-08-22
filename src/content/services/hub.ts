@@ -1,9 +1,14 @@
 /**
- * Copy for the `/services` hub. Kept here, beside the individual service
- * content, so the hub's title and description come from the same place as the
- * pages it lists — and so its blurbs are written for the hub rather than
- * copied from each page's own value proposition.
+ * Copy for the `/services` hub.
+ *
+ * Phase 3B moved the hub's own metadata into `./manifest.ts` — the small module
+ * the SEO registry and the navigation read — and left the body copy here. The
+ * two are spread back together at the bottom of this file, so `servicesHub`
+ * still exposes the same fields it always did, and only the `/services` route
+ * chunk pays for the prose.
  */
+
+import { servicesHubMeta } from './manifest';
 
 export interface HubEntry {
   path: string;
@@ -19,12 +24,7 @@ export interface HubGroup {
 }
 
 export const servicesHub = {
-  path: '/services',
-  navLabel: 'Services',
-  metaTitle: 'Software & AI Development Services | SCS Softwares',
-  metaDescription:
-    'Every service SCS Softwares delivers: custom software, mobile, web and SaaS development, modernization, AI and machine learning, plus UI/UX design, cloud, DevOps and SEO support.',
-  shareTitle: 'Services — SCS Softwares',
+  ...servicesHubMeta,
   h1: 'Software and AI Development Services',
   valueProp:
     'One India-based team covering the whole build: the product, the platform it runs on, and the AI inside it.',

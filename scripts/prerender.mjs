@@ -153,7 +153,11 @@ async function main() {
         const document =
           route.indexability === 'redirect'
             ? redirectDocument(route, entry.renderHead(url))
-            : applyTemplate(template, entry.render(url));
+            // `render` is async: it awaits the route's content chunk (the
+            // /services and /locations pages are code-split) before rendering,
+            // so the emitted HTML is the whole page and never a Suspense
+            // fallback.
+            : applyTemplate(template, await entry.render(url));
 
         for (const outputPath of outputPathsFor(url)) {
           await writeHtml(outputPath, document);

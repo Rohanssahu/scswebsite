@@ -8,16 +8,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n/config';
 import ServicesHub from './ServicesHub';
+import { SERVICES_HUB_PATH, hubBreadcrumb } from '@/content/services';
 import {
   AI_SERVICE_CONTENT,
   DELIVERY_SERVICE_CONTENT,
   GROWTH_SERVICE_CONTENT,
   SERVICE_CONTENT,
-  SERVICES_HUB_PATH,
   SOFTWARE_SERVICE_CONTENT,
-  hubBreadcrumb,
   servicesHub,
-} from '@/content/services';
+} from '@/content/services/all';
 import { ALL_SERVICE_NAV } from '@/data/serviceNav';
 
 const html = renderToStaticMarkup(

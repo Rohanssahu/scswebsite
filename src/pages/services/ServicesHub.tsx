@@ -6,8 +6,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Reveal from '@/components/Reveal';
 import Breadcrumbs from '@/components/services/Breadcrumbs';
-import { SERVICE_CONTENT_BY_PATH, hubBreadcrumb, servicesHub } from '@/content/services';
-import type { HubEntry } from '@/content/services';
+import { SERVICE_META_BY_PATH, hubBreadcrumb } from '@/content/services';
+import { servicesHub, type HubEntry } from '@/content/services/hub';
 
 /**
  * The `/services` hub: one page listing every service and linking to it.
@@ -35,7 +35,7 @@ const ServicesHub = () => {
 
   /** Display name for a hub entry, from the page's own content where we have it. */
   const nameFor = (entry: HubEntry): string => {
-    const service = SERVICE_CONTENT_BY_PATH[entry.path];
+    const service = SERVICE_META_BY_PATH[entry.path];
     if (service) return service.navLabel;
     return t(`services.names.${entry.path.replace('/services/', '')}`);
   };

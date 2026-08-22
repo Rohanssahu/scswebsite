@@ -16,6 +16,7 @@
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { AppProviders, SiteRoutes } from '../App';
+import { preloadRoute } from '../routes/contentRoutes';
 import { buildHeadTags, serializeHeadTags } from '../seo/head';
 import { matchRouteSeo } from '../seo/registry';
 
@@ -26,8 +27,22 @@ export interface RenderResult {
   head: string;
 }
 
-export function render(url: string): RenderResult {
+/**
+ * Render one route to complete markup.
+ *
+ * Async because the `/services/*` and `/locations/*` pages are route-level
+ * chunks: `preloadRoute` resolves the module for this URL and puts it in the
+ * loadable cache, after which `renderToString` — which is synchronous and
+ * cannot wait for a Suspense boundary — renders the real page rather than the
+ * fallback. Any other URL resolves immediately.
+ *
+ * A chunk that fails to load throws here, which fails that route in
+ * `scripts/prerender.mjs` and therefore fails the build. That is deliberate: a
+ * silently empty page is the one outcome this must never produce.
+ */
+export async function render(url: string): Promise<RenderResult> {
   const route = matchRouteSeo(url);
+  await preloadRoute(url);
   const html = renderToString(
     <AppProviders>
       <StaticRouter location={url}>

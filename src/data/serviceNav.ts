@@ -7,14 +7,18 @@
  * supporting design, cloud, delivery and growth pages. Every entry is a
  * canonical `/services/*` URL — the old `/gig/*` paths only exist as
  * forwarding stubs now, and nothing in the navigation points at them.
+ *
+ * It reads the metadata manifest rather than the page content modules, so the
+ * navigation stays synchronous and costs the main bundle a list of paths and
+ * labels instead of every service page's prose.
  */
 
 import {
-  AI_SERVICE_CONTENT,
-  DELIVERY_SERVICE_CONTENT,
-  GROWTH_SERVICE_CONTENT,
+  AI_SERVICE_META,
+  DELIVERY_SERVICE_META,
+  GROWTH_SERVICE_META,
   SERVICES_HUB_PATH,
-  SOFTWARE_SERVICE_CONTENT,
+  SOFTWARE_SERVICE_META,
 } from '@/content/services';
 
 export interface ServiceNavItem {
@@ -32,18 +36,18 @@ const toNavItem = (path: string): ServiceNavItem => ({
 export const SERVICES_HUB = { nameKey: 'all-services', path: SERVICES_HUB_PATH } as const;
 
 /** Software-development services. */
-export const CORE_SERVICE_NAV: ServiceNavItem[] = SOFTWARE_SERVICE_CONTENT.map((service) => toNavItem(service.path));
+export const CORE_SERVICE_NAV: ServiceNavItem[] = SOFTWARE_SERVICE_META.map((service) => toNavItem(service.path));
 
 /** AI services. */
-export const AI_SERVICE_NAV: ServiceNavItem[] = AI_SERVICE_CONTENT.map((service) => toNavItem(service.path));
+export const AI_SERVICE_NAV: ServiceNavItem[] = AI_SERVICE_META.map((service) => toNavItem(service.path));
 
 /** Design, cloud and delivery services — the ones that sit inside a build. */
-export const DELIVERY_SERVICE_NAV: ServiceNavItem[] = DELIVERY_SERVICE_CONTENT.map((service) =>
+export const DELIVERY_SERVICE_NAV: ServiceNavItem[] = DELIVERY_SERVICE_META.map((service) =>
   toNavItem(service.path),
 );
 
 /** Growth services, kept separate from the engineering offer. */
-export const GROWTH_SERVICE_NAV: ServiceNavItem[] = GROWTH_SERVICE_CONTENT.map((service) =>
+export const GROWTH_SERVICE_NAV: ServiceNavItem[] = GROWTH_SERVICE_META.map((service) =>
   toNavItem(service.path),
 );
 

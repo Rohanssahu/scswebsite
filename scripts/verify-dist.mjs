@@ -2,7 +2,8 @@
 /**
  * Post-build gate for `dist/`.
  *
- * Runs five scans and two live checks, and exits non-zero on any failure:
+ * Runs the static scans, the live static-server checks and the page-contract
+ * checks below, and exits non-zero on any failure:
  *
  *   1. broken internal links   — every internal href resolves to a real file
  *   2. missing local assets    — every src/href asset exists in dist
@@ -28,10 +29,29 @@
  *                                BreadcrumbList JSON-LD, links to the real
  *                                global service pages, the three CTAs — plus a
  *                                fabricated-location scan that fails the build
- *                                on any local office / entity / staff / phone /
- *                                certification / guaranteed-coverage claim, and
- *                                requires the India + remote + no-local-office
+ *                                on any local office / entity / registration /
+ *                                phone / certification / guaranteed-coverage
+ *                                claim in any of the six markets, and requires
+ *                                the India + remote + no-local-office
  *                                disclosure as visible copy
+ *   9. site-wide honesty scan  — the same unsupported-claim discipline applied
+ *                                to every public indexable page (homepage,
+ *                                About, Contact, both hubs, service pages,
+ *                                country pages), while still allowing an
+ *                                explicit denial such as "we do not guarantee
+ *                                rankings"
+ *  10. prerender completeness  — the /services and /locations pages are
+ *                                route-level chunks now, so every generated
+ *                                document is checked for a complete page rather
+ *                                than a Suspense fallback or an empty shell
+ *  11. bundle budget           — an evidence-based ceiling on the main bundle
+ *                                and on total JavaScript, plus proof that the
+ *                                homepage does not request the service or
+ *                                regional content chunks
+ *
+ * Sections 7 and 8 share the page-contract helpers in `assertPageContract` —
+ * the two used to carry near-identical copies of the metadata, breadcrumb,
+ * JSON-LD, CTA and sitemap assertions.
  *
  * Usage: node scripts/verify-dist.mjs
  */
@@ -40,6 +60,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import fss from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -95,6 +116,187 @@ const CONTENT_TYPES = {
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg', '.ico': 'image/x-icon', '.webp': 'image/webp',
 };
+
+// --- document readers, shared by every page-level scan ---------------------
+
+const metaOf = (html, key) =>
+  html.match(new RegExp(`<meta (?:name|property)="${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" content="([^"]*)"`))?.[1] ?? '';
+const titleOf = (html) => html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+const canonicalOf = (html) => html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+const robotsOf = (html) => html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+
+/**
+ * The markup a crawler reads before any JavaScript runs: everything the
+ * prerenderer injected into `#root`, with the module script and after excluded.
+ */
+function prerenderedBody(html) {
+  const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
+  const text = decodeEntities(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+  return { body, text, words: text === '' ? 0 : text.split(' ').length };
+}
+
+/** All visible text in the document, entity-decoded — used for crumb checks. */
+const visibleText = (html) => decodeEntities(html.replace(/<[^>]+>/g, ' '));
+
+function jsonLdBlocks(html) {
+  return [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].flatMap((match) => {
+    const raw = match[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&');
+    try {
+      return [JSON.parse(raw)];
+    } catch {
+      fail('structured-data', `unparseable JSON-LD block: ${raw.slice(0, 80)}`);
+      return [];
+    }
+  });
+}
+
+/** A negation close in front of a phrase turns a claim into a disclaimer. */
+const DENIAL_WORDS = /\b(?:no|not|never|cannot|can't|without|nor|neither|nothing|none|do not|does not|will not|hold no|have no|make no|claim no|offer no|give no)\b/i;
+
+/** The sentence a match sits inside, so a question can be told from a claim. */
+function sentenceAround(text, index) {
+  const start = Math.max(
+    text.lastIndexOf('.', index),
+    text.lastIndexOf('?', index),
+    text.lastIndexOf('!', index),
+  );
+  const rest = text.slice(index);
+  const endOffset = rest.search(/[.?!]/);
+  return text.slice(start + 1, endOffset === -1 ? undefined : index + endOffset + 1).trim();
+}
+
+/** True when `text` denies, rather than asserts, the phrase found at `index`. */
+function isDenied(text, index) {
+  return DENIAL_WORDS.test(text.slice(Math.max(0, index - 140), index));
+}
+
+/** The three conversion destinations every content page has to offer. */
+const REQUIRED_CTAS = ['/project-analysis', '/schedule-call', '/contact'];
+
+/** Open Graph and Twitter keys a share card needs to render correctly. */
+const REQUIRED_SHARE_KEYS = [
+  'og:title',
+  'og:description',
+  'og:url',
+  'og:image',
+  'twitter:card',
+  'twitter:title',
+  'twitter:description',
+];
+
+/**
+ * The contract every prerendered content page satisfies, in one place.
+ *
+ * `checkServicePages` and `checkLocationPages` previously each carried their own
+ * copy of these assertions, which is how they drifted (the service pages never
+ * checked `og:image`, the location pages never checked the hub back-link). The
+ * differences that are real — how much copy a hub carries versus a page, which
+ * JSON-LD node types belong on it — stay as options.
+ *
+ * Returns the parsed document so the caller can make its own extra assertions.
+ */
+function assertPageContract(scan, urlPath, html, options) {
+  const { minimumWords, sitemapLocs, titles, descriptions, expectSelfCanonical = true } = options;
+  const { text: bodyText, words } = prerenderedBody(html);
+
+  // --- physical HTML with meaningful copy before JavaScript -----------------
+  if (words < minimumWords) fail(scan, `${urlPath}: only ${words} words of prerendered copy`);
+
+  // --- exactly one H1 -------------------------------------------------------
+  const h1s = html.match(/<h1[\s>]/g) ?? [];
+  if (h1s.length !== 1) fail(scan, `${urlPath}: ${h1s.length} <h1> elements`);
+
+  // --- unique metadata, self-canonical, indexable ---------------------------
+  const title = titleOf(html);
+  const description = metaOf(html, 'description');
+  const canonical = canonicalOf(html);
+  const robots = robotsOf(html);
+  if (titles.has(title)) fail(scan, `${urlPath}: title duplicates ${titles.get(title)}`);
+  titles.set(title, urlPath);
+  if (descriptions.has(description)) {
+    fail(scan, `${urlPath}: description duplicates ${descriptions.get(description)}`);
+  }
+  descriptions.set(description, urlPath);
+  if (expectSelfCanonical && canonical !== `${ORIGIN}${urlPath}`) {
+    fail(scan, `${urlPath}: canonical is "${canonical}"`);
+  }
+  if (robots !== 'index,follow') fail(scan, `${urlPath}: robots="${robots}"`);
+  for (const key of REQUIRED_SHARE_KEYS) {
+    if (!new RegExp(`<meta (?:name|property)="${key}" content="[^"]+"`).test(html)) {
+      fail(scan, `${urlPath}: missing ${key}`);
+    }
+  }
+  // No hreflang anywhere: the regional pages are separate service pages, not
+  // translations of one localized page, and nothing else is localized either.
+  if (/rel="alternate"[^>]*hreflang=/.test(html)) {
+    fail(scan, `${urlPath}: carries an hreflang alternate`);
+  }
+
+  // --- sitemap membership ---------------------------------------------------
+  if (!sitemapLocs.includes(`${ORIGIN}${urlPath}`)) {
+    fail(scan, `${urlPath} is missing from sitemap.xml`);
+  }
+
+  // --- visible breadcrumb ---------------------------------------------------
+  if (!html.includes('aria-label="Breadcrumb"')) fail(scan, `${urlPath}: no visible breadcrumb`);
+  if (!html.includes('aria-current="page"')) fail(scan, `${urlPath}: breadcrumb marks no current page`);
+
+  // --- the three required calls to action -----------------------------------
+  for (const target of REQUIRED_CTAS) {
+    if (!html.includes(`href="${target}"`)) fail(scan, `${urlPath}: no link to ${target}`);
+  }
+
+  return { bodyText, words, title, description, canonical, robots };
+}
+
+/**
+ * The BreadcrumbList contract: the right depth, the right trail, ending on the
+ * page's own canonical, and every crumb name readable on the page itself.
+ */
+function assertBreadcrumbJsonLd(urlPath, html, breadcrumb, { expectedDepth, expectedNames, canonical }) {
+  if (!breadcrumb) {
+    fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
+    return;
+  }
+  const items = breadcrumb.itemListElement ?? [];
+  if (expectedDepth !== undefined && items.length !== expectedDepth) {
+    fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s), expected ${expectedDepth}`);
+  } else if (expectedDepth === undefined && items.length < 2) {
+    fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s)`);
+  }
+  (expectedNames ?? []).forEach((name, index) => {
+    if (items[index]?.name !== name) {
+      fail('structured-data', `${urlPath}: crumb ${index + 1} is "${items[index]?.name}", expected "${name}"`);
+    }
+  });
+  if (items.at(-1)?.item !== canonical) {
+    fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
+  }
+  const visible = visibleText(html);
+  for (const item of items) {
+    if (!visible.includes(item.name)) {
+      fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
+    }
+  }
+}
+
+/** Word bigrams, for the duplicate-content measure. */
+const bigrams = (text) => {
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const set = new Set();
+  for (let i = 0; i < words.length - 1; i += 1) set.add(`${words[i]} ${words[i + 1]}`);
+  return set;
+};
+
+/** Jaccard overlap of two texts' bigrams: 0 = nothing shared, 1 = identical. */
+function similarity(a, b) {
+  const left = bigrams(a);
+  const right = bigrams(b);
+  if (left.size === 0 || right.size === 0) return 0;
+  let shared = 0;
+  for (const gram of left) if (right.has(gram)) shared += 1;
+  return shared / (left.size + right.size - shared);
+}
 
 // ---------------------------------------------------------------------------
 // 1-5: static scans
@@ -241,12 +443,18 @@ function startServer() {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
 }
 
-async function serveAndCheck() {
+/** Run `body` against a freshly served copy of dist, then close the server. */
+async function withServer(body) {
   const server = await startServer();
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const meta = (html, name) => html.match(new RegExp(`<meta name="${name}" content="([^"]+)"`))?.[1];
-
   try {
+    return await body(`http://127.0.0.1:${server.address().port}`);
+  } finally {
+    server.close();
+  }
+}
+
+async function serveAndCheck() {
+  await withServer(async (base) => {
     const htmlFiles = await walk(DIST, (f) => f.endsWith('.html'));
     // Every generated document, reached through its public URL form(s).
     const urls = new Set(['/']);
@@ -265,13 +473,13 @@ async function serveAndCheck() {
         continue;
       }
       if (!/<title>[^<]+<\/title>/.test(html)) fail('static-server', `GET ${url}: no <title>`);
-      if (!meta(html, 'description')) fail('static-server', `GET ${url}: no meta description`);
-      if (!meta(html, 'robots')) fail('static-server', `GET ${url}: no meta robots`);
+      if (!metaOf(html, 'description')) fail('static-server', `GET ${url}: no meta description`);
+      if (!robotsOf(html)) fail('static-server', `GET ${url}: no meta robots`);
       // The landmark is required on any page a crawler may index. The
       // session-scoped result page prerenders to its Suspense fallback (its
       // content depends on the visitor's own stored analysis), and a redirect
       // stub has no page body at all.
-      const indexable = meta(html, 'robots') === 'index,follow';
+      const indexable = robotsOf(html) === 'index,follow';
       if (indexable && !html.includes('id="main-content"')) {
         fail('static-server', `GET ${url}: no <main id="main-content"> landmark`);
       }
@@ -288,21 +496,19 @@ async function serveAndCheck() {
       if (response.status !== 404) {
         fail('spa-fallback', `GET ${url} -> ${response.status} (expected the 404.html fallback)`);
       }
-      if (meta(html, 'robots') !== 'noindex,nofollow') {
-        fail('spa-fallback', `GET ${url}: robots="${meta(html, 'robots')}"`);
+      if (robotsOf(html) !== 'noindex,nofollow') {
+        fail('spa-fallback', `GET ${url}: robots="${robotsOf(html)}"`);
       }
       if (!html.includes('<script type="module"')) {
         fail('spa-fallback', `GET ${url}: fallback does not load the app bundle`);
       }
     }
     notes.push('verified the SPA fallback for 4 dynamic/unknown paths');
-  } finally {
-    server.close();
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
-// 7: the Phase 2A service pages, served through the static server
+// the two content sections
 // ---------------------------------------------------------------------------
 
 /** The hub, then every canonical service URL it lists. */
@@ -325,6 +531,40 @@ const SERVICE_PATHS = [
   '/services/devops-engineering',
   '/services/digital-marketing',
 ];
+
+const LOCATIONS_HUB_PATH = '/locations';
+
+/** Exactly the markets that have a written page. */
+const LOCATION_PATHS = [
+  '/locations/united-states',
+  '/locations/united-kingdom',
+  '/locations/united-arab-emirates',
+  '/locations/canada',
+  '/locations/australia',
+  '/locations/singapore',
+];
+
+/**
+ * Countries named on the hub as future markets. None may be linked anywhere.
+ * Canada, Australia and Singapore graduated to real pages in Phase 3B.
+ */
+const UNWRITTEN_MARKET_SLUGS = ['germany', 'netherlands', 'turkey'];
+
+/** The global service pages every regional page has to link to. */
+const REQUIRED_SERVICE_LINKS = [
+  '/services/custom-software-development',
+  '/services/mobile-app-development',
+  '/services/web-application-development',
+  '/services/saas-development',
+  '/services/ai-development',
+  '/services/ai-voice-agent-development',
+  '/services/ai-video-consultation-agents',
+  '/services/ai-automation-integration',
+];
+
+// ---------------------------------------------------------------------------
+// 7: the service pages, served through the static server
+// ---------------------------------------------------------------------------
 
 /** Claims these pages must never make. Checked against the rendered text. */
 const FABRICATION_PATTERNS = [
@@ -374,25 +614,11 @@ const LEGACY_SERVICE_FORWARDS = [
   ['/gig/digital-marketing', '/services/digital-marketing'],
 ];
 
-function jsonLdBlocks(html) {
-  return [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].flatMap((match) => {
-    const raw = match[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&');
-    try {
-      return [JSON.parse(raw)];
-    } catch {
-      fail('structured-data', `unparseable JSON-LD block: ${raw.slice(0, 80)}`);
-      return [];
-    }
-  });
-}
-
 async function checkServicePages(sitemapLocs) {
-  const server = await startServer();
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const titles = new Map();
-  const descriptions = new Map();
+  await withServer(async (base) => {
+    const titles = new Map();
+    const descriptions = new Map();
 
-  try {
     for (const urlPath of [SERVICES_HUB_PATH, ...SERVICE_PATHS]) {
       const isHub = urlPath === SERVICES_HUB_PATH;
       const response = await fetch(`${base}${urlPath}`);
@@ -402,13 +628,15 @@ async function checkServicePages(sitemapLocs) {
         continue;
       }
 
-      // --- physical HTML with meaningful copy before JavaScript ------------
-      const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
-      const bodyText = decodeEntities(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
-      const words = bodyText.split(' ').length;
+      // The shared contract: copy, one H1, unique metadata, self-canonical,
+      // index,follow, share cards, sitemap membership, breadcrumb, three CTAs.
       // The hub is an index page, so it carries less copy than a service page.
-      const minimumWords = isHub ? 400 : 800;
-      if (words < minimumWords) fail('service-pages', `${urlPath}: only ${words} words of prerendered copy`);
+      const { bodyText, canonical } = assertPageContract('service-pages', urlPath, html, {
+        minimumWords: isHub ? 400 : 800,
+        sitemapLocs,
+        titles,
+        descriptions,
+      });
 
       // --- no fabricated claims --------------------------------------------
       for (const [pattern, label] of FABRICATION_PATTERNS) {
@@ -416,45 +644,13 @@ async function checkServicePages(sitemapLocs) {
         if (!hit) continue;
         // A disclaimer may use the word; a claim may not. Require a negation
         // close in front of it.
-        const index = bodyText.indexOf(hit[0]);
-        const context = bodyText.slice(Math.max(0, index - 140), index);
-        if (!/\b(?:no|not|never|cannot|without|nor|do not|does not|will not)\b/i.test(context)) {
+        if (!isDenied(bodyText, bodyText.indexOf(hit[0]))) {
           fail('fabricated-claims', `${urlPath}: ${label} — "${hit[0]}"`);
         }
       }
       for (const pattern of REQUIRED_DISCLAIMERS[urlPath] ?? []) {
         if (!pattern.test(bodyText)) fail('fabricated-claims', `${urlPath}: missing disclaimer ${pattern}`);
       }
-      const h1s = html.match(/<h1[\s>]/g) ?? [];
-      if (h1s.length !== 1) fail('service-pages', `${urlPath}: ${h1s.length} <h1> elements`);
-
-      // --- unique metadata, correct canonical, indexable -------------------
-      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
-      const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
-      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
-      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
-      if (titles.has(title)) fail('service-pages', `${urlPath}: title duplicates ${titles.get(title)}`);
-      titles.set(title, urlPath);
-      if (descriptions.has(description)) {
-        fail('service-pages', `${urlPath}: description duplicates ${descriptions.get(description)}`);
-      }
-      descriptions.set(description, urlPath);
-      if (canonical !== `${ORIGIN}${urlPath}`) fail('service-pages', `${urlPath}: canonical is "${canonical}"`);
-      if (robots !== 'index,follow') fail('service-pages', `${urlPath}: robots="${robots}"`);
-      for (const key of ['og:title', 'og:description', 'og:url', 'twitter:title', 'twitter:description']) {
-        if (!new RegExp(`<meta (?:name|property)="${key}" content="[^"]+"`).test(html)) {
-          fail('service-pages', `${urlPath}: missing ${key}`);
-        }
-      }
-
-      // --- sitemap ----------------------------------------------------------
-      if (!sitemapLocs.includes(`${ORIGIN}${urlPath}`)) {
-        fail('service-pages', `${urlPath} is missing from sitemap.xml`);
-      }
-
-      // --- visible breadcrumb ----------------------------------------------
-      if (!html.includes('aria-label="Breadcrumb"')) fail('service-pages', `${urlPath}: no visible breadcrumb`);
-      if (!html.includes('aria-current="page"')) fail('service-pages', `${urlPath}: breadcrumb marks no current page`);
 
       // --- Service + BreadcrumbList structured data, matching the page ------
       const blocks = jsonLdBlocks(html);
@@ -468,28 +664,10 @@ async function checkServicePages(sitemapLocs) {
       } else if (service.url !== canonical) {
         fail('structured-data', `${urlPath}: Service.url is "${service.url}"`);
       }
-      if (!breadcrumb) fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
-      else {
-        const items = breadcrumb.itemListElement ?? [];
-        if (items.length < 2) fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s)`);
-        if (items.at(-1)?.item !== canonical) {
-          fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
-        }
-        // Every crumb name must be readable on the page a visitor sees. The
-        // markup carries entity-encoded text ("AI Automation &amp; ..."), so
-        // decode before comparing against the JSON-LD name.
-        const text = decodeEntities(html.replace(/<[^>]+>/g, ' '));
-        for (const item of items) {
-          if (!text.includes(item.name)) {
-            fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
-          }
-        }
-      }
-
-      // --- the three required calls to action -------------------------------
-      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
-        if (!html.includes(`href="${target}"`)) fail('service-pages', `${urlPath}: no link to ${target}`);
-      }
+      assertBreadcrumbJsonLd(urlPath, html, breadcrumb, {
+        expectedNames: isHub ? ['Home', 'Services'] : ['Home', 'Services'],
+        canonical,
+      });
 
       // --- hub linkage -------------------------------------------------------
       if (isHub) {
@@ -506,16 +684,13 @@ async function checkServicePages(sitemapLocs) {
       const response = await fetch(`${base}${from}`);
       const html = await response.text();
       if (response.status !== 200) fail('legacy-forwards', `GET ${from} -> ${response.status}`);
-      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1];
-      if (robots !== 'noindex,follow') fail('legacy-forwards', `${from}: robots="${robots}"`);
-      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
-      if (canonical !== `${ORIGIN}${to}`) fail('legacy-forwards', `${from}: canonical is "${canonical}"`);
+      if (robotsOf(html) !== 'noindex,follow') fail('legacy-forwards', `${from}: robots="${robotsOf(html)}"`);
+      if (canonicalOf(html) !== `${ORIGIN}${to}`) fail('legacy-forwards', `${from}: canonical is "${canonicalOf(html)}"`);
       if (!html.includes(`content="0; url=${to}"`)) fail('legacy-forwards', `${from}: no meta refresh to ${to}`);
       if (!html.includes('window.location.replace')) fail('legacy-forwards', `${from}: no script redirect`);
       if (sitemapLocs.includes(`${ORIGIN}${from}`)) fail('legacy-forwards', `${from} is still in the sitemap`);
       // The destination must be a real page, not another stub.
-      const target = resolveDistPath(to);
-      if (!target) fail('legacy-forwards', `${from} forwards to ${to}, which has no file in dist`);
+      if (!resolveDistPath(to)) fail('legacy-forwards', `${from} forwards to ${to}, which has no file in dist`);
     }
 
     // --- nothing anywhere in the build links to a retired /gig/ URL ---------
@@ -533,52 +708,37 @@ async function checkServicePages(sitemapLocs) {
     notes.push(
       `verified the services hub, ${SERVICE_PATHS.length} service pages and ${LEGACY_SERVICE_FORWARDS.length} legacy forwards`,
     );
-  } finally {
-    server.close();
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
-// 8: the Phase 3A regional pages, served through the static server
+// 8: the regional pages, served through the static server
 // ---------------------------------------------------------------------------
-
-const LOCATIONS_HUB_PATH = '/locations';
-
-/** Exactly the markets that have a written page. */
-const LOCATION_PATHS = [
-  '/locations/united-states',
-  '/locations/united-kingdom',
-  '/locations/united-arab-emirates',
-];
-
-/** Countries named on the hub as future markets. None may be linked anywhere. */
-const UNWRITTEN_MARKET_SLUGS = ['canada', 'australia', 'germany', 'netherlands', 'singapore', 'turkey'];
-
-/** The global service pages every regional page has to link to. */
-const REQUIRED_SERVICE_LINKS = [
-  '/services/custom-software-development',
-  '/services/mobile-app-development',
-  '/services/web-application-development',
-  '/services/ai-development',
-  '/services/ai-voice-agent-development',
-  '/services/ai-video-consultation-agents',
-];
 
 /**
  * Claims that are a lie on a regional page in any context whatsoever. No
  * negation rescues these — the phrasing itself is the problem.
+ *
+ * Extended in Phase 3B to the three new markets: Canadian, Australian and
+ * Singapore offices, teams, staff and entities, the +61 and +65 dialling codes,
+ * and the PIPEDA / PDPA / Privacy Act certification claims that would be the
+ * obvious thing to fabricate on those pages.
  */
 const FABRICATED_LOCATION_PATTERNS = [
-  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati) (?:office|team|staff|branch|headquarters)\b/i, 'a local office or team'],
-  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|Sharjah|London|New York)\b/i, 'a foreign office'],
-  [/\b(?:based|headquartered|located|registered) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i, 'a foreign base'],
-  [/\+1[\s-]?\(?\d{3}/, 'a US telephone number'],
+  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a local office, team or entity'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth)\b/i, 'a foreign office'],
+  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth)\b/i, 'a foreign base'],
+  [/\+1[\s-]?\(?\d{3}/, 'a North American telephone number'],
   [/\+44[\s-]?\d{2}/, 'a UK telephone number'],
   [/\+971[\s-]?\d/, 'a UAE telephone number'],
+  [/\+61[\s-]?\d/, 'an Australian telephone number'],
+  [/\+65[\s-]?\d/, 'a Singapore telephone number'],
   [/\bfully (?:compliant|certified|secure|GDPR)\b/i, 'an absolute compliance claim'],
-  [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2) compliant\b/i, 'a compliance claim'],
+  [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2|PIPEDA|PDPA) compliant\b/i, 'a compliance claim'],
+  [/\b(?:PIPEDA|PDPA|Privacy Act|Australian Privacy Principles)[- ]?(?:certified|compliant|accredited|approved)\b/i, 'a named privacy-framework certification'],
   [/\bgovernment[- ](?:approved|certified|licensed)\b/i, 'a government approval'],
-  [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|results?)\b/i, 'a guaranteed outcome or coverage'],
+  [/\blocal government (?:approval|approved|endorsement)\b/i, 'a local government approval'],
+  [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|results?|timezone|time[- ]zone)\b/i, 'a guaranteed outcome or coverage'],
   [/\b24\/7 (?:support|coverage|availability)\b/i, 'round-the-clock coverage'],
   [/\baround[- ]the[- ]clock (?:support|coverage|availability)\b/i, 'round-the-clock coverage'],
   [/\balways available\b/i, 'continuous availability'],
@@ -593,7 +753,7 @@ const FABRICATED_LOCATION_PATTERNS = [
   [/\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY) \d{5}(?:-\d{4})?\b/, 'a US postal address'],
   [/\b(?:E|EC|N|NW|SE|SW|W|WC|B|M|LS|G|EH|CF|BS|L)\d{1,2}[A-Z]? ?\d[A-Z]{2}\b/, 'a UK postcode'],
   [/\bP\.? ?O\.? Box\b/i, 'a PO box'],
-  [/\b(?:Suite|Ste\.|Street|Avenue|Boulevard|Sheikh Zayed Road)\b[^.]{0,60}\b(?:USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i, 'a street address in a target country'],
+  [/\b(?:Suite|Ste\.|Street|Avenue|Boulevard|Sheikh Zayed Road)\b[^.]{0,60}\b(?:USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|London|New York|Toronto|Sydney)\b/i, 'a street address in a target country'],
   [/\bfastest[- ]growing\b/i, 'a growth ranking'],
 ];
 
@@ -607,16 +767,18 @@ const DENIAL_ONLY_PATTERNS = [
   [/\blocal team\b/i, 'a local team'],
   [/\blocal (?:employees|staff)\b/i, 'local employees'],
   [/\blocal (?:phone|telephone)\b/i, 'a local phone number'],
+  [/\blocal (?:entity|registration|licence|license)\b/i, 'a local entity or registration'],
   [/\blocally registered\b/i, 'local registration'],
+  [/\blocally based\b/i, 'a local presence'],
   [/\bregistered (?:entity|company|branch)\b/i, 'a registered foreign entity'],
+  [/\bgovernment (?:approval|panel|framework) \b/i, 'a government approval'],
   [/\bguarantee[a-z]*\b/i, 'a guarantee'],
   [/\bcompliant\b/i, 'a compliance claim'],
   [/\bcertif(?:ied|ication)\b/i, 'a certification'],
+  [/\baccredit(?:ed|ation)\b/i, 'an accreditation'],
   [/\btrade licen[cs]e\b/i, 'a trade licence'],
   [/\b(?:HIPAA|SOC ?2|PCI ?DSS|ISO ?\d{4,}|Cyber Essentials)[- ]?(?:certified|compliant|accredited)\b/i, 'a named-framework certification'],
 ];
-
-const DENIAL_WORDS = /\b(?:no|not|never|cannot|can't|without|nor|neither|nothing|none|do not|does not|will not|hold no|have no|make no|claim no)\b/i;
 
 /**
  * Text every regional page must contain as visible copy: SCS operates from
@@ -624,22 +786,10 @@ const DENIAL_WORDS = /\b(?:no|not|never|cannot|can't|without|nor|neither|nothing
  * represented in that market.
  */
 const REQUIRED_LOCATION_DISCLOSURES = [
-  [/(?:operates|works|working) from Indore|based in Indore|from Indore, (?:Madhya Pradesh, )?India/i, 'operates from Indore, India'],
-  [/delivered remotely|delivery is remote|remote(?:ly)? from (?:that office|India)|serves .{0,60} remotely/i, 'delivery is remote'],
+  [/(?:operates|works|working) from Indore|based in Indore|from Indore, (?:Madhya Pradesh, )?India|from one office in Indore/i, 'operates from Indore, India'],
+  [/delivered remotely|delivery is remote|remote(?:ly)? from (?:that office|there|India)|serves .{0,60} remotely/i, 'delivery is remote'],
   [/no local office|do not maintain a local office|have no premises|there is no local office/i, 'no local office in this market'],
 ];
-
-/** The sentence a match sits inside, so a question can be told from a claim. */
-function sentenceAround(text, index) {
-  const start = Math.max(
-    text.lastIndexOf('.', index),
-    text.lastIndexOf('?', index),
-    text.lastIndexOf('!', index),
-  );
-  const rest = text.slice(index);
-  const endOffset = rest.search(/[.?!]/);
-  return text.slice(start + 1, endOffset === -1 ? undefined : index + endOffset + 1).trim();
-}
 
 function scanFabricatedLocation(urlPath, bodyText) {
   for (const [pattern, label] of FABRICATED_LOCATION_PATTERNS) {
@@ -652,8 +802,8 @@ function scanFabricatedLocation(urlPath, bodyText) {
       const index = match.index ?? 0;
       // A question asserts nothing — the answer beneath it is what must be honest.
       if (sentenceAround(bodyText, index).endsWith('?')) continue;
-      const before = bodyText.slice(Math.max(0, index - 140), index);
-      if (!DENIAL_WORDS.test(before)) {
+      if (!isDenied(bodyText, index)) {
+        const before = bodyText.slice(Math.max(0, index - 140), index);
         fail('fabricated-location', `${urlPath}: ${label} with no denial in front — "…${before.slice(-60)}${match[0]}"`);
       }
     }
@@ -661,13 +811,11 @@ function scanFabricatedLocation(urlPath, bodyText) {
 }
 
 async function checkLocationPages(sitemapLocs) {
-  const server = await startServer();
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const titles = new Map();
-  const descriptions = new Map();
-  const bodies = new Map();
+  await withServer(async (base) => {
+    const titles = new Map();
+    const descriptions = new Map();
+    const bodies = new Map();
 
-  try {
     for (const urlPath of [LOCATIONS_HUB_PATH, ...LOCATION_PATHS]) {
       const isHub = urlPath === LOCATIONS_HUB_PATH;
       const response = await fetch(`${base}${urlPath}`);
@@ -677,50 +825,13 @@ async function checkLocationPages(sitemapLocs) {
         continue;
       }
 
-      // --- physical HTML with meaningful copy before JavaScript ------------
-      const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
-      const bodyText = decodeEntities(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
-      const words = bodyText.split(' ').length;
-      const minimumWords = isHub ? 500 : 1200;
-      if (words < minimumWords) fail('location-pages', `${urlPath}: only ${words} words of prerendered copy`);
+      const { bodyText, canonical } = assertPageContract('location-pages', urlPath, html, {
+        minimumWords: isHub ? 500 : 1200,
+        sitemapLocs,
+        titles,
+        descriptions,
+      });
       bodies.set(urlPath, bodyText);
-
-      // --- exactly one H1 --------------------------------------------------
-      const h1s = html.match(/<h1[\s>]/g) ?? [];
-      if (h1s.length !== 1) fail('location-pages', `${urlPath}: ${h1s.length} <h1> elements`);
-
-      // --- unique metadata, self-canonical, indexable -----------------------
-      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
-      const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
-      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
-      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
-      if (titles.has(title)) fail('location-pages', `${urlPath}: title duplicates ${titles.get(title)}`);
-      titles.set(title, urlPath);
-      if (descriptions.has(description)) {
-        fail('location-pages', `${urlPath}: description duplicates ${descriptions.get(description)}`);
-      }
-      descriptions.set(description, urlPath);
-      if (canonical !== `${ORIGIN}${urlPath}`) fail('location-pages', `${urlPath}: canonical is "${canonical}"`);
-      if (robots !== 'index,follow') fail('location-pages', `${urlPath}: robots="${robots}"`);
-      for (const key of ['og:title', 'og:description', 'og:url', 'og:image', 'twitter:card', 'twitter:title', 'twitter:description']) {
-        if (!new RegExp(`<meta (?:name|property)="${key}" content="[^"]+"`).test(html)) {
-          fail('location-pages', `${urlPath}: missing ${key}`);
-        }
-      }
-      // Phase 3A ships no hreflang: these are regional service pages, not
-      // translations of one localized page.
-      if (/rel="alternate"[^>]*hreflang=/.test(html)) {
-        fail('location-pages', `${urlPath}: carries an hreflang alternate`);
-      }
-
-      // --- sitemap membership ----------------------------------------------
-      if (!sitemapLocs.includes(`${ORIGIN}${urlPath}`)) {
-        fail('location-pages', `${urlPath} is missing from sitemap.xml`);
-      }
-
-      // --- visible breadcrumb ----------------------------------------------
-      if (!html.includes('aria-label="Breadcrumb"')) fail('location-pages', `${urlPath}: no visible breadcrumb`);
-      if (!html.includes('aria-current="page"')) fail('location-pages', `${urlPath}: breadcrumb marks no current page`);
 
       // --- structured data --------------------------------------------------
       const blocks = jsonLdBlocks(html);
@@ -741,6 +852,19 @@ async function checkLocationPages(sitemapLocs) {
           if (serviceNode.url !== canonical) fail('structured-data', `${urlPath}: Service.url is "${serviceNode.url}"`);
           if (serviceNode.areaServed?.['@type'] !== 'Country') {
             fail('structured-data', `${urlPath}: areaServed is not a schema.org Country`);
+          }
+          // The country the markup claims to serve must be the one the page is
+          // about, spelled the way schema.org expects.
+          const expectedCountry = {
+            '/locations/united-states': 'United States',
+            '/locations/united-kingdom': 'United Kingdom',
+            '/locations/united-arab-emirates': 'United Arab Emirates',
+            '/locations/canada': 'Canada',
+            '/locations/australia': 'Australia',
+            '/locations/singapore': 'Singapore',
+          }[urlPath];
+          if (serviceNode.areaServed?.name !== expectedCountry) {
+            fail('structured-data', `${urlPath}: areaServed.name is "${serviceNode.areaServed?.name}", expected "${expectedCountry}"`);
           }
           if (serviceNode.provider?.['@id'] !== `${ORIGIN}/#organization`) {
             fail('structured-data', `${urlPath}: Service.provider does not reference the India-based Organization`);
@@ -765,29 +889,13 @@ async function checkLocationPages(sitemapLocs) {
           fail('structured-data', `${urlPath}: markup contains ${forbidden}`);
         }
       }
-      if (!breadcrumb) {
-        fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
-      } else {
-        const items = breadcrumb.itemListElement ?? [];
-        const expectedDepth = isHub ? 2 : 3;
-        if (items.length !== expectedDepth) {
-          fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s), expected ${expectedDepth}`);
-        }
-        if (items[0]?.name !== 'Home') fail('structured-data', `${urlPath}: breadcrumb does not start at Home`);
-        if (items[1]?.name !== 'Locations') fail('structured-data', `${urlPath}: breadcrumb does not pass through Locations`);
-        if (items[1]?.item !== `${ORIGIN}${LOCATIONS_HUB_PATH}`) {
-          fail('structured-data', `${urlPath}: middle crumb points at "${items[1]?.item}"`);
-        }
-        if (items.at(-1)?.item !== canonical) {
-          fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
-        }
-        // Every crumb name must be readable on the page a visitor sees.
-        const visible = decodeEntities(html.replace(/<[^>]+>/g, ' '));
-        for (const item of items) {
-          if (!visible.includes(item.name)) {
-            fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
-          }
-        }
+      assertBreadcrumbJsonLd(urlPath, html, breadcrumb, {
+        expectedDepth: isHub ? 2 : 3,
+        expectedNames: isHub ? ['Home', 'Locations'] : ['Home', 'Locations'],
+        canonical,
+      });
+      if (breadcrumb && (breadcrumb.itemListElement ?? [])[1]?.item !== `${ORIGIN}${LOCATIONS_HUB_PATH}`) {
+        fail('structured-data', `${urlPath}: middle crumb does not point at the locations hub`);
       }
 
       // --- fabricated-location scan ----------------------------------------
@@ -813,11 +921,6 @@ async function checkLocationPages(sitemapLocs) {
         }
       }
 
-      // --- the three required calls to action -------------------------------
-      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
-        if (!html.includes(`href="${target}"`)) fail('location-pages', `${urlPath}: no link to ${target}`);
-      }
-
       // --- linkage ----------------------------------------------------------
       if (isHub) {
         for (const locationPath of LOCATION_PATHS) {
@@ -835,11 +938,19 @@ async function checkLocationPages(sitemapLocs) {
             fail('location-pages', `${urlPath}: links to ${servicePath}, which has no file in dist`);
           }
         }
-        // The other two live markets, and nothing else.
+        // Every other live market, and nothing else. A page linking to itself
+        // is not checked here — the header's market list legitimately includes
+        // the current page; `locationPages.test.tsx` asserts that a country's
+        // own `otherMarkets` never contains itself.
         const linkedMarkets = [...html.matchAll(/href="(\/locations\/[^"]+)"/g)].map((match) => match[1]);
         for (const linked of new Set(linkedMarkets)) {
           if (!LOCATION_PATHS.includes(linked)) {
             fail('location-pages', `${urlPath}: links to unwritten market ${linked}`);
+          }
+        }
+        for (const other of LOCATION_PATHS.filter((market) => market !== urlPath)) {
+          if (!html.includes(`href="${other}"`)) {
+            fail('location-pages', `${urlPath}: does not cross-link the active market ${other}`);
           }
         }
       }
@@ -871,41 +982,341 @@ async function checkLocationPages(sitemapLocs) {
         fail('location-links', `${entry}: no link to the locations hub`);
       }
     }
-
-    // --- duplicate-content scan across the three market pages --------------
-    const bigrams = (text) => {
-      const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
-      const set = new Set();
-      for (let i = 0; i < words.length - 1; i += 1) set.add(`${words[i]} ${words[i + 1]}`);
-      return set;
-    };
-    for (let i = 0; i < LOCATION_PATHS.length; i += 1) {
-      for (let j = i + 1; j < LOCATION_PATHS.length; j += 1) {
-        const left = bigrams(bodies.get(LOCATION_PATHS[i]) ?? '');
-        const right = bigrams(bodies.get(LOCATION_PATHS[j]) ?? '');
-        if (left.size === 0 || right.size === 0) continue;
-        let shared = 0;
-        for (const gram of left) if (right.has(gram)) shared += 1;
-        const score = shared / (left.size + right.size - shared);
-        // Rendered bodies include the shared header, footer and layout labels,
-        // so the ceiling is looser than the content-object test in
-        // locationPages.test.tsx. A country-name substitution scores near 1.0.
-        if (score > 0.4) {
-          fail(
-            'duplicate-content',
-            `${LOCATION_PATHS[i]} and ${LOCATION_PATHS[j]} are ${(score * 100).toFixed(1)}% similar`,
-          );
-        }
-        notes.push(
-          `${LOCATION_PATHS[i]} vs ${LOCATION_PATHS[j]}: ${(score * 100).toFixed(1)}% body similarity`,
-        );
+    // The homepage international-delivery section lists every active market.
+    const home = await (await fetch(`${base}/`)).text();
+    for (const market of LOCATION_PATHS) {
+      if (!home.includes(`href="${market}"`)) {
+        fail('location-links', `/: homepage international-delivery section omits ${market}`);
       }
     }
 
+    // --- duplicate-content scan across all six market pages ----------------
+    // Two passes, as required: the rendered body as-is, and again with every
+    // country name, region name and time-zone label replaced by a placeholder.
+    // The second pass is what a find-and-replace clone fails: its raw texts
+    // differ only by the country name, so neutralising it makes two pages
+    // identical.
+    const neutralise = (text) =>
+      text
+        .replace(
+          /United Arab Emirates|United States|United Kingdom|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Canada|Australia|Singapore|USA|UAE|UK|US\b/g,
+          'COUNTRY',
+        )
+        .replace(
+          /Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia/g,
+          'ZONE',
+        )
+        .replace(/Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth/g, 'CITY');
+
+    // The rendered bodies include the shared header, footer, CTA labels and
+    // layout copy, so these ceilings are looser than the content-object test in
+    // locationPages.test.tsx. A country-name substitution scores near 1.0 on
+    // the neutralised pass.
+    const RAW_CEILING = 0.4;
+    const NEUTRAL_CEILING = 0.45;
+    let worstRaw = 0;
+    let worstNeutral = 0;
+    for (let i = 0; i < LOCATION_PATHS.length; i += 1) {
+      for (let j = i + 1; j < LOCATION_PATHS.length; j += 1) {
+        const a = LOCATION_PATHS[i];
+        const b = LOCATION_PATHS[j];
+        const rawScore = similarity(bodies.get(a) ?? '', bodies.get(b) ?? '');
+        const neutralScore = similarity(neutralise(bodies.get(a) ?? ''), neutralise(bodies.get(b) ?? ''));
+        worstRaw = Math.max(worstRaw, rawScore);
+        worstNeutral = Math.max(worstNeutral, neutralScore);
+        if (rawScore > RAW_CEILING) {
+          fail('duplicate-content', `${a} and ${b} are ${(rawScore * 100).toFixed(1)}% similar`);
+        }
+        if (neutralScore > NEUTRAL_CEILING) {
+          fail(
+            'duplicate-content',
+            `${a} and ${b} are ${(neutralScore * 100).toFixed(1)}% similar once the country names are removed — this reads as a find-and-replace clone`,
+          );
+        }
+      }
+    }
+    notes.push(
+      `duplicate-content across ${LOCATION_PATHS.length} markets (${(LOCATION_PATHS.length * (LOCATION_PATHS.length - 1)) / 2} pairs): ` +
+        `worst raw ${(worstRaw * 100).toFixed(1)}% (ceiling ${RAW_CEILING * 100}%), ` +
+        `worst country-neutralised ${(worstNeutral * 100).toFixed(1)}% (ceiling ${NEUTRAL_CEILING * 100}%)`,
+    );
+
     notes.push(`verified the locations hub, ${LOCATION_PATHS.length} regional pages and the fabricated-location scan`);
-  } finally {
-    server.close();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 9: site-wide honesty scan
+// ---------------------------------------------------------------------------
+
+/**
+ * The unsupported positive claims no public page may make.
+ *
+ * Each is exempt when the page denies it — "we do not guarantee rankings" and
+ * "we hold no certification" are the honest sentences this project relies on,
+ * and flagging them would push the copy towards saying nothing at all. The
+ * exemption is a negation within 140 characters in front of the match, or a
+ * match inside a question the page then answers.
+ */
+const UNSUPPORTED_CLAIM_PATTERNS = [
+  [/\bleading (?:software|AI|IT|digital|design|cloud|DevOps|marketing|development|technology) (?:company|agency|provider|partner|firm|studio)\b/i, 'a "leading company" claim'],
+  [/\bindustry[- ]leading\b/i, 'an industry-leading claim'],
+  [/\bmarket leader\b/i, 'a market-leader claim'],
+  [/\bbest (?:software|AI|IT|digital|design|cloud|DevOps|marketing|development) (?:company|agency|team|partner|firm|studio)\b/i, 'a "best company" claim'],
+  [/\bbest[- ]in[- ]class\b/i, 'a best-in-class claim'],
+  [/\bnumber one\b/i, 'a number-one claim'],
+  [/\bno\.? ?1\b/i, 'a number-one claim'],
+  [/#1\b/, 'a number-one claim'],
+  [/\baward[- ]winning\b/i, 'an award'],
+  [/\bcertified partner\b/i, 'a certified-partner claim'],
+  [/\b(?:AWS|Azure|Google Cloud|Google|Meta|Facebook|Microsoft) (?:certified|partner)\b/i, 'a platform partnership claim'],
+  [/\bISO ?\d{4,}[- ]?(?:certified|certification)\b/i, 'an ISO certification'],
+  [/\bguaranteed (?:results?|rankings?|leads?|traffic|revenue|conversions?|delivery|uptime|compliance|coverage|availability)\b/i, 'a guaranteed outcome'],
+  [/\bwe guarantee\b/i, 'a guarantee'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Germany|Netherlands|Singapore|Turkey|Dubai|London|New York|Toronto|Sydney)\b/i, 'a foreign office'],
+  [/\bour (?:US|USA|UK|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean|German|Dutch|Turkish) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a foreign local team'],
+  [/\b\d{2,}\+? (?:happy )?(?:clients|customers|projects|users)\b/i, 'a fabricated client or project count'],
+  [/\b\d+% (?:satisfaction|success|accuracy|uptime|growth|retention)\b/i, 'a performance percentage'],
+  [/\b\d+\+ years\b/i, 'a years-in-business claim'],
+  [/\btrusted by \d/i, 'a trusted-by count'],
+];
+
+/**
+ * Every public, indexable page the scan covers: the homepage, About, Contact,
+ * both hubs, every service page and every country page. Phase 3B widened this
+ * from the country pages alone.
+ */
+const HONESTY_SCAN_PATHS = [
+  '/',
+  '/about',
+  '/contact',
+  '/products',
+  '/careers',
+  '/project-analysis',
+  '/schedule-call',
+  SERVICES_HUB_PATH,
+  ...SERVICE_PATHS,
+  LOCATIONS_HUB_PATH,
+  ...LOCATION_PATHS,
+];
+
+async function checkSiteHonesty() {
+  await withServer(async (base) => {
+    let scanned = 0;
+    for (const urlPath of HONESTY_SCAN_PATHS) {
+      const response = await fetch(`${base}${urlPath}`);
+      if (response.status !== 200) {
+        fail('site-honesty', `GET ${urlPath} -> ${response.status}`);
+        continue;
+      }
+      const html = await response.text();
+      const { text } = prerenderedBody(html);
+      scanned += 1;
+      for (const [pattern, label] of UNSUPPORTED_CLAIM_PATTERNS) {
+        const global = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
+        for (const match of text.matchAll(global)) {
+          const index = match.index ?? 0;
+          // A question is the buyer's words, not a claim: "Are you certified?"
+          // is answered honestly underneath.
+          if (sentenceAround(text, index).endsWith('?')) continue;
+          if (isDenied(text, index)) continue;
+          const before = text.slice(Math.max(0, index - 90), index);
+          fail('site-honesty', `${urlPath}: ${label} — "…${before.slice(-60)}${match[0]}"`);
+        }
+      }
+    }
+    notes.push(`honesty-scanned ${scanned} public pages for unsupported claims`);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 10: prerender completeness for the code-split routes
+// ---------------------------------------------------------------------------
+
+/**
+ * The `/services/*` and `/locations/*` pages are route-level chunks now, loaded
+ * with a dynamic import. That is only acceptable because the prerenderer awaits
+ * the chunk before rendering, so every generated document still carries the
+ * whole page.
+ *
+ * This scan is what proves it. If the preload step were ever removed, or a new
+ * split route added without wiring it up, the affected documents would contain
+ * the route fallback (`data-route-fallback`, from
+ * `src/routes/RouteFallback.tsx`) instead of the page — and this fails the
+ * build.
+ */
+async function checkPrerenderCompleteness() {
+  // No generated document anywhere may contain the loading fallback.
+  const htmlFiles = await walk(DIST, (file) => file.endsWith('.html'));
+  for (const file of htmlFiles) {
+    const html = await fs.readFile(file, 'utf8');
+    if (html.includes('data-route-fallback')) {
+      fail('lazy-routes', `${rel(file)}: prerendered a Suspense fallback instead of the page`);
+    }
   }
+
+  // And every split route must carry a complete page before JavaScript: body
+  // copy, one H1, a breadcrumb, JSON-LD, metadata and the three CTAs.
+  for (const urlPath of [SERVICES_HUB_PATH, ...SERVICE_PATHS, LOCATIONS_HUB_PATH, ...LOCATION_PATHS]) {
+    const file = resolveDistPath(urlPath);
+    if (!file) {
+      fail('lazy-routes', `${urlPath}: no prerendered file — the route chunk never resolved`);
+      continue;
+    }
+    const html = await fs.readFile(file, 'utf8');
+    const { body, words } = prerenderedBody(html);
+    const isHub = urlPath === SERVICES_HUB_PATH || urlPath === LOCATIONS_HUB_PATH;
+    if (words < (isHub ? 400 : 800)) {
+      fail('lazy-routes', `${urlPath}: incomplete lazy route — only ${words} words inside #root`);
+    }
+    if (!/<h1[\s>]/.test(body)) fail('lazy-routes', `${urlPath}: no <h1> inside the prerendered #root`);
+    if (!body.includes('id="main-content"')) fail('lazy-routes', `${urlPath}: no main landmark inside #root`);
+    if (!body.includes('aria-label="Breadcrumb"')) fail('lazy-routes', `${urlPath}: no breadcrumb inside #root`);
+    if (jsonLdBlocks(html).length === 0) fail('lazy-routes', `${urlPath}: no JSON-LD in the prerendered head`);
+    if (!titleOf(html) || !metaOf(html, 'description') || !canonicalOf(html)) {
+      fail('lazy-routes', `${urlPath}: incomplete metadata on a lazily loaded route`);
+    }
+    for (const cta of REQUIRED_CTAS) {
+      if (!body.includes(`href="${cta}"`)) fail('lazy-routes', `${urlPath}: no ${cta} link inside #root`);
+    }
+  }
+  notes.push(
+    `lazy-route completeness verified for ${SERVICE_PATHS.length + LOCATION_PATHS.length + 2} code-split routes`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 11: bundle budget
+// ---------------------------------------------------------------------------
+
+/**
+ * Evidence-based ceilings, measured on the Phase 3B build that introduced
+ * route-level splitting of `/services/*` and `/locations/*`:
+ *
+ *   main bundle   1,430,439 bytes raw / 413,572 bytes gzip
+ *   all JavaScript 2,992,874 bytes raw / 879,159 bytes gzip
+ *
+ * (Before the split the main bundle was 1,789,870 raw / 512,680 gzip, with the
+ * service and regional copy inside it.)
+ *
+ * The ceilings below add a 3% tolerance for deterministic build variation —
+ * a dependency patch release, a minifier version, a slightly different hash
+ * length. It is deliberately small: 3% of the main bundle is ~43 KB raw, far
+ * less than any one service or country page's copy, so re-inlining even a
+ * single content module would still fail.
+ *
+ * Raise a ceiling only together with a measurement, in the same change that
+ * makes the code bigger.
+ */
+const BUNDLE_BUDGET = {
+  mainRaw: 1_473_000,
+  mainGzip: 426_000,
+  totalRaw: 3_082_000,
+  totalGzip: 905_000,
+  /** Route chunks the split must actually produce (services + locations + hubs). */
+  minimumContentChunks: 23,
+};
+
+/** Chunk names the /services and /locations routes are split into. */
+const CONTENT_CHUNK_NAMES = [
+  'ServicesHub', 'CustomSoftwareDevelopment', 'MobileAppDevelopment', 'WebApplicationDevelopment',
+  'SaasDevelopment', 'SoftwareModernization', 'AiDevelopment', 'MachineLearningDevelopment',
+  'AiVoiceAgentDevelopment', 'AiVideoConsultationAgents', 'ConversationalAiDevelopment',
+  'AiAutomationIntegration', 'UiUxDesign', 'CloudSolutions', 'DevOpsEngineering', 'DigitalMarketing',
+  'LocationsHub', 'UnitedStates', 'UnitedKingdom', 'UnitedArabEmirates', 'Canada', 'Australia', 'Singapore',
+];
+
+async function checkBundleBudget() {
+  const assetsDir = path.join(DIST, 'assets');
+  if (!fss.existsSync(assetsDir)) {
+    fail('bundle-budget', 'dist/assets does not exist');
+    return;
+  }
+  const files = (await fs.readdir(assetsDir)).filter((name) => name.endsWith('.js'));
+  const sizes = new Map();
+  let totalRaw = 0;
+  let totalGzip = 0;
+  for (const name of files) {
+    const buffer = await fs.readFile(path.join(assetsDir, name));
+    const gzip = zlib.gzipSync(buffer).length;
+    sizes.set(name, { raw: buffer.length, gzip });
+    totalRaw += buffer.length;
+    totalGzip += gzip;
+  }
+
+  const mainName = files.find((name) => /^index-[^.]+\.js$/.test(name));
+  if (!mainName) {
+    fail('bundle-budget', 'could not find the main index-*.js bundle in dist/assets');
+    return;
+  }
+  const main = sizes.get(mainName);
+
+  if (main.raw > BUNDLE_BUDGET.mainRaw) {
+    fail('bundle-budget', `main bundle is ${main.raw} bytes raw, over the ${BUNDLE_BUDGET.mainRaw} ceiling`);
+  }
+  if (main.gzip > BUNDLE_BUDGET.mainGzip) {
+    fail('bundle-budget', `main bundle is ${main.gzip} bytes gzip, over the ${BUNDLE_BUDGET.mainGzip} ceiling`);
+  }
+  if (totalRaw > BUNDLE_BUDGET.totalRaw) {
+    fail('bundle-budget', `total JavaScript is ${totalRaw} bytes raw, over the ${BUNDLE_BUDGET.totalRaw} ceiling`);
+  }
+  if (totalGzip > BUNDLE_BUDGET.totalGzip) {
+    fail('bundle-budget', `total JavaScript is ${totalGzip} bytes gzip, over the ${BUNDLE_BUDGET.totalGzip} ceiling`);
+  }
+
+  // The split has to be real: one chunk per content route, actually emitted.
+  const contentChunks = CONTENT_CHUNK_NAMES.filter((chunk) =>
+    files.some((name) => name.startsWith(`${chunk}-`)),
+  );
+  const missing = CONTENT_CHUNK_NAMES.filter((chunk) => !contentChunks.includes(chunk));
+  if (missing.length > 0) {
+    fail('bundle-budget', `no route chunk emitted for: ${missing.join(', ')} — the split has been undone`);
+  }
+  if (contentChunks.length < BUNDLE_BUDGET.minimumContentChunks) {
+    fail(
+      'bundle-budget',
+      `only ${contentChunks.length} content route chunks, expected at least ${BUNDLE_BUDGET.minimumContentChunks}`,
+    );
+  }
+
+  // The saving must be real rather than moved: the homepage document must not
+  // reference, preload or otherwise pull any content chunk. If it did, every
+  // visitor would still download the whole of the service and regional copy.
+  const homepage = await fs.readFile(path.join(DIST, 'index.html'), 'utf8');
+  for (const chunk of CONTENT_CHUNK_NAMES) {
+    const emitted = files.find((name) => name.startsWith(`${chunk}-`));
+    if (emitted && homepage.includes(emitted)) {
+      fail('bundle-budget', `the homepage document references the ${chunk} route chunk`);
+    }
+  }
+  // And the shared page layouts, which only these routes use.
+  for (const shared of ['ServicePage', 'LocationPage']) {
+    const emitted = files.find((name) => name.startsWith(`${shared}-`));
+    if (!emitted) {
+      fail('bundle-budget', `${shared} was inlined instead of shared between the route chunks`);
+    } else if (homepage.includes(emitted)) {
+      fail('bundle-budget', `the homepage document references the ${shared} chunk`);
+    }
+  }
+  // Nothing else may be modulepreloaded into the homepage either: Vite emits
+  // those links only for static imports of the entry, so a content chunk
+  // appearing here would mean the dynamic import had been turned back into a
+  // static one.
+  const preloads = [...homepage.matchAll(/rel="modulepreload"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
+  for (const href of preloads) {
+    if (CONTENT_CHUNK_NAMES.some((chunk) => href.includes(`/${chunk}-`))) {
+      fail('bundle-budget', `the homepage modulepreloads ${href}`);
+    }
+  }
+
+  const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`;
+  notes.push(
+    `main bundle ${main.raw} B raw (${kb(main.raw)}) / ${main.gzip} B gzip (${kb(main.gzip)}) ` +
+      `— ceilings ${BUNDLE_BUDGET.mainRaw} / ${BUNDLE_BUDGET.mainGzip}`,
+  );
+  notes.push(
+    `${files.length} JS chunks, ${contentChunks.length} of them content routes; total ${totalRaw} B raw / ${totalGzip} B gzip`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -922,6 +1333,9 @@ async function main() {
   await serveAndCheck();
   await checkServicePages(sitemapLocs);
   await checkLocationPages(sitemapLocs);
+  await checkSiteHonesty();
+  await checkPrerenderCompleteness();
+  await checkBundleBudget();
 
   for (const note of notes) console.log(`  · ${note}`);
   if (failures.length > 0) {
@@ -931,7 +1345,7 @@ async function main() {
     return;
   }
   console.log(
-    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards, regional pages, location honesty.',
+    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards, regional pages, location honesty, site-wide honesty, lazy-route completeness, bundle budget.',
   );
 }
 

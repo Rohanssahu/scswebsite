@@ -13,14 +13,10 @@ import {
   type RouteSeo,
 } from './registry';
 import { POSITIONING, SITE_ORIGIN } from './site';
-import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
-import {
-  LOCATION_CONTENT,
-  LOCATIONS_HUB_PATH,
-  locationBreadcrumb,
-  locationsHub,
-  locationsHubBreadcrumb,
-} from '@/content/locations';
+import { serviceBreadcrumb } from '@/content/services';
+import { SERVICE_CONTENT } from '@/content/services/all';
+import { LOCATIONS_HUB_PATH, locationBreadcrumb, locationsHubBreadcrumb } from '@/content/locations';
+import { LOCATION_CONTENT, locationsHub } from '@/content/locations/all';
 
 const APP_SOURCE = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
@@ -284,6 +280,9 @@ describe('sitemap route matching', () => {
         '/locations/united-states',
         '/locations/united-kingdom',
         '/locations/united-arab-emirates',
+        '/locations/canada',
+        '/locations/australia',
+        '/locations/singapore',
       ].sort(),
     );
   });
@@ -442,15 +441,18 @@ describe('structured data', () => {
   });
 });
 
-describe('Phase 3A regional routes', () => {
+describe('regional routes', () => {
   const hub = () => ROUTE_SEO[LOCATIONS_HUB_PATH];
 
-  it('registers the hub and exactly the three active markets', () => {
+  it('registers the hub and exactly the six active markets', () => {
     expect(LOCATIONS_HUB_PATH).toBe('/locations');
     expect(LOCATION_CONTENT.map((location) => location.path)).toEqual([
       '/locations/united-states',
       '/locations/united-kingdom',
       '/locations/united-arab-emirates',
+      '/locations/canada',
+      '/locations/australia',
+      '/locations/singapore',
     ]);
     for (const location of LOCATION_CONTENT) expect(ROUTE_SEO[location.path], location.path).toBeDefined();
   });
@@ -573,9 +575,9 @@ describe('Phase 3A regional routes', () => {
     // "in the United States" would read as an office; "for US businesses" does not.
     for (const location of LOCATION_CONTENT) {
       const route = ROUTE_SEO[location.path];
-      expect(route.title, location.path).not.toMatch(/\b(?:in|based in|located in) (?:the )?(?:US|USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i);
+      expect(route.title, location.path).not.toMatch(/\b(?:in|based in|located in) (?:the )?(?:US|USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Dubai|Abu Dhabi|London|New York|Toronto|Sydney)\b/i);
       expect(route.description, location.path).not.toMatch(/\boffices? in\b/i);
-      expect(route.title, location.path).not.toMatch(/\bour (?:US|USA|UK|UAE) (?:office|team)\b/i);
+      expect(route.title, location.path).not.toMatch(/\bour (?:US|USA|UK|UAE|Canadian|Australian|Singapore) (?:office|team)\b/i);
     }
   });
 

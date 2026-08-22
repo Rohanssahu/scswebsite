@@ -9,19 +9,10 @@
  * sections describe something the US page does not.
  */
 
-import type { LocationContent } from './types';
+import type { LocationBody } from './types';
 
-export const unitedKingdom: LocationContent = {
+export const unitedKingdom: LocationBody = {
   path: '/locations/united-kingdom',
-  countryName: 'United Kingdom',
-  navLabel: 'United Kingdom',
-  serviceName: 'Software and AI Development for United Kingdom Clients',
-  serviceType: 'Remote product and AI engineering',
-  metaTitle: 'Software & AI Development Partner for UK Businesses | SCS',
-  metaDescription:
-    'Remote software and AI development for UK businesses, delivered from Indore, India: documented requirements, staged approvals, iterative demos and a named maintenance arrangement.',
-  shareTitle: 'Software & AI Development for UK Businesses',
-  priority: 0.8,
   h1: 'Remote Software and AI Development for United Kingdom Businesses',
   valueProp:
     'A remote development partner for UK businesses, delivered from India — requirements documented, releases approved in stages, and maintenance arranged before launch rather than after it.',
@@ -363,6 +354,24 @@ export const unitedKingdom: LocationContent = {
       label: 'United Arab Emirates',
       blurb:
         'Almost the same working day as ours, mobile-first delivery, and Arabic interface work available as a scoped addition.',
+    },
+    {
+      path: '/locations/canada',
+      label: 'Canada',
+      blurb:
+        'Internal platforms and portals for organisations spread across six clock offsets, with reachable hours fixed per client.',
+    },
+    {
+      path: '/locations/australia',
+      label: 'Australia',
+      blurb:
+        'Product delivery on a moving clock difference, with scheduled collaboration windows and a dated release plan.',
+    },
+    {
+      path: '/locations/singapore',
+      label: 'Singapore',
+      blurb:
+        'Regional operations systems for companies working across several neighbouring markets from one head office.',
     },
   ],
   cta: {

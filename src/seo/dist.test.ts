@@ -3,14 +3,15 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { indexableRoutes, prerenderRoutes, ROUTE_SEO } from './registry';
 import { SITE_ORIGIN } from './site';
-import { AI_SERVICE_CONTENT, SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb } from '@/content/services';
+import { hubBreadcrumb, serviceBreadcrumb } from '@/content/services';
+import { AI_SERVICE_CONTENT, SERVICE_CONTENT } from '@/content/services/all';
 import {
-  LOCATION_CONTENT,
   LOCATIONS_HUB_PATH,
   REQUIRED_SERVICE_LINKS,
   locationBreadcrumb,
   locationsHubBreadcrumb,
 } from '@/content/locations';
+import { LOCATION_CONTENT } from '@/content/locations/all';
 
 /**
  * Assertions about the deployable artifact.
@@ -248,7 +249,7 @@ describe.skipIf(!built)('prerender output', () => {
       expect(html, `hub does not link to ${location.path}`).toContain(`href="${location.path}"`);
     }
     // Countries without a page must not be linked from anywhere in the build.
-    for (const slug of ['canada', 'australia', 'germany', 'netherlands', 'singapore', 'turkey']) {
+    for (const slug of ['germany', 'netherlands', 'turkey']) {
       expect(html.includes(`href="/locations/${slug}"`), `hub links to /locations/${slug}`).toBe(false);
     }
     for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
@@ -314,7 +315,7 @@ describe.skipIf(!built)('prerender output', () => {
       for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
         expect(html, `${location.path} -> ${target}`).toContain(`href="${target}"`);
       }
-      // And to the other two live markets, never to a country with no page.
+      // And to every other live market, never to a country with no page.
       for (const market of location.otherMarkets) {
         expect(html, `${location.path} -> ${market.path}`).toContain(`href="${market.path}"`);
       }

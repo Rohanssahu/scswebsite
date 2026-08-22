@@ -21,26 +21,12 @@ import ProductDetailsPage from "./pages/ProductDetailsPage";
 import ProductShowcase from "./pages/ProductShowcase";
 import ProjectAnalysis from "./pages/ProjectAnalysis";
 import ScheduleCall from "./pages/ScheduleCall";
-import ServicesHub from "./pages/services/ServicesHub";
-import CustomSoftwareDevelopment from "./pages/services/CustomSoftwareDevelopment";
-import MobileAppDevelopment from "./pages/services/MobileAppDevelopment";
-import WebApplicationDevelopment from "./pages/services/WebApplicationDevelopment";
-import SaasDevelopment from "./pages/services/SaasDevelopment";
-import SoftwareModernization from "./pages/services/SoftwareModernization";
-import AiDevelopment from "./pages/services/AiDevelopment";
-import MachineLearningDevelopment from "./pages/services/MachineLearningDevelopment";
-import AiVoiceAgentDevelopment from "./pages/services/AiVoiceAgentDevelopment";
-import AiVideoConsultationAgents from "./pages/services/AiVideoConsultationAgents";
-import ConversationalAiDevelopment from "./pages/services/ConversationalAiDevelopment";
-import AiAutomationIntegration from "./pages/services/AiAutomationIntegration";
-import UiUxDesign from "./pages/services/UiUxDesign";
-import CloudSolutions from "./pages/services/CloudSolutions";
-import DevOpsEngineering from "./pages/services/DevOpsEngineering";
-import DigitalMarketing from "./pages/services/DigitalMarketing";
-import LocationsHub from "./pages/locations/LocationsHub";
-import UnitedStates from "./pages/locations/UnitedStates";
-import UnitedKingdom from "./pages/locations/UnitedKingdom";
-import UnitedArabEmirates from "./pages/locations/UnitedArabEmirates";
+// The /services and /locations pages are route-level chunks: each one carries a
+// few hundred lines of page copy that only its own visitors need. ContentRoute
+// resolves the chunk for a path and renders it inside a Suspense boundary; the
+// prerenderer and main.tsx both preload it first, so neither a generated HTML
+// file nor a first paint ever shows the fallback. See routes/contentRoutes.ts.
+import ContentRoute from "./routes/ContentRoute";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
@@ -149,24 +135,51 @@ const RoutesComponent = () => {
       <Route path="/BlogPage" element={<BlogPage />} />
       <Route path="/ApplicationForm" element={<ApplicationForm />} />
       {/* The services hub, then the canonical service pages it lists. */}
-      <Route path="/services" element={<ServicesHub />} />
-      <Route path="/services/custom-software-development" element={<CustomSoftwareDevelopment />} />
-      <Route path="/services/mobile-app-development" element={<MobileAppDevelopment />} />
-      <Route path="/services/web-application-development" element={<WebApplicationDevelopment />} />
-      <Route path="/services/saas-development" element={<SaasDevelopment />} />
-      <Route path="/services/software-modernization" element={<SoftwareModernization />} />
+      <Route path="/services" element={<ContentRoute route="/services" />} />
+      <Route
+        path="/services/custom-software-development"
+        element={<ContentRoute route="/services/custom-software-development" />}
+      />
+      <Route
+        path="/services/mobile-app-development"
+        element={<ContentRoute route="/services/mobile-app-development" />}
+      />
+      <Route
+        path="/services/web-application-development"
+        element={<ContentRoute route="/services/web-application-development" />}
+      />
+      <Route path="/services/saas-development" element={<ContentRoute route="/services/saas-development" />} />
+      <Route
+        path="/services/software-modernization"
+        element={<ContentRoute route="/services/software-modernization" />}
+      />
       {/* AI service pages. */}
-      <Route path="/services/ai-development" element={<AiDevelopment />} />
-      <Route path="/services/machine-learning-development" element={<MachineLearningDevelopment />} />
-      <Route path="/services/ai-voice-agent-development" element={<AiVoiceAgentDevelopment />} />
-      <Route path="/services/ai-video-consultation-agents" element={<AiVideoConsultationAgents />} />
-      <Route path="/services/conversational-ai-development" element={<ConversationalAiDevelopment />} />
-      <Route path="/services/ai-automation-integration" element={<AiAutomationIntegration />} />
+      <Route path="/services/ai-development" element={<ContentRoute route="/services/ai-development" />} />
+      <Route
+        path="/services/machine-learning-development"
+        element={<ContentRoute route="/services/machine-learning-development" />}
+      />
+      <Route
+        path="/services/ai-voice-agent-development"
+        element={<ContentRoute route="/services/ai-voice-agent-development" />}
+      />
+      <Route
+        path="/services/ai-video-consultation-agents"
+        element={<ContentRoute route="/services/ai-video-consultation-agents" />}
+      />
+      <Route
+        path="/services/conversational-ai-development"
+        element={<ContentRoute route="/services/conversational-ai-development" />}
+      />
+      <Route
+        path="/services/ai-automation-integration"
+        element={<ContentRoute route="/services/ai-automation-integration" />}
+      />
       {/* Design, cloud, delivery and growth service pages. */}
-      <Route path="/services/ui-ux-design" element={<UiUxDesign />} />
-      <Route path="/services/cloud-solutions" element={<CloudSolutions />} />
-      <Route path="/services/devops-engineering" element={<DevOpsEngineering />} />
-      <Route path="/services/digital-marketing" element={<DigitalMarketing />} />
+      <Route path="/services/ui-ux-design" element={<ContentRoute route="/services/ui-ux-design" />} />
+      <Route path="/services/cloud-solutions" element={<ContentRoute route="/services/cloud-solutions" />} />
+      <Route path="/services/devops-engineering" element={<ContentRoute route="/services/devops-engineering" />} />
+      <Route path="/services/digital-marketing" element={<ContentRoute route="/services/digital-marketing" />} />
       {/* Every old gig path now forwards to the canonical service page that
           replaced it. The build also emits a noindex meta-refresh stub per path,
           so a direct hit resolves without JavaScript. */}
@@ -179,10 +192,16 @@ const RoutesComponent = () => {
       {/* The locations hub, then one regional landing page per active market.
           One flat level under /locations: no query parameters, no subdomains,
           no country abbreviations and no city pages. */}
-      <Route path="/locations" element={<LocationsHub />} />
-      <Route path="/locations/united-states" element={<UnitedStates />} />
-      <Route path="/locations/united-kingdom" element={<UnitedKingdom />} />
-      <Route path="/locations/united-arab-emirates" element={<UnitedArabEmirates />} />
+      <Route path="/locations" element={<ContentRoute route="/locations" />} />
+      <Route path="/locations/united-states" element={<ContentRoute route="/locations/united-states" />} />
+      <Route path="/locations/united-kingdom" element={<ContentRoute route="/locations/united-kingdom" />} />
+      <Route
+        path="/locations/united-arab-emirates"
+        element={<ContentRoute route="/locations/united-arab-emirates" />}
+      />
+      <Route path="/locations/canada" element={<ContentRoute route="/locations/canada" />} />
+      <Route path="/locations/australia" element={<ContentRoute route="/locations/australia" />} />
+      <Route path="/locations/singapore" element={<ContentRoute route="/locations/singapore" />} />
       <Route path="/products" element={<ProductShowcase />} />
       <Route path="/project-analysis" element={<ProjectAnalysis />} />
       <Route

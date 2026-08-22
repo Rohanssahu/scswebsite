@@ -20,7 +20,7 @@ import Footer from '../Footer';
 import Reveal from '../Reveal';
 import VisualPlaceholder from '../VisualPlaceholder';
 import Breadcrumbs from '../services/Breadcrumbs';
-import { locationBreadcrumb, locationsHub } from '@/content/locations';
+import { LOCATIONS_HUB_PATH, locationBreadcrumb } from '@/content/locations';
 import type { LocationContent, LocationSectionHeader } from '@/content/locations/types';
 
 /**
@@ -430,7 +430,7 @@ const LocationPage = ({ content }: { content: LocationContent }) => {
             </div>
             <div className="mt-6 text-center">
               <Link
-                to={locationsHub.path}
+                to={LOCATIONS_HUB_PATH}
                 className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
               >
                 All locations we serve <ArrowRight className="h-4 w-4" aria-hidden="true" />

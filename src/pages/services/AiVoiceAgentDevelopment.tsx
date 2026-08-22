@@ -1,7 +1,8 @@
 import React from 'react';
 import ServicePage from '@/components/services/ServicePage';
-import { aiVoiceAgentDevelopment } from '@/content/services';
+import { serviceContent } from '@/content/services';
+import { aiVoiceAgentDevelopment } from '@/content/services/aiVoiceAgentDevelopment';
 
-const AiVoiceAgentDevelopment = () => <ServicePage content={aiVoiceAgentDevelopment} />;
+const AiVoiceAgentDevelopment = () => <ServicePage content={serviceContent(aiVoiceAgentDevelopment)} />;
 
 export default AiVoiceAgentDevelopment;

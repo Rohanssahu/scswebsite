@@ -1,12 +1,17 @@
 /**
- * Copy for the `/locations` hub, plus the two short blocks the homepage and the
- * About page render to point at it.
+ * Copy for the `/locations` hub.
  *
  * The hub exists to say, once and plainly, what a regional page is and is not:
  * SCS Softwares is in Indore, India; international work is delivered remotely;
  * a country page describes where a service is available, not where we have an
  * office. Every country page then repeats that disclosure in its own words.
+ *
+ * Phase 3B moved the hub's own metadata into `./manifest.ts` and the homepage
+ * and About blocks into `./siteBlocks.ts`, leaving this module as pure body
+ * copy for the `/locations` route chunk.
  */
+
+import { locationsHubMeta } from './manifest';
 
 /** One active market, as listed on the hub. */
 export interface MarketEntry {
@@ -18,18 +23,14 @@ export interface MarketEntry {
 }
 
 export const locationsHub = {
-  path: '/locations',
-  navLabel: 'Locations',
-  metaTitle: 'Locations We Serve | Remote Delivery from India | SCS Softwares',
-  metaDescription:
-    'SCS Softwares is based in Indore, India, and delivers software and AI projects remotely. See the markets we actively work with and how a remote engagement is arranged.',
-  shareTitle: 'Locations — SCS Softwares',
+  ...locationsHubMeta,
   h1: 'Locations We Serve',
   valueProp:
     'One team in Indore, India, working remotely with businesses in other countries — and a plain account of what that does and does not mean.',
   intro: [
     'SCS Softwares is a software and AI development company based in Indore, Madhya Pradesh, India. Everything we build is built there. When we work with a business in another country, the engagement is remote from end to end: there is no branch, no local representative and no second office involved.',
     'The pages below exist because the practical questions differ by market. A buyer in the United States is mostly asking about accountability and time-zone distance; a buyer in the United Kingdom usually starts with documented requirements and supplier assurance; a buyer in the UAE is often launching a customer-facing app into a working day that already overlaps ours. Those are different conversations, so they get different pages.',
+    'The three markets added most recently ask their own questions. Canadian enquiries usually begin with which hours we will actually be reachable and where records will be stored; Australian ones with release planning and who maintains the product after launch; Singapore ones with integrations, regional roll-out and how approvals get recorded. None of that is interchangeable, which is why each market has its own page rather than a shared template.',
     'What does not differ is the disclosure. Each of these pages describes where a service is available. None of them describes a physical location, and none of them should be read as one.',
   ],
   /** The truthful mechanics of a remote international engagement. */
@@ -71,7 +72,7 @@ export const locationsHub = {
       },
     ],
   },
-  /** The three markets that have a real page today. Nothing else is linked. */
+  /** The six markets that have a real page today. Nothing else is linked. */
   markets: [
     {
       path: '/locations/united-states',
@@ -91,6 +92,24 @@ export const locationsHub = {
         'Mobile-first products, booking and service platforms and AI assistants for UAE businesses, with Arabic interfaces scoped separately.',
       distinctive: 'Barely any clock difference, so the working days effectively coincide.',
     },
+    {
+      path: '/locations/canada',
+      blurb:
+        'Internal business platforms, customer-facing products and AI assistants for Canadian organisations, with acceptance criteria written down before a build starts.',
+      distinctive: 'One country, six clock offsets — so the reachable hours are settled per client rather than assumed.',
+    },
+    {
+      path: '/locations/australia',
+      blurb:
+        'Mobile and web products, booking systems and dashboards for Australian businesses, with test environments and a release plan agreed up front.',
+      distinctive: 'Our day starts as the Australian afternoon runs out, so handover notes do the work a meeting cannot.',
+    },
+    {
+      path: '/locations/singapore',
+      blurb:
+        'Regional operations platforms, API integrations and AI assistants for Singapore businesses, with every decision recorded in writing.',
+      distinctive: 'Two and a half hours apart, which makes a genuinely shared working day the easiest one we have.',
+    },
   ] satisfies MarketEntry[],
   /**
    * Markets we take enquiries from but have no page for yet. Deliberately plain
@@ -101,7 +120,7 @@ export const locationsHub = {
   futureMarkets: {
     heading: 'Other countries we take enquiries from',
     body:
-      'We also work with businesses in Canada, Australia, Germany, the Netherlands, Singapore and Turkey. There are no dedicated pages for those markets yet — when we write one it will be because there is something specific to say about working with that country, not to fill a list. Until then, the enquiry route is the same as for anywhere else.',
+      'We also work with businesses in Germany, the Netherlands and Turkey. There are no dedicated pages for those markets yet — when we write one it will be because there is something specific to say about working with that country, not to fill a list. Until then, the enquiry route is the same as for anywhere else.',
     note:
       'Delivery for every country on that list is remote from Indore, India, on exactly the terms described above.',
   },
@@ -125,28 +144,3 @@ export const locationsHub = {
 } as const;
 
 export type LocationsHub = typeof locationsHub;
-
-/**
- * The short international-delivery block the homepage renders. Written here so
- * the homepage, the About page and the hub cannot end up describing three
- * different arrangements.
- */
-export const homeInternationalSection = {
-  eyebrow: 'International delivery',
-  title: 'Working with us from another country',
-  sub: 'We build from one office in Indore, India, and deliver remotely. These are the markets with a page of their own — each one explains how a project is actually run from here.',
-  linkLabel: 'See all locations',
-  note:
-    'Every international engagement is remote. We hold no office, entity or telephone number in any of these countries.',
-};
-
-/** The remote-delivery block on the About page. */
-export const aboutRemoteDeliverySection = {
-  eyebrow: 'Remote delivery',
-  title: 'How we work with clients outside India',
-  paragraphs: [
-    'The team, the office and the company are in Indore, India. Clients in other countries are served remotely: we shift part of our working day to overlap theirs, run demonstrations and approvals online, and settle contract, invoicing and data-location questions before development starts.',
-    'We keep a page per active market explaining what that looks like in practice. None of those pages claims a local office, a local entity or local staff, because there are none.',
-  ],
-  linkLabel: 'Locations we serve',
-};
