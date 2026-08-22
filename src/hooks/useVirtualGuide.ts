@@ -321,7 +321,7 @@ export function useVirtualGuide() {
       enqueueGuide([
         {
           key: 'guide.msg.review',
-          actions: [{ label: 'Run demo analysis', kind: 'run-analysis' }],
+          actions: [{ label: 'Run project analysis', kind: 'run-analysis' }],
         },
       ]);
     },
