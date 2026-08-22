@@ -1,20 +1,147 @@
 # https://scssoftwares.com/robots.txt
 #
-# Public marketing pages are open to every crawler.
+# Verified against the operators' own documentation on 2026-08-22. See
+# docs/seo/AI_CRAWLER_POLICY.md for the sources and the reasoning.
 #
-# Only two areas are blocked from crawling: the staff dashboard and the private
-# AI consultation rooms (whose URLs carry a per-visitor meeting reference that
-# no crawler should ever fetch).
+# ---------------------------------------------------------------------------
+# Two rules govern every group below.
 #
-# The other non-indexable routes — /project-analysis/result and
-# /ApplicationForm — are deliberately left crawlable so search engines can read
-# their `noindex,nofollow` meta tag. A Disallow here would hide that directive
-# and could leave a URL indexed without a snippet instead of removing it.
+# 1. Private paths are blocked in EVERY group. robots.txt gives a crawler only
+#    the single most specific group that matches its token — a named group does
+#    NOT inherit the `*` group. So every group here repeats the same two
+#    Disallow lines. `src/seo/robots.test.ts` fails the build if one of them
+#    ever loses a line.
+#
+#      /admin*            — the staff dashboard.
+#      /ai-consultation/* — private consultation rooms whose URLs carry a
+#                           per-visitor meeting reference.
+#
+#    Nothing else is listed. A URL is not exposed here merely to satisfy a
+#    crawler, and no `noindex` appears in this file: noindex is not a robots.txt
+#    directive, and a Disallow would only hide the real meta tag and risk
+#    leaving a URL indexed without a snippet instead of removing it.
+#
+#    /project-analysis/result and /ApplicationForm stay crawlable on purpose, so
+#    crawlers can read their `noindex,nofollow` meta tag.
+#
+# 2. Search access and model-training access are separate decisions and are
+#    written separately. Today both are allowed. Revoking training access is a
+#    one-line change inside a training group and must never be done by editing a
+#    search group.
+# ---------------------------------------------------------------------------
+
+
+# === Default: every crawler not named below ================================
 
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
 Disallow: /ai-consultation/
+
+
+# === Search and answer-engine indexing — MUST stay allowed =================
+#
+# These are how the site is discovered and cited. Blocking any of them removes
+# SCS Softwares from that product's results.
+#
+#   Googlebot         Google Search (also what feeds AI Overviews and AI Mode)
+#   Bingbot           Bing (also what feeds Microsoft Copilot)
+#   OAI-SearchBot     OpenAI — surfaces sites in ChatGPT's search features
+#   Claude-SearchBot  Anthropic — indexes content for Claude's search results
+#   PerplexityBot     Perplexity — indexes for Perplexity results; the operator
+#                     states it is not used for foundation-model training
+
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+
+# === User-initiated fetches — allowed ======================================
+#
+# A person asked the assistant to open a page. The operators state these are not
+# automated crawls and that robots.txt may not apply to them at all; allowing
+# them simply means a visitor who asks an assistant about this site gets the
+# real page rather than a guess.
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: Claude-User
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+
+# === Model training — allowed, and separately revocable ====================
+#
+# Public marketing pages describing services we actually deliver. Nothing here
+# is confidential, and being present in training data is one of the ways a
+# company becomes a name an assistant knows.
+#
+# To revoke training access later, change `Allow: /` to `Disallow: /` inside
+# these three groups ONLY. Doing so does not affect Google Search, Bing,
+# ChatGPT search, Claude search or Perplexity, because each of those reads a
+# different token above.
+#
+#   GPTBot           OpenAI — foundation-model training
+#   ClaudeBot        Anthropic — model training
+#   Google-Extended  Google — Gemini training and grounding. Google states this
+#                    token does not affect inclusion or ranking in Google Search
+
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /ai-consultation/
+
 
 Sitemap: https://scssoftwares.com/sitemap.xml
