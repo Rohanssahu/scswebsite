@@ -1,4 +1,4 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * The AI video consultation agent. Every claim maps to something implemented
@@ -11,17 +11,8 @@ import type { ServiceContent } from './types';
  * platform integration, binding quotations, and any suggestion that the agent
  * is a human employee or closes sales unsupervised.
  */
-export const aiVideoConsultationAgents: ServiceContent = {
+export const aiVideoConsultationAgents: ServiceBody = {
   path: '/services/ai-video-consultation-agents',
-  group: 'ai',
-  navLabel: 'AI Video Consultation Agents',
-  serviceName: 'AI Video Consultation Agent Development',
-  serviceType: 'AI Video Consultation Agent Development',
-  metaTitle: 'AI Video Consultation Agent Development | SCS Softwares',
-  metaDescription:
-    'Avatar-led consultation rooms with two-way voice, live transcript, chat and a structured meeting summary, reviewed by your team before any follow-up.',
-  shareTitle: 'AI Video Consultation Agents — SCS Softwares',
-  priority: 0.85,
   icon: 'video-consultation',
   h1: 'AI Video Consultation Agent Development',
   valueProp:

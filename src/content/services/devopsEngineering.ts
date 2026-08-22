@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const devopsEngineering: ServiceContent = {
+export const devopsEngineering: ServiceBody = {
   path: '/services/devops-engineering',
-  group: 'platform',
-  navLabel: 'DevOps Engineering',
-  serviceName: 'DevOps Engineering',
-  serviceType: 'DevOps and Release Engineering',
-  metaTitle: 'DevOps Engineering & CI/CD Pipeline Services | SCS Softwares',
-  metaDescription:
-    'CI/CD pipelines, reproducible builds, environment management, automated test gates, deployment and rollback workflows, infrastructure automation, monitoring and secret handling.',
-  shareTitle: 'DevOps Engineering — SCS Softwares',
-  priority: 0.8,
   icon: 'devops',
   h1: 'DevOps Engineering and Release Automation',
   valueProp:

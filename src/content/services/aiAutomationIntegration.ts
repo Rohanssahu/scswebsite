@@ -1,4 +1,4 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * AI automation and integration. Every integration is described as custom
@@ -6,17 +6,8 @@ import type { ServiceContent } from './types';
  * this repository ships no connector catalogue and claiming one would be
  * false.
  */
-export const aiAutomationIntegration: ServiceContent = {
+export const aiAutomationIntegration: ServiceBody = {
   path: '/services/ai-automation-integration',
-  group: 'ai',
-  navLabel: 'AI Automation & Integration',
-  serviceName: 'AI Automation and Integration',
-  serviceType: 'AI Automation and Systems Integration',
-  metaTitle: 'AI Automation & Integration Services | SCS Softwares',
-  metaDescription:
-    'Connect AI to the systems you already run: document processing, structured extraction, workflow automation, approval checkpoints and audit trails.',
-  shareTitle: 'AI Automation & Integration — SCS Softwares',
-  priority: 0.85,
   icon: 'automation',
   h1: 'AI Automation and Integration',
   valueProp:

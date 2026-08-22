@@ -24,11 +24,18 @@ import {
   breadcrumbJsonLd,
   contactPageJsonLd,
   organizationJsonLd,
+  regionalServiceJsonLd,
   serviceJsonLd,
   webSiteJsonLd,
   type JsonLd,
 } from './jsonld';
 import { SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb, servicesHub } from '@/content/services';
+import {
+  LOCATION_CONTENT,
+  locationBreadcrumb,
+  locationsHub,
+  locationsHubBreadcrumb,
+} from '@/content/locations';
 
 export type RobotsDirective = 'index,follow' | 'noindex,follow' | 'noindex,nofollow';
 
@@ -284,6 +291,56 @@ const LEGACY_SERVICE_REDIRECTS: RouteSpec[] = [
   },
 ];
 
+/**
+ * The `/locations` hub. It explains that SCS Softwares is in Indore, India,
+ * that international delivery is remote, and that a market page describes
+ * service availability rather than a physical presence. Like the services hub
+ * it carries a BreadcrumbList and nothing else: it describes no single service
+ * and — deliberately — claims no location, so there is no Service node and no
+ * LocalBusiness anywhere near it.
+ */
+const LOCATIONS_HUB_ROUTE: RouteSpec = {
+  path: locationsHub.path,
+  title: locationsHub.metaTitle,
+  description: locationsHub.metaDescription,
+  shareTitle: locationsHub.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: 0.8,
+  jsonLd: [breadcrumbJsonLd(locationsHubBreadcrumb())],
+};
+
+/**
+ * The regional landing pages (Phase 3A): one per active market.
+ *
+ * Each carries a Service node whose `areaServed` is a schema.org `Country` and
+ * whose `provider` references the one India-based Organization node, plus the
+ * `Home › Locations › Country` BreadcrumbList that matches the trail the page
+ * renders. No hreflang: these are separate regional service pages, not
+ * translations of one localized page.
+ */
+const LOCATION_ROUTES: RouteSpec[] = LOCATION_CONTENT.map((location) => ({
+  path: location.path,
+  title: location.metaTitle,
+  description: location.metaDescription,
+  shareTitle: location.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: location.priority,
+  jsonLd: [
+    regionalServiceJsonLd({
+      name: location.serviceName,
+      serviceType: location.serviceType,
+      description: location.metaDescription,
+      path: location.path,
+      countryName: location.countryName,
+    }),
+    breadcrumbJsonLd(locationBreadcrumb(location)),
+  ],
+}));
+
 const ROUTE_SPECS: RouteSpec[] = [
   {
     path: '/',
@@ -369,6 +426,8 @@ const ROUTE_SPECS: RouteSpec[] = [
   },
   SERVICES_HUB_ROUTE,
   ...CANONICAL_SERVICE_ROUTES,
+  LOCATIONS_HUB_ROUTE,
+  ...LOCATION_ROUTES,
   {
     path: '/PrivacyPolicy',
     title: 'Privacy Policy | SCS Softwares',

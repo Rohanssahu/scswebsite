@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const webApplicationDevelopment: ServiceContent = {
+export const webApplicationDevelopment: ServiceBody = {
   path: '/services/web-application-development',
-  group: 'software',
-  navLabel: 'Web Application Development',
-  serviceName: 'Web Application Development',
-  serviceType: 'Web Application Development',
-  metaTitle: 'Web Application Development Services | SCS Softwares',
-  metaDescription:
-    'Custom web application development for customer portals, dashboards, marketplaces and booking systems — responsive interfaces, APIs, admin systems, payments and AI-enabled features.',
-  shareTitle: 'Web Application Development — SCS Softwares',
-  priority: 0.85,
   icon: 'web',
   h1: 'Web Application Development',
   valueProp:

@@ -4,6 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { indexableRoutes, prerenderRoutes, ROUTE_SEO } from './registry';
 import { SITE_ORIGIN } from './site';
 import { AI_SERVICE_CONTENT, SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb } from '@/content/services';
+import {
+  LOCATION_CONTENT,
+  LOCATIONS_HUB_PATH,
+  REQUIRED_SERVICE_LINKS,
+  locationBreadcrumb,
+  locationsHubBreadcrumb,
+} from '@/content/locations';
 
 /**
  * Assertions about the deployable artifact.
@@ -38,6 +45,12 @@ const metaContent = (html: string, key: string) =>
   null;
 
 const canonicalOf = (html: string) => html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? null;
+
+/** Every JSON-LD block in a document, parsed, in document order. */
+const jsonLd = (html: string) =>
+  [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((match) =>
+    JSON.parse(match[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&')),
+  );
 const titleOf = (html: string) => html.match(/<title>([^<]*)<\/title>/)?.[1] ?? null;
 
 describe.skipIf(!built)('prerender output', () => {
@@ -218,6 +231,104 @@ describe.skipIf(!built)('prerender output', () => {
       for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
         expect(html, `${service.path} -> ${target}`).toContain(`href="${target}"`);
       }
+    }
+  });
+
+  it('ships the locations hub with a breadcrumb, BreadcrumbList only, and market links', () => {
+    const html = read(LOCATIONS_HUB_PATH);
+    expect(html).toContain('aria-label="Breadcrumb"');
+    const blocks = jsonLd(html);
+    // The hub claims no service and no location, so it carries one node only.
+    expect(blocks.map((node) => node['@type'])).toEqual(['BreadcrumbList']);
+    const crumbs = locationsHubBreadcrumb();
+    expect(blocks[0].itemListElement).toHaveLength(crumbs.length);
+    expect(blocks[0].itemListElement.map((item: { name: string }) => item.name)).toEqual(['Home', 'Locations']);
+    expect(blocks[0].itemListElement.at(-1).item).toBe(canonicalOf(html));
+    for (const location of LOCATION_CONTENT) {
+      expect(html, `hub does not link to ${location.path}`).toContain(`href="${location.path}"`);
+    }
+    // Countries without a page must not be linked from anywhere in the build.
+    for (const slug of ['canada', 'australia', 'germany', 'netherlands', 'singapore', 'turkey']) {
+      expect(html.includes(`href="/locations/${slug}"`), `hub links to /locations/${slug}`).toBe(false);
+    }
+    for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+      expect(html, `hub has no link to ${target}`).toContain(`href="${target}"`);
+    }
+  });
+
+  it('ships each market page with a Service (areaServed Country) and a matching breadcrumb', () => {
+    for (const location of LOCATION_CONTENT) {
+      const html = read(location.path);
+      expect(html, location.path).toContain('aria-label="Breadcrumb"');
+
+      const blocks = jsonLd(html);
+      expect(blocks.map((node) => node['@type']), location.path).toEqual(['Service', 'BreadcrumbList']);
+
+      const service = blocks[0];
+      expect(service.url, location.path).toBe(canonicalOf(html));
+      expect(service.name, location.path).toBe(location.serviceName);
+      expect(service.areaServed, location.path).toEqual({ '@type': 'Country', name: location.countryName });
+      expect(service.provider, location.path).toEqual({ '@id': `${SITE_ORIGIN}/#organization` });
+      // No LocalBusiness, address, coordinates, phone or opening hours anywhere.
+      const serialized = JSON.stringify(blocks);
+      for (const forbidden of ['LocalBusiness', 'PostalAddress', 'GeoCoordinates', 'telephone', 'openingHours', 'FAQPage', 'aggregateRating']) {
+        expect(serialized.includes(forbidden), `${location.path} markup contains ${forbidden}`).toBe(false);
+      }
+
+      const crumbNode = blocks[1];
+      const crumbs = locationBreadcrumb(location);
+      expect(crumbNode.itemListElement, location.path).toHaveLength(crumbs.length);
+      const visible = html.replace(/&amp;/g, '&');
+      for (const crumb of crumbs) expect(visible, `${location.path}: ${crumb.name}`).toContain(crumb.name);
+      expect(crumbNode.itemListElement.at(-1).item, location.path).toBe(canonicalOf(html));
+      expect(html, `${location.path} does not link to the locations hub`).toContain(`href="${LOCATIONS_HUB_PATH}"`);
+    }
+  });
+
+  it('discloses Indian delivery and no local presence on every market page', () => {
+    for (const location of LOCATION_CONTENT) {
+      const html = read(location.path);
+      const text = html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+      expect(text, `${location.path} disclosure body`).toContain(location.disclosure.body);
+      for (const point of location.disclosure.points) expect(text, `${location.path}: ${point.slice(0, 40)}`).toContain(point);
+      expect(text, location.path).toMatch(/Indore/);
+      expect(text, location.path).toMatch(/remote/i);
+    }
+  });
+
+  it('renders every market FAQ answer into the HTML, not behind JavaScript', () => {
+    for (const location of LOCATION_CONTENT) {
+      const html = read(location.path);
+      for (const faq of location.faqs) {
+        expect(html, `${location.path}: ${faq.question}`).toContain(faq.question.replace(/&/g, '&amp;'));
+      }
+    }
+  });
+
+  it('links every market page to the required global services and all three CTAs', () => {
+    for (const location of LOCATION_CONTENT) {
+      const html = read(location.path);
+      for (const required of REQUIRED_SERVICE_LINKS) {
+        expect(html, `${location.path} -> ${required}`).toContain(`href="${required}"`);
+      }
+      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+        expect(html, `${location.path} -> ${target}`).toContain(`href="${target}"`);
+      }
+      // And to the other two live markets, never to a country with no page.
+      for (const market of location.otherMarkets) {
+        expect(html, `${location.path} -> ${market.path}`).toContain(`href="${market.path}"`);
+      }
+    }
+  });
+
+  it('reaches the locations hub from the homepage and the About page', () => {
+    for (const entry of ['/', '/about']) {
+      expect(read(entry), `${entry} does not link to ${LOCATIONS_HUB_PATH}`).toContain(`href="${LOCATIONS_HUB_PATH}"`);
+    }
+    // The homepage international-delivery section lists the markets themselves.
+    const home = read('/');
+    for (const location of LOCATION_CONTENT) {
+      expect(home, `homepage does not link to ${location.path}`).toContain(`href="${location.path}"`);
     }
   });
 

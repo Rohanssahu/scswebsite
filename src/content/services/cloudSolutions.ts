@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const cloudSolutions: ServiceContent = {
+export const cloudSolutions: ServiceBody = {
   path: '/services/cloud-solutions',
-  group: 'platform',
-  navLabel: 'Cloud Solutions',
-  serviceName: 'Cloud Solutions',
-  serviceType: 'Cloud Architecture and Migration',
-  metaTitle: 'Cloud Solutions, Hosting & Migration Services | SCS Softwares',
-  metaDescription:
-    'Cloud-readiness assessment, deployment architecture, environments and configuration, managed databases and storage, backups, observability, cost review and staged migration.',
-  shareTitle: 'Cloud Solutions — SCS Softwares',
-  priority: 0.8,
   icon: 'cloud',
   h1: 'Cloud Architecture, Hosting and Migration',
   valueProp:

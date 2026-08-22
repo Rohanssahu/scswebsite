@@ -1,21 +1,12 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * Deliberately kept distinct from the generative-AI pages: this is supervised
  * and unsupervised learning on a client's own data, where feasibility is
  * decided by the data rather than by the choice of model provider.
  */
-export const machineLearningDevelopment: ServiceContent = {
+export const machineLearningDevelopment: ServiceBody = {
   path: '/services/machine-learning-development',
-  group: 'ai',
-  navLabel: 'Machine Learning Development',
-  serviceName: 'Machine Learning Development',
-  serviceType: 'Machine Learning Development',
-  metaTitle: 'Machine Learning Development Services | SCS Softwares',
-  metaDescription:
-    'Machine learning on your own data: prediction, classification, recommendation, anomaly detection and document sorting, integrated and monitored after launch.',
-  shareTitle: 'Machine Learning Development — SCS Softwares',
-  priority: 0.85,
   icon: 'machine-learning',
   h1: 'Machine Learning Development',
   valueProp:

@@ -20,6 +20,8 @@ import {
   ArrowRight,
   CheckCircle,
   Sparkles,
+  Globe2,
+  MapPin,
   ClipboardList,
   Rocket,
   Wrench,
@@ -40,6 +42,8 @@ import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import VisualPlaceholder from '../components/VisualPlaceholder';
 import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
+import { LOCATION_NAV, LOCATIONS_HUB } from '@/data/locationNav';
+import { homeInternationalSection } from '@/content/locations';
 
 const DEMO_TEAM = [
   { slug: 'requirement-analyst', rate: 5 },
@@ -478,6 +482,49 @@ const Index = () => {
                 className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
               >
                 {t('nav.allServices')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== International delivery ===== */}
+      <section id="international-delivery" className="border-t border-gray-200 py-20">
+        <div className="container mx-auto px-4">
+          <SectionHeading
+            eyebrow={homeInternationalSection.eyebrow}
+            title={homeInternationalSection.title}
+            sub={homeInternationalSection.sub}
+          />
+          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
+            {LOCATION_NAV.map((market, i) => (
+              <Reveal key={market.path} delay={i * 0.06}>
+                <Link
+                  to={market.path}
+                  className="group flex h-full items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-5 transition-colors hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  <span className="flex items-center gap-3">
+                    <Globe2 className="h-6 w-6 shrink-0 text-pink-600" aria-hidden="true" />
+                    <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{market.label}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.1}>
+            <p className="mx-auto mt-6 flex max-w-2xl items-start justify-center gap-2 text-center text-sm text-gray-600">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
+              <span>{homeInternationalSection.note}</span>
+            </p>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <div className="mt-6 text-center">
+              <Link
+                to={LOCATIONS_HUB.path}
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+              >
+                {homeInternationalSection.linkLabel} <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
           </Reveal>

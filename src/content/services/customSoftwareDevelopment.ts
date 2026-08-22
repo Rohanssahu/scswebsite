@@ -1,20 +1,11 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * The global pillar page. It describes the whole custom-build practice and
  * links out to the four focused service pages, which link back to it.
  */
-export const customSoftwareDevelopment: ServiceContent = {
+export const customSoftwareDevelopment: ServiceBody = {
   path: '/services/custom-software-development',
-  group: 'software',
-  navLabel: 'Custom Software Development',
-  serviceName: 'Custom Software Development',
-  serviceType: 'Custom Software Development',
-  metaTitle: 'Custom Software Development Company | SCS Softwares',
-  metaDescription:
-    'SCS Softwares is an India-based remote software development company building custom products, business-process automation, internal tools and AI-assisted solutions for international clients.',
-  shareTitle: 'Custom Software Development — SCS Softwares',
-  priority: 0.9,
   icon: 'custom-software',
   h1: 'Custom Software Development',
   valueProp:

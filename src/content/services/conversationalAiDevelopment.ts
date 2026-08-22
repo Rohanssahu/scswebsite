@@ -1,4 +1,4 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * Conversational AI across channels. Kept distinct from the voice-agent page:
@@ -6,17 +6,8 @@ import type { ServiceContent } from './types';
  * the conversation happens — chat first, with voice as one channel among
  * several rather than the subject.
  */
-export const conversationalAiDevelopment: ServiceContent = {
+export const conversationalAiDevelopment: ServiceBody = {
   path: '/services/conversational-ai-development',
-  group: 'ai',
-  navLabel: 'Conversational AI Development',
-  serviceName: 'Conversational AI Development',
-  serviceType: 'Conversational AI Development',
-  metaTitle: 'Conversational AI Development Services | SCS Softwares',
-  metaDescription:
-    'Website and in-app assistants grounded in your own content: guided requirement collection, support workflows, backend actions and a clean handoff to people.',
-  shareTitle: 'Conversational AI Development — SCS Softwares',
-  priority: 0.85,
   icon: 'conversational',
   h1: 'Conversational AI Development',
   valueProp:

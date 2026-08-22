@@ -121,6 +121,26 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://scssoftwares.com/locations</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://scssoftwares.com/locations/united-states</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://scssoftwares.com/locations/united-kingdom</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://scssoftwares.com/locations/united-arab-emirates</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://scssoftwares.com/PrivacyPolicy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>

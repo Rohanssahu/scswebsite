@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const uiUxDesign: ServiceContent = {
+export const uiUxDesign: ServiceBody = {
   path: '/services/ui-ux-design',
-  group: 'design',
-  navLabel: 'UI/UX Design',
-  serviceName: 'UI/UX Design',
-  serviceType: 'UI/UX and Product Design',
-  metaTitle: 'UI/UX Design Services for Web & Mobile Apps | SCS Softwares',
-  metaDescription:
-    'Product discovery, user flows, wireframes, interface and responsive design, design systems, clickable prototypes, accessibility review and build-ready developer handoff.',
-  shareTitle: 'UI/UX Design — SCS Softwares',
-  priority: 0.8,
   icon: 'design',
   h1: 'UI/UX Design for Web and Mobile Products',
   valueProp:

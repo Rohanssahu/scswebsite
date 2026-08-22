@@ -20,6 +20,18 @@
  *                                CTAs — plus every old /gig URL still
  *                                forwarding as noindex and absent from the
  *                                sitemap
+ *   8. location-page check     — the /locations hub and every regional page:
+ *                                physical HTML with real copy, unique metadata,
+ *                                self-canonical, index,follow, sitemap
+ *                                membership, a visible breadcrumb, matching
+ *                                Service (areaServed Country) and
+ *                                BreadcrumbList JSON-LD, links to the real
+ *                                global service pages, the three CTAs — plus a
+ *                                fabricated-location scan that fails the build
+ *                                on any local office / entity / staff / phone /
+ *                                certification / guaranteed-coverage claim, and
+ *                                requires the India + remote + no-local-office
+ *                                disclosure as visible copy
  *
  * Usage: node scripts/verify-dist.mjs
  */
@@ -527,6 +539,376 @@ async function checkServicePages(sitemapLocs) {
 }
 
 // ---------------------------------------------------------------------------
+// 8: the Phase 3A regional pages, served through the static server
+// ---------------------------------------------------------------------------
+
+const LOCATIONS_HUB_PATH = '/locations';
+
+/** Exactly the markets that have a written page. */
+const LOCATION_PATHS = [
+  '/locations/united-states',
+  '/locations/united-kingdom',
+  '/locations/united-arab-emirates',
+];
+
+/** Countries named on the hub as future markets. None may be linked anywhere. */
+const UNWRITTEN_MARKET_SLUGS = ['canada', 'australia', 'germany', 'netherlands', 'singapore', 'turkey'];
+
+/** The global service pages every regional page has to link to. */
+const REQUIRED_SERVICE_LINKS = [
+  '/services/custom-software-development',
+  '/services/mobile-app-development',
+  '/services/web-application-development',
+  '/services/ai-development',
+  '/services/ai-voice-agent-development',
+  '/services/ai-video-consultation-agents',
+];
+
+/**
+ * Claims that are a lie on a regional page in any context whatsoever. No
+ * negation rescues these — the phrasing itself is the problem.
+ */
+const FABRICATED_LOCATION_PATTERNS = [
+  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati) (?:office|team|staff|branch|headquarters)\b/i, 'a local office or team'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|Sharjah|London|New York)\b/i, 'a foreign office'],
+  [/\b(?:based|headquartered|located|registered) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i, 'a foreign base'],
+  [/\+1[\s-]?\(?\d{3}/, 'a US telephone number'],
+  [/\+44[\s-]?\d{2}/, 'a UK telephone number'],
+  [/\+971[\s-]?\d/, 'a UAE telephone number'],
+  [/\bfully (?:compliant|certified|secure|GDPR)\b/i, 'an absolute compliance claim'],
+  [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2) compliant\b/i, 'a compliance claim'],
+  [/\bgovernment[- ](?:approved|certified|licensed)\b/i, 'a government approval'],
+  [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|results?)\b/i, 'a guaranteed outcome or coverage'],
+  [/\b24\/7 (?:support|coverage|availability)\b/i, 'round-the-clock coverage'],
+  [/\baround[- ]the[- ]clock (?:support|coverage|availability)\b/i, 'round-the-clock coverage'],
+  [/\balways available\b/i, 'continuous availability'],
+  [/\baward[- ]winning\b/i, 'an award'],
+  [/\bindustry[- ]leading\b/i, 'an industry-leading claim'],
+  [/\bnumber one\b/i, 'a number-one claim'],
+  [/\bno\.? ?1\b/i, 'a number-one claim'],
+  [/\b\d{2,}\+? (?:happy )?(?:clients|customers|projects)\b/i, 'a client or project count'],
+  [/\b\d+% (?:satisfaction|success|accuracy|uptime|growth)\b/i, 'a performance percentage'],
+  [/\b\d+\+ years\b/i, 'a years-in-business claim'],
+  [/\bmarket (?:is|was) (?:worth|valued)\b/i, 'a market-size statistic'],
+  [/\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY) \d{5}(?:-\d{4})?\b/, 'a US postal address'],
+  [/\b(?:E|EC|N|NW|SE|SW|W|WC|B|M|LS|G|EH|CF|BS|L)\d{1,2}[A-Z]? ?\d[A-Z]{2}\b/, 'a UK postcode'],
+  [/\bP\.? ?O\.? Box\b/i, 'a PO box'],
+  [/\b(?:Suite|Ste\.|Street|Avenue|Boulevard|Sheikh Zayed Road)\b[^.]{0,60}\b(?:USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i, 'a street address in a target country'],
+  [/\bfastest[- ]growing\b/i, 'a growth ranking'],
+];
+
+/**
+ * Phrases allowed only inside a denial, or inside a question the page then
+ * answers. The required disclosure has to be able to say "we do not maintain a
+ * local office"; a claim may not say "our local office".
+ */
+const DENIAL_ONLY_PATTERNS = [
+  [/\blocal offices?\b/i, 'a local office'],
+  [/\blocal team\b/i, 'a local team'],
+  [/\blocal (?:employees|staff)\b/i, 'local employees'],
+  [/\blocal (?:phone|telephone)\b/i, 'a local phone number'],
+  [/\blocally registered\b/i, 'local registration'],
+  [/\bregistered (?:entity|company|branch)\b/i, 'a registered foreign entity'],
+  [/\bguarantee[a-z]*\b/i, 'a guarantee'],
+  [/\bcompliant\b/i, 'a compliance claim'],
+  [/\bcertif(?:ied|ication)\b/i, 'a certification'],
+  [/\btrade licen[cs]e\b/i, 'a trade licence'],
+  [/\b(?:HIPAA|SOC ?2|PCI ?DSS|ISO ?\d{4,}|Cyber Essentials)[- ]?(?:certified|compliant|accredited)\b/i, 'a named-framework certification'],
+];
+
+const DENIAL_WORDS = /\b(?:no|not|never|cannot|can't|without|nor|neither|nothing|none|do not|does not|will not|hold no|have no|make no|claim no)\b/i;
+
+/**
+ * Text every regional page must contain as visible copy: SCS operates from
+ * Indore, India; services are delivered remotely; no local office is
+ * represented in that market.
+ */
+const REQUIRED_LOCATION_DISCLOSURES = [
+  [/(?:operates|works|working) from Indore|based in Indore|from Indore, (?:Madhya Pradesh, )?India/i, 'operates from Indore, India'],
+  [/delivered remotely|delivery is remote|remote(?:ly)? from (?:that office|India)|serves .{0,60} remotely/i, 'delivery is remote'],
+  [/no local office|do not maintain a local office|have no premises|there is no local office/i, 'no local office in this market'],
+];
+
+/** The sentence a match sits inside, so a question can be told from a claim. */
+function sentenceAround(text, index) {
+  const start = Math.max(
+    text.lastIndexOf('.', index),
+    text.lastIndexOf('?', index),
+    text.lastIndexOf('!', index),
+  );
+  const rest = text.slice(index);
+  const endOffset = rest.search(/[.?!]/);
+  return text.slice(start + 1, endOffset === -1 ? undefined : index + endOffset + 1).trim();
+}
+
+function scanFabricatedLocation(urlPath, bodyText) {
+  for (const [pattern, label] of FABRICATED_LOCATION_PATTERNS) {
+    const hit = bodyText.match(pattern);
+    if (hit) fail('fabricated-location', `${urlPath}: ${label} — "${hit[0]}"`);
+  }
+  for (const [pattern, label] of DENIAL_ONLY_PATTERNS) {
+    const global = new RegExp(pattern.source, 'gi');
+    for (const match of bodyText.matchAll(global)) {
+      const index = match.index ?? 0;
+      // A question asserts nothing — the answer beneath it is what must be honest.
+      if (sentenceAround(bodyText, index).endsWith('?')) continue;
+      const before = bodyText.slice(Math.max(0, index - 140), index);
+      if (!DENIAL_WORDS.test(before)) {
+        fail('fabricated-location', `${urlPath}: ${label} with no denial in front — "…${before.slice(-60)}${match[0]}"`);
+      }
+    }
+  }
+}
+
+async function checkLocationPages(sitemapLocs) {
+  const server = await startServer();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const titles = new Map();
+  const descriptions = new Map();
+  const bodies = new Map();
+
+  try {
+    for (const urlPath of [LOCATIONS_HUB_PATH, ...LOCATION_PATHS]) {
+      const isHub = urlPath === LOCATIONS_HUB_PATH;
+      const response = await fetch(`${base}${urlPath}`);
+      const html = await response.text();
+      if (response.status !== 200) {
+        fail('location-pages', `GET ${urlPath} -> ${response.status}`);
+        continue;
+      }
+
+      // --- physical HTML with meaningful copy before JavaScript ------------
+      const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
+      const bodyText = decodeEntities(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+      const words = bodyText.split(' ').length;
+      const minimumWords = isHub ? 500 : 1200;
+      if (words < minimumWords) fail('location-pages', `${urlPath}: only ${words} words of prerendered copy`);
+      bodies.set(urlPath, bodyText);
+
+      // --- exactly one H1 --------------------------------------------------
+      const h1s = html.match(/<h1[\s>]/g) ?? [];
+      if (h1s.length !== 1) fail('location-pages', `${urlPath}: ${h1s.length} <h1> elements`);
+
+      // --- unique metadata, self-canonical, indexable -----------------------
+      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+      const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
+      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+      const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+      if (titles.has(title)) fail('location-pages', `${urlPath}: title duplicates ${titles.get(title)}`);
+      titles.set(title, urlPath);
+      if (descriptions.has(description)) {
+        fail('location-pages', `${urlPath}: description duplicates ${descriptions.get(description)}`);
+      }
+      descriptions.set(description, urlPath);
+      if (canonical !== `${ORIGIN}${urlPath}`) fail('location-pages', `${urlPath}: canonical is "${canonical}"`);
+      if (robots !== 'index,follow') fail('location-pages', `${urlPath}: robots="${robots}"`);
+      for (const key of ['og:title', 'og:description', 'og:url', 'og:image', 'twitter:card', 'twitter:title', 'twitter:description']) {
+        if (!new RegExp(`<meta (?:name|property)="${key}" content="[^"]+"`).test(html)) {
+          fail('location-pages', `${urlPath}: missing ${key}`);
+        }
+      }
+      // Phase 3A ships no hreflang: these are regional service pages, not
+      // translations of one localized page.
+      if (/rel="alternate"[^>]*hreflang=/.test(html)) {
+        fail('location-pages', `${urlPath}: carries an hreflang alternate`);
+      }
+
+      // --- sitemap membership ----------------------------------------------
+      if (!sitemapLocs.includes(`${ORIGIN}${urlPath}`)) {
+        fail('location-pages', `${urlPath} is missing from sitemap.xml`);
+      }
+
+      // --- visible breadcrumb ----------------------------------------------
+      if (!html.includes('aria-label="Breadcrumb"')) fail('location-pages', `${urlPath}: no visible breadcrumb`);
+      if (!html.includes('aria-current="page"')) fail('location-pages', `${urlPath}: breadcrumb marks no current page`);
+
+      // --- structured data --------------------------------------------------
+      const blocks = jsonLdBlocks(html);
+      const types = blocks.map((node) => node['@type']);
+      const serviceNode = blocks.find((node) => node['@type'] === 'Service');
+      const breadcrumb = blocks.find((node) => node['@type'] === 'BreadcrumbList');
+      if (isHub) {
+        if (types.join(',') !== 'BreadcrumbList') {
+          fail('structured-data', `${urlPath}: hub markup is [${types.join(', ')}] — expected BreadcrumbList only`);
+        }
+      } else {
+        if (types.join(',') !== 'Service,BreadcrumbList') {
+          fail('structured-data', `${urlPath}: markup is [${types.join(', ')}] — expected Service then BreadcrumbList`);
+        }
+        if (!serviceNode) {
+          fail('structured-data', `${urlPath}: no Service JSON-LD`);
+        } else {
+          if (serviceNode.url !== canonical) fail('structured-data', `${urlPath}: Service.url is "${serviceNode.url}"`);
+          if (serviceNode.areaServed?.['@type'] !== 'Country') {
+            fail('structured-data', `${urlPath}: areaServed is not a schema.org Country`);
+          }
+          if (serviceNode.provider?.['@id'] !== `${ORIGIN}/#organization`) {
+            fail('structured-data', `${urlPath}: Service.provider does not reference the India-based Organization`);
+          }
+        }
+      }
+      // No location claim of any kind may appear in the markup on these pages.
+      const serialized = JSON.stringify(blocks);
+      for (const forbidden of [
+        'LocalBusiness',
+        'PostalAddress',
+        'GeoCoordinates',
+        'telephone',
+        'openingHours',
+        'OpeningHoursSpecification',
+        'aggregateRating',
+        'FAQPage',
+        '"review"',
+        'branchOf',
+      ]) {
+        if (serialized.includes(forbidden)) {
+          fail('structured-data', `${urlPath}: markup contains ${forbidden}`);
+        }
+      }
+      if (!breadcrumb) {
+        fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
+      } else {
+        const items = breadcrumb.itemListElement ?? [];
+        const expectedDepth = isHub ? 2 : 3;
+        if (items.length !== expectedDepth) {
+          fail('structured-data', `${urlPath}: BreadcrumbList has ${items.length} item(s), expected ${expectedDepth}`);
+        }
+        if (items[0]?.name !== 'Home') fail('structured-data', `${urlPath}: breadcrumb does not start at Home`);
+        if (items[1]?.name !== 'Locations') fail('structured-data', `${urlPath}: breadcrumb does not pass through Locations`);
+        if (items[1]?.item !== `${ORIGIN}${LOCATIONS_HUB_PATH}`) {
+          fail('structured-data', `${urlPath}: middle crumb points at "${items[1]?.item}"`);
+        }
+        if (items.at(-1)?.item !== canonical) {
+          fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
+        }
+        // Every crumb name must be readable on the page a visitor sees.
+        const visible = decodeEntities(html.replace(/<[^>]+>/g, ' '));
+        for (const item of items) {
+          if (!visible.includes(item.name)) {
+            fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
+          }
+        }
+      }
+
+      // --- fabricated-location scan ----------------------------------------
+      scanFabricatedLocation(urlPath, bodyText);
+
+      // --- the required disclosure, as visible copy -------------------------
+      for (const [pattern, what] of REQUIRED_LOCATION_DISCLOSURES) {
+        if (!pattern.test(bodyText)) fail('location-honesty', `${urlPath}: does not disclose ${what}`);
+      }
+      if (!/Indore/.test(bodyText)) fail('location-honesty', `${urlPath}: never names Indore`);
+      // The disclosure must not be hidden text.
+      for (const match of html.matchAll(/class="[^"]*sr-only[^"]*"[^>]*>([^<]*)</g)) {
+        if (/Indore|remote|office/i.test(match[1])) {
+          fail('location-honesty', `${urlPath}: disclosure copy hidden in a screen-reader-only block`);
+        }
+      }
+      for (const hidden of ['display:none', 'visibility:hidden', 'font-size:0', 'text-indent:-']) {
+        const index = html.indexOf(hidden);
+        if (index === -1) continue;
+        const around = decodeEntities(html.slice(index, index + 800).replace(/<[^>]+>/g, ' '));
+        if (/Indore|remote|no local office/i.test(around)) {
+          fail('location-honesty', `${urlPath}: disclosure copy sits inside a "${hidden}" block`);
+        }
+      }
+
+      // --- the three required calls to action -------------------------------
+      for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+        if (!html.includes(`href="${target}"`)) fail('location-pages', `${urlPath}: no link to ${target}`);
+      }
+
+      // --- linkage ----------------------------------------------------------
+      if (isHub) {
+        for (const locationPath of LOCATION_PATHS) {
+          if (!html.includes(`href="${locationPath}"`)) fail('location-pages', `${urlPath}: no link to ${locationPath}`);
+        }
+      } else {
+        if (!html.includes(`href="${LOCATIONS_HUB_PATH}"`)) {
+          fail('location-pages', `${urlPath}: no link back to the locations hub`);
+        }
+        for (const servicePath of REQUIRED_SERVICE_LINKS) {
+          if (!html.includes(`href="${servicePath}"`)) {
+            fail('location-pages', `${urlPath}: no link to the global page ${servicePath}`);
+          }
+          if (!resolveDistPath(servicePath)) {
+            fail('location-pages', `${urlPath}: links to ${servicePath}, which has no file in dist`);
+          }
+        }
+        // The other two live markets, and nothing else.
+        const linkedMarkets = [...html.matchAll(/href="(\/locations\/[^"]+)"/g)].map((match) => match[1]);
+        for (const linked of new Set(linkedMarkets)) {
+          if (!LOCATION_PATHS.includes(linked)) {
+            fail('location-pages', `${urlPath}: links to unwritten market ${linked}`);
+          }
+        }
+      }
+    }
+
+    // --- nothing in the whole build links to a market page we never wrote ---
+    const htmlFiles = await walk(DIST, (file) => file.endsWith('.html'));
+    for (const file of htmlFiles) {
+      const html = await fs.readFile(file, 'utf8');
+      const name = rel(file).replace(/\\/g, '/');
+      for (const slug of UNWRITTEN_MARKET_SLUGS) {
+        if (html.includes(`href="/locations/${slug}"`)) {
+          fail('location-links', `${name}: links to /locations/${slug}, which does not exist`);
+        }
+      }
+      for (const match of html.matchAll(/href="(\/locations[^"]*)"/g)) {
+        const target = match[1];
+        if (target !== LOCATIONS_HUB_PATH && !LOCATION_PATHS.includes(target)) {
+          fail('location-links', `${name}: links to unknown locations URL ${target}`);
+        }
+      }
+    }
+
+    // --- the hub is reachable from the site chrome and key pages ------------
+    for (const entry of ['/', '/about', '/services', '/contact']) {
+      const response = await fetch(`${base}${entry}`);
+      const html = await response.text();
+      if (!html.includes(`href="${LOCATIONS_HUB_PATH}"`)) {
+        fail('location-links', `${entry}: no link to the locations hub`);
+      }
+    }
+
+    // --- duplicate-content scan across the three market pages --------------
+    const bigrams = (text) => {
+      const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+      const set = new Set();
+      for (let i = 0; i < words.length - 1; i += 1) set.add(`${words[i]} ${words[i + 1]}`);
+      return set;
+    };
+    for (let i = 0; i < LOCATION_PATHS.length; i += 1) {
+      for (let j = i + 1; j < LOCATION_PATHS.length; j += 1) {
+        const left = bigrams(bodies.get(LOCATION_PATHS[i]) ?? '');
+        const right = bigrams(bodies.get(LOCATION_PATHS[j]) ?? '');
+        if (left.size === 0 || right.size === 0) continue;
+        let shared = 0;
+        for (const gram of left) if (right.has(gram)) shared += 1;
+        const score = shared / (left.size + right.size - shared);
+        // Rendered bodies include the shared header, footer and layout labels,
+        // so the ceiling is looser than the content-object test in
+        // locationPages.test.tsx. A country-name substitution scores near 1.0.
+        if (score > 0.4) {
+          fail(
+            'duplicate-content',
+            `${LOCATION_PATHS[i]} and ${LOCATION_PATHS[j]} are ${(score * 100).toFixed(1)}% similar`,
+          );
+        }
+        notes.push(
+          `${LOCATION_PATHS[i]} vs ${LOCATION_PATHS[j]}: ${(score * 100).toFixed(1)}% body similarity`,
+        );
+      }
+    }
+
+    notes.push(`verified the locations hub, ${LOCATION_PATHS.length} regional pages and the fabricated-location scan`);
+  } finally {
+    server.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   if (!fss.existsSync(DIST)) {
@@ -539,6 +921,7 @@ async function main() {
   const sitemapLocs = await scanSitemapAndRobots();
   await serveAndCheck();
   await checkServicePages(sitemapLocs);
+  await checkLocationPages(sitemapLocs);
 
   for (const note of notes) console.log(`  · ${note}`);
   if (failures.length > 0) {
@@ -548,7 +931,7 @@ async function main() {
     return;
   }
   console.log(
-    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards.',
+    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards, regional pages, location honesty.',
   );
 }
 

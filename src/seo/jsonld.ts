@@ -104,6 +104,42 @@ export function serviceJsonLd(input: {
   };
 }
 
+/**
+ * A Service node for one of the regional landing pages (Phase 3A).
+ *
+ * Identical in spirit to `serviceJsonLd`, with one difference that matters: the
+ * `areaServed` is a schema.org `Country` rather than the "Worldwide" `Place`,
+ * because the page really is about one market. That is the only location claim
+ * the markup makes — availability of a service in a country.
+ *
+ * `provider` is a reference to the single India-based Organization node defined
+ * on the homepage, so there is exactly one organisation on the site and it has
+ * exactly one address, in Indore.
+ *
+ * Deliberately absent, and never to be added for a target country: LocalBusiness,
+ * PostalAddress, GeoCoordinates, telephone, openingHours, aggregateRating,
+ * review, FAQPage, branch or `location` nodes.
+ */
+export function regionalServiceJsonLd(input: {
+  name: string;
+  serviceType: string;
+  description: string;
+  path: string;
+  /** schema.org `Country.name`, e.g. "United States". */
+  countryName: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: input.name,
+    serviceType: input.serviceType,
+    description: input.description,
+    url: canonicalUrl(input.path),
+    provider: { '@id': ORGANIZATION_ID },
+    areaServed: { '@type': 'Country', name: input.countryName },
+  };
+}
+
 /** A ContactPage node carrying only the contact details the page shows. */
 export function contactPageJsonLd(path: string): JsonLd {
   return {

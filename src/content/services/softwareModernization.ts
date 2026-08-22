@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const softwareModernization: ServiceContent = {
+export const softwareModernization: ServiceBody = {
   path: '/services/software-modernization',
-  group: 'software',
-  navLabel: 'Software Modernization',
-  serviceName: 'Software Modernization',
-  serviceType: 'Legacy Software Modernization',
-  metaTitle: 'Software Modernization & Legacy App Upgrade | SCS Softwares',
-  metaDescription:
-    'Assessment, incremental migration and modernization of existing applications: legacy interfaces, performance, API upgrades, security review, cloud readiness, bug fixing and maintenance.',
-  shareTitle: 'Software Modernization — SCS Softwares',
-  priority: 0.85,
   icon: 'modernization',
   h1: 'Software Modernization',
   valueProp:

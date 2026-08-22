@@ -16,10 +16,13 @@ import {
   ShieldCheck,
   Clock,
   PhoneCall,
+  Globe2,
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
+import { LOCATIONS_HUB } from '@/data/locationNav';
+import { aboutRemoteDeliverySection } from '@/content/locations';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -235,6 +238,34 @@ const About = () => {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ===== Remote delivery ===== */}
+      <section id="remote-delivery" className="border-t border-gray-200 py-20">
+        <div className="container mx-auto px-4">
+          <Reveal>
+            <div className="mx-auto max-w-3xl">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+                {aboutRemoteDeliverySection.eyebrow}
+              </span>
+              <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
+                {aboutRemoteDeliverySection.title}
+              </h2>
+              {aboutRemoteDeliverySection.paragraphs.map((paragraph) => (
+                <p key={paragraph.slice(0, 40)} className="mt-5 leading-relaxed text-gray-600">
+                  {paragraph}
+                </p>
+              ))}
+              <Link
+                to={LOCATIONS_HUB.path}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-pink-300 bg-white px-5 py-3 text-sm font-semibold text-pink-700 transition-colors hover:border-pink-400 hover:bg-pink-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+              >
+                <Globe2 className="h-4 w-4" aria-hidden="true" /> {aboutRemoteDeliverySection.linkLabel}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 

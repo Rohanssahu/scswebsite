@@ -1,88 +1,47 @@
 /**
- * Every service page, in the order it appears in navigation and on the
- * `/services` hub.
+ * The lightweight service barrel.
  *
- * `src/seo/registry.ts`, the header, the footer, the homepage, the hub and the
- * page components all read this list, so a new service page is added in one
- * place and reaches every surface.
+ * Everything exported here is small enough to sit in the main JavaScript
+ * bundle: the metadata manifest, the breadcrumb builders and the types. The
+ * `/services` hub copy lives in `./hub.ts` and each page's body copy in its own
+ * module, both of which are loaded as route-level chunks.
+ *
+ * Nothing in this file may import a body module or the hub copy — that is what
+ * keeps 320 KB of service prose out of the app shell. `./all.ts` composes the
+ * full objects for tests and other build-time consumers.
  */
 
-import { aiAutomationIntegration } from './aiAutomationIntegration';
-import { aiDevelopment } from './aiDevelopment';
-import { aiVideoConsultationAgents } from './aiVideoConsultationAgents';
-import { aiVoiceAgentDevelopment } from './aiVoiceAgentDevelopment';
-import { cloudSolutions } from './cloudSolutions';
-import { conversationalAiDevelopment } from './conversationalAiDevelopment';
-import { customSoftwareDevelopment } from './customSoftwareDevelopment';
-import { devopsEngineering } from './devopsEngineering';
-import { digitalMarketing } from './digitalMarketing';
-import { machineLearningDevelopment } from './machineLearningDevelopment';
-import { mobileAppDevelopment } from './mobileAppDevelopment';
-import { saasDevelopment } from './saasDevelopment';
-import { servicesHub } from './hub';
-import { softwareModernization } from './softwareModernization';
-import { uiUxDesign } from './uiUxDesign';
-import { webApplicationDevelopment } from './webApplicationDevelopment';
-import type { ServiceContent } from './types';
+export {
+  AI_PILLAR_SERVICE_META,
+  AI_SERVICE_META,
+  DELIVERY_SERVICE_META,
+  GROWTH_SERVICE_META,
+  PILLAR_SERVICE_META,
+  SERVICES_HUB_PATH,
+  SERVICE_META,
+  SERVICE_META_BY_PATH,
+  SOFTWARE_SERVICE_META,
+  SUPPORT_SERVICE_META,
+  servicesHubMeta,
+} from './manifest';
+export { serviceContent } from './compose';
+export type {
+  CapabilityGroup,
+  EngagementOption,
+  FaqItem,
+  ProblemBlock,
+  ProcessStep,
+  RelatedLink,
+  ServiceBody,
+  ServiceContent,
+  ServiceGroup,
+  ServiceIconKey,
+  ServiceMeta,
+  ServiceSectionHeader,
+} from './types';
 
-/** The hub every service page's breadcrumb passes through. */
-export const SERVICES_HUB_PATH = servicesHub.path;
-
-/** The pillar page for the software-development group. */
-export const PILLAR_SERVICE = customSoftwareDevelopment;
-/** The pillar page for the AI group. */
-export const AI_PILLAR_SERVICE = aiDevelopment;
-
-/** Software-development service pages (Phase 2A). */
-export const SOFTWARE_SERVICE_CONTENT: ServiceContent[] = [
-  customSoftwareDevelopment,
-  mobileAppDevelopment,
-  webApplicationDevelopment,
-  saasDevelopment,
-  softwareModernization,
-];
-
-/** AI service pages (Phase 2B). */
-export const AI_SERVICE_CONTENT: ServiceContent[] = [
-  aiDevelopment,
-  machineLearningDevelopment,
-  aiVoiceAgentDevelopment,
-  aiVideoConsultationAgents,
-  conversationalAiDevelopment,
-  aiAutomationIntegration,
-];
-
-/**
- * Design, cloud and delivery service pages (Phase 2C). These support a build
- * rather than being one of the two engineering pillars.
- */
-export const DELIVERY_SERVICE_CONTENT: ServiceContent[] = [uiUxDesign, cloudSolutions, devopsEngineering];
-
-/**
- * Growth services (Phase 2C). Kept in a group of its own so marketing support
- * is never presented as part of the software or AI engineering offer.
- */
-export const GROWTH_SERVICE_CONTENT: ServiceContent[] = [digitalMarketing];
-
-/**
- * The supporting services, in the order the header, footer, homepage and hub
- * list them after the two engineering groups.
- */
-export const SUPPORT_SERVICE_CONTENT: ServiceContent[] = [
-  ...DELIVERY_SERVICE_CONTENT,
-  ...GROWTH_SERVICE_CONTENT,
-];
-
-/** Every service page rendered by the shared ServicePage layout. */
-export const SERVICE_CONTENT: ServiceContent[] = [
-  ...SOFTWARE_SERVICE_CONTENT,
-  ...AI_SERVICE_CONTENT,
-  ...SUPPORT_SERVICE_CONTENT,
-];
-
-export const SERVICE_CONTENT_BY_PATH: Record<string, ServiceContent> = Object.fromEntries(
-  SERVICE_CONTENT.map((service) => [service.path, service]),
-);
+import { SERVICES_HUB_PATH, servicesHubMeta } from './manifest';
+import type { ServiceMeta } from './types';
 
 export interface Crumb {
   name: string;
@@ -94,11 +53,14 @@ export interface Crumb {
  * BreadcrumbList JSON-LD: `Home › Services › Service Name`. Both the trail and
  * the markup are built from this one function, so they cannot describe
  * different paths.
+ *
+ * It takes only the metadata half, so the SEO registry can build every trail
+ * without loading a line of page copy.
  */
-export function serviceBreadcrumb(service: ServiceContent): Crumb[] {
+export function serviceBreadcrumb(service: Pick<ServiceMeta, 'navLabel' | 'path'>): Crumb[] {
   return [
     { name: 'Home', path: '/' },
-    { name: servicesHub.navLabel, path: servicesHub.path },
+    { name: servicesHubMeta.navLabel, path: SERVICES_HUB_PATH },
     { name: service.navLabel, path: service.path },
   ];
 }
@@ -107,27 +69,6 @@ export function serviceBreadcrumb(service: ServiceContent): Crumb[] {
 export function hubBreadcrumb(): Crumb[] {
   return [
     { name: 'Home', path: '/' },
-    { name: servicesHub.navLabel, path: servicesHub.path },
+    { name: servicesHubMeta.navLabel, path: SERVICES_HUB_PATH },
   ];
 }
-
-export {
-  aiAutomationIntegration,
-  aiDevelopment,
-  aiVideoConsultationAgents,
-  aiVoiceAgentDevelopment,
-  cloudSolutions,
-  conversationalAiDevelopment,
-  customSoftwareDevelopment,
-  devopsEngineering,
-  digitalMarketing,
-  machineLearningDevelopment,
-  mobileAppDevelopment,
-  saasDevelopment,
-  servicesHub,
-  softwareModernization,
-  uiUxDesign,
-  webApplicationDevelopment,
-};
-export type { ServiceContent } from './types';
-export type { HubEntry, HubGroup } from './hub';

@@ -14,6 +14,13 @@ import {
 } from './registry';
 import { POSITIONING, SITE_ORIGIN } from './site';
 import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
+import {
+  LOCATION_CONTENT,
+  LOCATIONS_HUB_PATH,
+  locationBreadcrumb,
+  locationsHub,
+  locationsHubBreadcrumb,
+} from '@/content/locations';
 
 const APP_SOURCE = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
@@ -273,6 +280,10 @@ describe('sitemap route matching', () => {
         '/services/software-modernization',
         '/services/ui-ux-design',
         '/services/web-application-development',
+        '/locations',
+        '/locations/united-states',
+        '/locations/united-kingdom',
+        '/locations/united-arab-emirates',
       ].sort(),
     );
   });
@@ -357,10 +368,14 @@ describe('structured data', () => {
   });
 
   it('emits a BreadcrumbList only where a visible breadcrumb trail is rendered', () => {
-    // The hub and every service page under it render a trail; nothing else does.
+    // The two hubs and every page under them render a trail; nothing else does.
     for (const route of ALL_ROUTES) {
       const hasBreadcrumb = route.jsonLd.some((node) => node['@type'] === 'BreadcrumbList');
-      const rendersTrail = route.canonicalPath === '/services' || route.canonicalPath.startsWith('/services/');
+      const rendersTrail =
+        route.canonicalPath === '/services' ||
+        route.canonicalPath.startsWith('/services/') ||
+        route.canonicalPath === '/locations' ||
+        route.canonicalPath.startsWith('/locations/');
       expect(hasBreadcrumb, route.routePattern).toBe(rendersTrail);
     }
   });
@@ -424,6 +439,155 @@ describe('structured data', () => {
     expect(organization.address.addressLocality).toBe('Indore');
     expect(organization.address.addressCountry).toBe('IN');
     expect(organization.foundingDate).toBe('2018');
+  });
+});
+
+describe('Phase 3A regional routes', () => {
+  const hub = () => ROUTE_SEO[LOCATIONS_HUB_PATH];
+
+  it('registers the hub and exactly the three active markets', () => {
+    expect(LOCATIONS_HUB_PATH).toBe('/locations');
+    expect(LOCATION_CONTENT.map((location) => location.path)).toEqual([
+      '/locations/united-states',
+      '/locations/united-kingdom',
+      '/locations/united-arab-emirates',
+    ]);
+    for (const location of LOCATION_CONTENT) expect(ROUTE_SEO[location.path], location.path).toBeDefined();
+  });
+
+  it('uses the flat /locations/<country> form and no abbreviation or city page', () => {
+    for (const location of LOCATION_CONTENT) {
+      expect(location.path).toMatch(/^\/locations\/[a-z-]+$/);
+      expect(location.path.split('/')).toHaveLength(3);
+      for (const bad of ['/usa', '/uk', '/uae', '?country=', 'dubai', 'london', 'new-york']) {
+        expect(location.path.includes(bad), `${location.path} contains ${bad}`).toBe(false);
+      }
+    }
+  });
+
+  it('makes every regional route indexable, prerendered and self-canonical', () => {
+    for (const route of [hub(), ...LOCATION_CONTENT.map((location) => ROUTE_SEO[location.path])]) {
+      expect(route.indexability, route.canonicalPath).toBe('indexable');
+      expect(route.robots, route.canonicalPath).toBe('index,follow');
+      expect(route.prerender, route.canonicalPath).toBe(true);
+      expect(route.canonical, route.canonicalPath).toBe(`${SITE_ORIGIN}${route.canonicalPath}`);
+      expect(route.og.url, route.canonicalPath).toBe(route.canonical);
+      expect(route.twitter.card, route.canonicalPath).toBe('summary_large_image');
+    }
+  });
+
+  it('gives the hub a BreadcrumbList and nothing else', () => {
+    expect(hub().jsonLd.map((node) => node['@type'])).toEqual(['BreadcrumbList']);
+    const trail = hub().jsonLd[0] as { itemListElement: { name: string; item: string }[] };
+    expect(trail.itemListElement.map((item) => item.name)).toEqual(['Home', 'Locations']);
+    expect(trail.itemListElement.at(-1)?.item).toBe(hub().canonical);
+    expect(locationsHubBreadcrumb().map((crumb) => crumb.name)).toEqual(['Home', 'Locations']);
+    expect(locationsHub.navLabel).toBe('Locations');
+  });
+
+  it('gives each country page a Service with areaServed Country, plus a BreadcrumbList', () => {
+    for (const location of LOCATION_CONTENT) {
+      const route = ROUTE_SEO[location.path];
+      expect(route.jsonLd.map((node) => node['@type']), location.path).toEqual(['Service', 'BreadcrumbList']);
+      const service = route.jsonLd[0] as {
+        url: string;
+        name: string;
+        serviceType: string;
+        description: string;
+        provider: { '@id': string };
+        areaServed: { '@type': string; name: string };
+      };
+      expect(service.url).toBe(route.canonical);
+      expect(service.name).toBe(location.serviceName);
+      expect(service.serviceType).toBe(location.serviceType);
+      expect(service.description).toBe(location.metaDescription);
+      // The provider is the one India-based Organization node, by reference.
+      expect(service.provider['@id']).toBe(`${SITE_ORIGIN}/#organization`);
+      expect(service.areaServed['@type']).toBe('Country');
+      expect(service.areaServed.name).toBe(location.countryName);
+    }
+  });
+
+  it('routes every country breadcrumb through the locations hub, ending on itself', () => {
+    for (const location of LOCATION_CONTENT) {
+      const crumbs = locationBreadcrumb(location);
+      expect(crumbs.map((crumb) => crumb.name)).toEqual(['Home', 'Locations', location.navLabel]);
+      const node = ROUTE_SEO[location.path].jsonLd[1] as {
+        itemListElement: { position: number; name: string; item: string }[];
+      };
+      expect(node.itemListElement).toHaveLength(3);
+      node.itemListElement.forEach((element, index) => {
+        expect(element.position).toBe(index + 1);
+        expect(element.name).toBe(crumbs[index].name);
+        expect(element.item).toBe(
+          crumbs[index].path === '/' ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}${crumbs[index].path}`,
+        );
+      });
+      expect(node.itemListElement[1].item).toBe(ROUTE_SEO[LOCATIONS_HUB_PATH].canonical);
+      expect(node.itemListElement.at(-1)?.item).toBe(ROUTE_SEO[location.path].canonical);
+    }
+  });
+
+  it('adds no LocalBusiness, address, coordinates, phone, hours, rating or FAQPage', () => {
+    const forbiddenTypes = [
+      'LocalBusiness',
+      'PostalAddress',
+      'GeoCoordinates',
+      'Place',
+      'FAQPage',
+      'AggregateRating',
+      'Review',
+      'OpeningHoursSpecification',
+    ];
+    const forbiddenKeys = ['telephone', 'address', 'geo', 'openinghours', 'openinghoursspecification', 'branchof', 'location'];
+    const walk = (node: unknown, where: string): void => {
+      if (Array.isArray(node)) {
+        node.forEach((child, index) => walk(child, `${where}[${index}]`));
+        return;
+      }
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        expect(forbiddenKeys, `${where}.${key}`).not.toContain(key.toLowerCase());
+        if (key === '@type') {
+          expect(forbiddenTypes, `${where} declares @type ${String(value)}`).not.toContain(String(value));
+        }
+        walk(value, `${where}.${key}`);
+      }
+    };
+    for (const route of [ROUTE_SEO[LOCATIONS_HUB_PATH], ...LOCATION_CONTENT.map((l) => ROUTE_SEO[l.path])]) {
+      walk(route.jsonLd, route.canonicalPath);
+    }
+  });
+
+  it('adds no hreflang alternate for these pages — they are not translations', () => {
+    // Phase 3A ships regional service pages, not localized variants of one
+    // page, so nothing here may advertise an alternate. The registry has no
+    // hreflang field at all; this test documents that as a decision.
+    for (const route of [ROUTE_SEO[LOCATIONS_HUB_PATH], ...LOCATION_CONTENT.map((l) => ROUTE_SEO[l.path])]) {
+      expect(Object.keys(route)).not.toContain('hreflang');
+      expect(Object.keys(route)).not.toContain('alternates');
+    }
+  });
+
+  it('never puts a country name in a title in a way that implies presence', () => {
+    // "in the United States" would read as an office; "for US businesses" does not.
+    for (const location of LOCATION_CONTENT) {
+      const route = ROUTE_SEO[location.path];
+      expect(route.title, location.path).not.toMatch(/\b(?:in|based in|located in) (?:the )?(?:US|USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Dubai|Abu Dhabi|London|New York)\b/i);
+      expect(route.description, location.path).not.toMatch(/\boffices? in\b/i);
+      expect(route.title, location.path).not.toMatch(/\bour (?:US|USA|UK|UAE) (?:office|team)\b/i);
+    }
+  });
+
+  it('gives the hub and every market page a distinct title and description', () => {
+    const routes = [ROUTE_SEO[LOCATIONS_HUB_PATH], ...LOCATION_CONTENT.map((l) => ROUTE_SEO[l.path])];
+    expect(new Set(routes.map((route) => route.title)).size).toBe(routes.length);
+    expect(new Set(routes.map((route) => route.description)).size).toBe(routes.length);
+    for (const route of routes) {
+      expect(route.title.length, `${route.canonicalPath} title`).toBeLessThanOrEqual(75);
+      expect(route.description.length, `${route.canonicalPath} description`).toBeGreaterThan(80);
+      expect(route.description.length, `${route.canonicalPath} description`).toBeLessThanOrEqual(190);
+    }
   });
 });
 

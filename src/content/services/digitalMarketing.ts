@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const digitalMarketing: ServiceContent = {
+export const digitalMarketing: ServiceBody = {
   path: '/services/digital-marketing',
-  group: 'growth',
-  navLabel: 'Digital Marketing',
-  serviceName: 'Digital Marketing Support',
-  serviceType: 'SEO and Digital Marketing Support',
-  metaTitle: 'SEO & Digital Marketing Support Services | SCS Softwares',
-  metaDescription:
-    'Website SEO foundations, technical SEO fixes, content planning, analytics and conversion tracking setup, landing pages and campaign pages, plus plain monthly reporting.',
-  shareTitle: 'Digital Marketing Support — SCS Softwares',
-  priority: 0.7,
   icon: 'marketing',
   h1: 'SEO and Digital Marketing Support',
   valueProp:

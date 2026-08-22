@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
 import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB, isServicePath } from '@/data/serviceNav';
+import { LOCATION_NAV, LOCATIONS_HUB, isLocationPath } from '@/data/locationNav';
 
 // Service names come from the shared services.names.* i18n table so they stay
 // consistent with Buddy and the footer. Layout uses logical properties so the
@@ -178,6 +179,17 @@ const Header = () => {
               )}
             </div>
 
+            {/* One top-level link only: the /locations hub is the gateway, and the
+                individual market pages live inside it rather than in this bar. */}
+            <Link
+              to={LOCATIONS_HUB.path}
+              className={`whitespace-nowrap rounded-lg px-1 py-1 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 xl:text-sm ${
+                isLocationPath(location.pathname) ? 'text-pink-600 font-semibold' : 'text-gray-700 hover:text-pink-600'
+              }`}
+            >
+              {t('nav.locations')}
+            </Link>
+
             <Link to="/products" className={linkCls('/products')}>
               {t('nav.products')}
             </Link>
@@ -345,6 +357,33 @@ const Header = () => {
                         onClick={() => setIsMenuOpen(false)}
                       >
                         {t(`services.names.${service.nameKey}`)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 border-t border-gray-200 pt-4">
+                  <Link
+                    to={LOCATIONS_HUB.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                      isActive(LOCATIONS_HUB.path) ? 'bg-pink-50 text-pink-600' : 'text-pink-700 hover:bg-pink-50'
+                    }`}
+                  >
+                    {t('nav.locations')}
+                    <ArrowRight className={`ms-auto h-4 w-4 ${rtl ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </Link>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {LOCATION_NAV.map((market) => (
+                      <Link
+                        key={market.path}
+                        to={market.path}
+                        className={`rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                          isActive(market.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-600 hover:bg-gray-50 hover:text-pink-600'
+                        }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {market.label}
                       </Link>
                     ))}
                   </div>

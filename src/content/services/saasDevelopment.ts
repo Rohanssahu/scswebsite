@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const saasDevelopment: ServiceContent = {
+export const saasDevelopment: ServiceBody = {
   path: '/services/saas-development',
-  group: 'software',
-  navLabel: 'SaaS Development',
-  serviceName: 'SaaS Development',
-  serviceType: 'SaaS Product Development',
-  metaTitle: 'SaaS Development Services | MVP to Multi-Tenant | SCS Softwares',
-  metaDescription:
-    'SaaS product development from MVP to multi-tenant platform: subscriptions, roles and permissions, dashboards, usage tracking, integrations, scalable architecture and product iteration.',
-  shareTitle: 'SaaS Development — SCS Softwares',
-  priority: 0.85,
   icon: 'saas',
   h1: 'SaaS Development',
   valueProp:

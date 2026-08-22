@@ -7,6 +7,9 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 // One shared service list with the header, so the footer can never keep
 // advertising a service URL the navigation has already retired.
 import { ALL_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
+// The markets that actually have a page. Nothing here is hand-maintained, so
+// the footer cannot advertise a country page that was never written.
+import { LOCATION_NAV, LOCATIONS_HUB } from '@/data/locationNav';
 
 const quickLinks = [
   { key: 'nav.home', path: '/' },
@@ -146,6 +149,31 @@ const Footer = () => {
                 </a>
               </div>
             </div>
+          </div>
+
+          {/* Markets — the hub first, then the markets with a live page */}
+          <div className="sm:col-span-2 lg:col-span-4">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('nav.markets')}</h3>
+            <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+              <li>
+                <Link
+                  to={LOCATIONS_HUB.path}
+                  className="rounded text-sm font-semibold text-pink-400 transition-colors hover:text-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                >
+                  {t('nav.locations')}
+                </Link>
+              </li>
+              {LOCATION_NAV.map((market) => (
+                <li key={market.path}>
+                  <Link to={market.path} className={footerLinkCls}>
+                    {market.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs leading-relaxed text-gray-500">
+              Based in Indore, India. International projects are delivered remotely — we hold no office outside India.
+            </p>
           </div>
         </div>
 

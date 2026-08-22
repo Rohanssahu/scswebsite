@@ -1,0 +1,373 @@
+/**
+ * `/locations/united-kingdom` — written for this page only.
+ *
+ * The UK angle is deliberately different from the US one. UK enquiries arrive
+ * with a supplier-diligence mindset: documented requirements, staged approval,
+ * a named maintenance arrangement after launch, and privacy questions raised in
+ * the first conversation rather than the last. The shorter time-zone gap also
+ * changes how a day is actually shared, so the collaboration and communication
+ * sections describe something the US page does not.
+ */
+
+import type { LocationContent } from './types';
+
+export const unitedKingdom: LocationContent = {
+  path: '/locations/united-kingdom',
+  countryName: 'United Kingdom',
+  navLabel: 'United Kingdom',
+  serviceName: 'Software and AI Development for United Kingdom Clients',
+  serviceType: 'Remote product and AI engineering',
+  metaTitle: 'Software & AI Development Partner for UK Businesses | SCS',
+  metaDescription:
+    'Remote software and AI development for UK businesses, delivered from Indore, India: documented requirements, staged approvals, iterative demos and a named maintenance arrangement.',
+  shareTitle: 'Software & AI Development for UK Businesses',
+  priority: 0.8,
+  h1: 'Remote Software and AI Development for United Kingdom Businesses',
+  valueProp:
+    'A remote development partner for UK businesses, delivered from India — requirements documented, releases approved in stages, and maintenance arranged before launch rather than after it.',
+  heroHighlights: [
+    'One team in Indore, India, working a shared afternoon with the UK working day',
+    'Requirements written up and signed off before a build cycle opens',
+    'Each release demonstrated and formally approved before the next stage begins',
+    'Maintenance, response expectations and handover agreed as part of the engagement',
+  ],
+  intro: [
+    'UK enquiries tend to arrive further along than most. There is usually a document already — a requirements list, an internal brief, sometimes a tender pack — and the conversation starts with how the work would be governed rather than whether the idea is any good. That suits how we prefer to run a project, so this page is mostly about governance and rhythm.',
+    'SCS Softwares is based in Indore, India. Working with the UK from here has one practical advantage worth naming: our afternoon and the UK morning genuinely overlap, so a question asked at the start of a British working day usually has an answer inside it rather than the following one. That single fact shapes everything below — reviews happen live, approvals happen in a meeting, and fewer decisions sit waiting overnight.',
+    'The work covers product and platform engineering: web applications, mobile apps, subscription platforms, modernization of systems already in service, and AI workflows designed as software with a person in the approval path. Where privacy, hosting location or supplier assurance requirements apply, we confirm what is being asked of us during discovery and build to it, rather than asserting a compliance position we would not be able to evidence.',
+  ],
+  disclosure: {
+    title: 'A UK-facing service, delivered from India',
+    body:
+      'SCS Softwares operates from Indore, Madhya Pradesh, India. Work for UK clients is delivered remotely from that office; this page describes the availability of a service, not a British presence.',
+    points: [
+      'There is no local office, no UK company and no UK-registered branch behind this page, and we do not imply one.',
+      'Delivery is remote throughout: requirement workshops, design reviews, demonstrations and approvals all take place online.',
+      'Nobody on the team is employed in the United Kingdom, and we claim no British staff or representation.',
+      'Contracts and invoices are issued by an Indian company, from an Indian address, with Indian company details.',
+      'We are not a legal or regulatory adviser. Where a rule affects the build, we implement what your advisers specify.',
+    ],
+  },
+  concerns: {
+    eyebrow: 'Supplier questions',
+    heading: 'What UK organisations check before appointing us',
+    intro:
+      'These come up in nearly every UK conversation, often as a written questionnaire. Answering them here saves a round trip.',
+    items: [
+      {
+        title: 'Whether the requirement is understood before pricing',
+        body:
+          'We will not price a paragraph. Discovery produces a requirement document with acceptance criteria per feature, and the estimate is attached to that document rather than to the original brief.',
+      },
+      {
+        title: 'How change is controlled once work starts',
+        body:
+          'Every change is logged, sized and approved in writing before it enters a cycle. The requirement document is versioned, so at any point there is one current answer to what was agreed.',
+      },
+      {
+        title: 'Where personal data would be processed',
+        body:
+          'Hosting region, sub-processors, retention and who on our side can reach live data are settled during discovery and written into the agreement. If your policy requires processing to stay inside a particular region, that constraint shapes the architecture from the start.',
+      },
+      {
+        title: 'What happens after the launch date',
+        body:
+          'Maintenance is scoped as part of the engagement, not improvised afterwards: what is covered, how issues are raised, what response you can expect and how the arrangement ends.',
+      },
+      {
+        title: 'Whether the team is the team you met',
+        body:
+          'The engineers introduced during discovery are the ones assigned. If a change is unavoidable we tell you before it happens and hand over with an overlap, rather than substituting quietly.',
+      },
+      {
+        title: 'How an AI component would be assured',
+        body:
+          'By treating it as software with a known failure mode. We document what the model is allowed to do, what it must escalate, and who signs off the output before it reaches a customer or a record.',
+      },
+    ],
+  },
+  services: {
+    eyebrow: 'The underlying services',
+    heading: 'What UK engagements are usually built from',
+    intro:
+      'The pages below describe each service in full, without a regional framing. This page covers how we run them with a UK client from India.',
+    items: [
+      {
+        path: '/services/custom-software-development',
+        label: 'Custom Software Development',
+        blurb:
+          'Applications built around an operating process that no product off the shelf matches — quoting, compliance records, scheduling, reconciliation.',
+      },
+      {
+        path: '/services/mobile-app-development',
+        label: 'Mobile App Development',
+        blurb:
+          'Customer and field-team apps for iOS and Android, including accessibility, consent handling and the store review cycle around a UK launch date.',
+      },
+      {
+        path: '/services/web-application-development',
+        label: 'Web Application Development',
+        blurb:
+          'Portals, member areas, dashboards and internal platforms, with role-based permissions and an admin surface your own staff can operate.',
+      },
+      {
+        path: '/services/saas-development',
+        label: 'SaaS Development',
+        blurb:
+          'Subscription platforms with tenants, plans, billing, entitlements and usage reporting — plus the operational tooling a support team needs.',
+      },
+      {
+        path: '/services/software-modernization',
+        label: 'Software Modernization',
+        blurb:
+          'A staged route out of a system that still works but cannot be extended: assessment, API layer, interface rework, then migration.',
+      },
+      {
+        path: '/services/ai-development',
+        label: 'AI Development',
+        blurb:
+          'AI workflow design grounded in your own documents and data, with evaluation, logging and an approval step written into the flow.',
+      },
+      {
+        path: '/services/ai-voice-agent-development',
+        label: 'AI Voice Agent Development',
+        blurb:
+          'Spoken assistants inside a product or a website, scoped to defined actions, with a documented handover to a member of your team.',
+      },
+      {
+        path: '/services/ai-video-consultation-agents',
+        label: 'AI Video Consultation Agents',
+        blurb:
+          'Guided video intake that collects a structured brief and a transcript, reviewed by a person before anything is acted on.',
+      },
+      {
+        path: '/services/ai-automation-integration',
+        label: 'AI Automation & Integration',
+        blurb:
+          'Document handling, extraction and back-office automation connected to your existing stack, with approvals and a full audit trail.',
+      },
+    ],
+  },
+  projectTypes: {
+    eyebrow: 'Project fit',
+    heading: 'The UK work that suits this arrangement',
+    intro:
+      'Remote delivery is not right for everything. These are the shapes of project where it has worked well from Indore.',
+    items: [
+      {
+        title: 'A platform rebuild with a documented specification',
+        body:
+          'An existing service that has to be rebuilt properly, with the requirement already half-written internally. We finish the documentation with you, then build against it in approved stages.',
+      },
+      {
+        title: 'A second delivery stream alongside an in-house team',
+        body:
+          'Your developers hold the core system; we take a defined module with its own repository, branch policy and review gate, and integrate on an agreed cadence.',
+      },
+      {
+        title: 'A member or customer portal on top of existing systems',
+        body:
+          'The data already exists in a finance or operations system. The build is the access layer, the permissions and the self-service journeys that stop the phone ringing.',
+      },
+      {
+        title: 'An AI workflow inside a document-heavy process',
+        body:
+          'Applications, claims, contracts or case notes moving through people. We automate the reading and the routing, and keep a person on the decision.',
+      },
+      {
+        title: 'A product that needs to be maintainable by someone else',
+        body:
+          'Built with handover as a requirement: documented, conventionally structured and covered by tests, because your intention is to run it internally later.',
+      },
+      {
+        title: 'A stalled project that needs an independent assessment',
+        body:
+          'A build that is late and nobody can say why. A short paid review produces a written position on the codebase, the remaining work and the realistic options.',
+      },
+    ],
+  },
+  collaboration: {
+    eyebrow: 'Delivery rhythm',
+    heading: 'How a UK project moves from brief to live service',
+    intro:
+      'Each stage ends with something written and something approved. That is what makes a remote arrangement auditable rather than merely optimistic.',
+    steps: [
+      {
+        title: 'Introductory call and fit assessment',
+        body:
+          'A short call in the shared part of the day. We are establishing what has to be true for this project to be considered a success, and whether we are the wrong supplier for it.',
+        points: [
+          'Held inside the UK working day, in our overlapping afternoon',
+          'Any supplier questionnaire or diligence pack reviewed at this point',
+          'An honest statement if the requirement sits outside what we do',
+        ],
+      },
+      {
+        title: 'Requirement documentation and acceptance criteria',
+        body:
+          'Structured requirement sessions, written up as a specification with acceptance criteria per feature, explicit exclusions, and the integration and data constraints named.',
+        points: [
+          'Acceptance criteria written per feature, not per project',
+          'Data location, retention and access requirements captured in the same document',
+          'A versioned specification that both sides work from afterwards',
+        ],
+      },
+      {
+        title: 'Estimate, agreement and maintenance terms',
+        body:
+          'The estimate is attached to the specification. Maintenance, response expectations and exit arrangements are agreed now, while there is still time to negotiate them.',
+        points: [
+          'Estimate as a range, with the assumptions it depends on stated',
+          'Payment schedule tied to approved stages',
+          'Support arrangement and handover terms agreed before build, not after launch',
+        ],
+      },
+      {
+        title: 'Iterative build with staged approval',
+        body:
+          'Work proceeds in cycles. Each cycle ends with a demonstration on a live environment and a formal approval before the next one is opened.',
+        points: [
+          'A running environment you can use yourself between demonstrations',
+          'A written record of what was approved, and what was deferred',
+          'Changes sized and approved in writing before they enter a cycle',
+        ],
+      },
+      {
+        title: 'Go-live and the maintenance arrangement',
+        body:
+          'Release runs to a checklist agreed in advance. Afterwards the maintenance arrangement takes over, or everything is handed to your own team.',
+        points: [
+          'Pre-agreed release checklist, rollback route and monitoring',
+          'Documentation, repositories, accounts and credentials transferred',
+          'Maintenance cycles with a defined route for raising issues',
+        ],
+      },
+    ],
+  },
+  communication: {
+    eyebrow: 'Working hours',
+    heading: 'The shared part of the day, and what fills it',
+    intro:
+      'Indian Standard Time is four and a half to five and a half hours ahead of the UK, depending on British Summer Time. That leaves a genuinely shared window, and we schedule the decisions into it.',
+    points: [
+      'Our afternoon sits over the UK morning, so a question raised at the start of your day is usually answered within it.',
+      'One recurring meeting slot is fixed inside UK hours at kick-off, and we hold it for the duration of the engagement.',
+      'We do not advertise a fixed number of overlap hours, because it depends on the engineers your project needs; the window we agree is written into the engagement.',
+      'Demonstrations, requirement sessions and approvals are always scheduled in UK time, never in ours.',
+      'A short written update follows each cycle, so the record does not depend on who attended a call.',
+      'Out-of-hours contact follows a route agreed at kick-off; we do not present it as a support desk staffed through the British night.',
+    ],
+    note:
+      'Where a release has to happen during UK evening hours, we plan the staffing for it in advance as part of the release checklist. We would rather schedule that once, deliberately, than imply continuous cover we have not committed to.',
+  },
+  security: {
+    eyebrow: 'Data and assurance',
+    heading: 'Privacy, hosting and the questions your assurance team asks',
+    intro:
+      'These items are usually the difference between a supplier conversation progressing and stalling, so we deal with them during discovery.',
+    points: [
+      'Hosting region and data residency are chosen with you and recorded in the agreement before build.',
+      'Sub-processors and third-party services are listed, so your own records of processing can be kept accurate.',
+      'Live personal data stays out of development environments; we work with masked or generated data instead.',
+      'Access is per person and per environment, logged, and withdrawn when someone leaves the project.',
+      'Retention and deletion behaviour is a requirement in the specification, not an afterthought at launch.',
+      'Confidentiality, IP assignment and processing terms sit in the signed agreement before any access is issued.',
+    ],
+    note:
+      'We hold no security or data-protection certification, and we do not describe our service as UK GDPR compliant — compliance is a property of your processing, assessed by you and your advisers, not something a supplier can assert on a marketing page. What we do is implement the controls your team specifies, document what we built, and answer your assurance questionnaire honestly.',
+  },
+  oversight: {
+    title: 'Where a person stays in the loop',
+    body:
+      'AI can draft, extract, classify and summarise. It should not be the last step before something reaches a customer, a regulator or a permanent record — so we design the approval point with the feature.',
+    points: [
+      'Model output that affects an application, a payment or a case record is reviewed before it lands.',
+      'Every automated decision keeps a trace: input, source material, model version and who approved it.',
+      'The system escalates rather than guesses when confidence is low or the source material is missing.',
+      'Evaluation runs against your own examples, so quality is measured on your material rather than a benchmark.',
+      'The specification records what the AI is explicitly not permitted to decide by itself.',
+    ],
+  },
+  engagement: {
+    eyebrow: 'Commercial shapes',
+    heading: 'How UK engagements are typically arranged',
+    intro:
+      'Which one fits depends on how firm the specification is and how much the roadmap is expected to move.',
+    options: [
+      {
+        name: 'Staged fixed price',
+        body:
+          'The specification is divided into stages, each priced and approved separately. You can stop at the end of any stage with a working, documented result in hand.',
+        bestFor: 'Best where the requirement is documented and budget approval is staged.',
+      },
+      {
+        name: 'Monthly delivery capacity',
+        body:
+          'A named team for an agreed number of months against a backlog you prioritise. Direction can change between cycles without renegotiating the contract.',
+        bestFor: 'Best for a product that will keep evolving, or for ongoing platform work.',
+      },
+      {
+        name: 'Maintenance and improvement retainer',
+        body:
+          'A recurring arrangement covering patching, dependency updates, monitoring, small changes and an agreed route for raising issues.',
+        bestFor: 'Best after launch, or for a system you already own and need looked after.',
+      },
+    ],
+  },
+  faqs: [
+    {
+      question: 'Are you a UK company?',
+      answer:
+        'No. SCS Softwares is an Indian company operating from Indore, and this page describes a service available to UK businesses rather than a British presence. There is no UK entity, UK address or UK phone line behind it, and every engagement is delivered remotely from India.',
+    },
+    {
+      question: 'How much of the UK working day do we actually share?',
+      answer:
+        'Indian Standard Time runs four and a half to five and a half hours ahead of the UK, so our afternoon covers your morning. We fix one recurring meeting slot inside UK hours at kick-off and hold it, but we do not publish a fixed overlap figure — the honest answer depends on which engineers your project needs.',
+    },
+    {
+      question: 'Can you confirm the work is UK GDPR compliant?',
+      answer:
+        'No supplier can honestly promise that, because compliance depends on your purposes, your lawful basis and your own records — all of which sit with you. What we can do is implement the controls your data protection adviser specifies, keep processing inside the region you require, list the sub-processors involved, and document what we built so your team can assess it.',
+    },
+    {
+      question: 'Will you complete our supplier due-diligence questionnaire?',
+      answer:
+        'Yes, and we would rather do it early than at contract stage. We answer it factually, including where the answer is that we hold no certification. If a question requires something we do not have, we say so instead of interpreting it generously.',
+    },
+    {
+      question: 'What does the maintenance arrangement cover?',
+      answer:
+        'Dependency and security updates, monitoring, backup restore checks, defect fixes within the agreed scope, and a set allowance for small changes each cycle. Larger work is quoted separately. The arrangement is written down before launch, including how it ends and what we hand over when it does.',
+    },
+    {
+      question: 'Do you work with UK public sector or regulated organisations?',
+      answer:
+        'We can act as a development supplier where your own procurement and assurance processes permit it, and we will build to the controls your team defines. We hold no framework place, no accreditation and no regulatory approval, and we will not present ourselves as an approved supplier on any register.',
+    },
+    {
+      question: 'What if we already have a specification written?',
+      answer:
+        'Send it. We read it, come back with the gaps, ambiguities and missing acceptance criteria we found, and only then estimate. That review is usually the most useful hour of the whole process, because it surfaces the assumptions that would otherwise become change requests later.',
+    },
+  ],
+  otherMarkets: [
+    {
+      path: '/locations/united-states',
+      label: 'United States',
+      blurb:
+        'A larger time-zone gap, handled with an agreed overlap window, written scope and a demonstrable build every cycle.',
+    },
+    {
+      path: '/locations/united-arab-emirates',
+      label: 'United Arab Emirates',
+      blurb:
+        'Almost the same working day as ours, mobile-first delivery, and Arabic interface work available as a scoped addition.',
+    },
+  ],
+  cta: {
+    title: 'Send the requirement and we will tell you what is missing from it',
+    body:
+      'Get an indicative estimate from a few questions, talk the scope through with our AI consultation agent, or email the specification to the team in Indore for a written read.',
+  },
+};

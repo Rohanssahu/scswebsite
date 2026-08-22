@@ -1,4 +1,4 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * The AI pillar page. Everything it claims is backed by something in this
@@ -7,17 +7,8 @@ import type { ServiceContent } from './types';
  * capability rather than implementation. No provider names, no prompts, no
  * internal architecture detail that would help someone attack the system.
  */
-export const aiDevelopment: ServiceContent = {
+export const aiDevelopment: ServiceBody = {
   path: '/services/ai-development',
-  group: 'ai',
-  navLabel: 'AI Development',
-  serviceName: 'AI Development',
-  serviceType: 'Artificial Intelligence Development',
-  metaTitle: 'AI Development Services | SCS Softwares',
-  metaDescription:
-    'AI development by an India-based remote team: assistants, generative AI integrations, retrieval over your own content, and AI features inside web and mobile apps.',
-  shareTitle: 'AI Development — SCS Softwares',
-  priority: 0.9,
   icon: 'ai',
   h1: 'AI Development',
   valueProp:

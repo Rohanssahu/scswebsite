@@ -1,4 +1,4 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
 /**
  * Voice agents. The technical claims here describe the pipeline we run on this
@@ -10,17 +10,8 @@ import type { ServiceContent } from './types';
  * Telephony is deliberately absent: no phone integration exists in this
  * repository, so no phone-calling capability is claimed anywhere on the page.
  */
-export const aiVoiceAgentDevelopment: ServiceContent = {
+export const aiVoiceAgentDevelopment: ServiceBody = {
   path: '/services/ai-voice-agent-development',
-  group: 'ai',
-  navLabel: 'AI Voice Agent Development',
-  serviceName: 'AI Voice Agent Development',
-  serviceType: 'AI Voice Agent Development',
-  metaTitle: 'AI Voice Agent Development Services | SCS Softwares',
-  metaDescription:
-    'Real-time AI voice agents for websites and apps: natural two-way speech, interruption handling, requirement collection and escalation to your own team.',
-  shareTitle: 'AI Voice Agent Development — SCS Softwares',
-  priority: 0.85,
   icon: 'voice',
   h1: 'AI Voice Agent Development',
   valueProp:

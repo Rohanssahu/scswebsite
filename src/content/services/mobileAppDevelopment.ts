@@ -1,16 +1,7 @@
-import type { ServiceContent } from './types';
+import type { ServiceBody } from './types';
 
-export const mobileAppDevelopment: ServiceContent = {
+export const mobileAppDevelopment: ServiceBody = {
   path: '/services/mobile-app-development',
-  group: 'software',
-  navLabel: 'Mobile App Development',
-  serviceName: 'Mobile App Development',
-  serviceType: 'Mobile Application Development',
-  metaTitle: 'Mobile App Development Company | iOS & Android | SCS Softwares',
-  metaDescription:
-    'Custom mobile application development for iOS and Android in React Native, Flutter and native code — API integration, payments, maps, notifications, offline support and app store release.',
-  shareTitle: 'Mobile App Development — SCS Softwares',
-  priority: 0.85,
   icon: 'mobile',
   h1: 'Mobile App Development',
   valueProp:

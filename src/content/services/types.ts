@@ -1,5 +1,5 @@
 /**
- * Shape of one canonical service page.
+ * Shape of one canonical service page, in two halves.
  *
  * These modules are plain data — no React, no icons — so three consumers can
  * read them without pulling in the UI:
@@ -9,8 +9,19 @@
  *     Service JSON-LD and BreadcrumbList JSON-LD from the same object
  *   - the nav/footer/homepage link lists read `path` and `navLabel`
  *
- * Because the metadata and the copy come from one object, the `<title>` and
- * meta description can never describe a page the body does not.
+ * Phase 3B split the shape in two so those consumers stop paying for each
+ * other's data:
+ *
+ *   - `ServiceMeta` is the small half (path, labels, schema.org names, title,
+ *     description, priority). It lives in `./manifest.ts` and is the only part
+ *     the SEO registry, the navigation and the breadcrumbs need, so it is the
+ *     only part in the main JavaScript bundle.
+ *   - `ServiceBody` is the page's copy. One module per service, several hundred
+ *     lines each, loaded as a route-level chunk when the page is opened.
+ *
+ * `ServiceContent` is still the union of the two, and `./compose.ts` joins them
+ * on `path`. Because the metadata and the copy are joined on that one key, the
+ * `<title>` and meta description can never describe a page the body does not.
  *
  * Content rules these files follow (see `servicePages.test.tsx`, which enforces
  * them): no guaranteed outcomes, no foreign offices, no invented clients,
@@ -89,7 +100,12 @@ export interface ServiceSectionHeader {
   intro: string;
 }
 
-export interface ServiceContent {
+/**
+ * The lightweight half: everything the SEO registry, the navigation lists and
+ * the breadcrumbs need, and nothing else. Lives in `./manifest.ts`, which the
+ * main bundle imports synchronously.
+ */
+export interface ServiceMeta {
   /** Canonical path, e.g. `/services/mobile-app-development`. */
   path: string;
   /** Menu group. Defaults to software when a page predates the AI group. */
@@ -108,6 +124,19 @@ export interface ServiceContent {
   shareTitle?: string;
   /** Sitemap priority. */
   priority: number;
+}
+
+/**
+ * The heavy half: the page's own copy. One module per service, loaded as a
+ * route-level chunk when that page is opened rather than with the app shell.
+ *
+ * `path` is repeated here as the join key back to `ServiceMeta` — it is the one
+ * field both halves carry, so a body can never be composed against the wrong
+ * metadata.
+ */
+export interface ServiceBody {
+  /** Canonical path — the join key back into the manifest. */
+  path: string;
   icon: ServiceIconKey;
   /** The single H1. */
   h1: string;
@@ -145,3 +174,10 @@ export interface ServiceContent {
   related: RelatedLink[];
   cta: { title: string; body: string };
 }
+
+/**
+ * One whole service page: its metadata and its copy. Composed on demand by
+ * `./compose.ts` once the body chunk has loaded, so every existing consumer
+ * still sees the single object it saw before Phase 3B split the modules.
+ */
+export type ServiceContent = ServiceMeta & ServiceBody;

@@ -37,6 +37,10 @@ import UiUxDesign from "./pages/services/UiUxDesign";
 import CloudSolutions from "./pages/services/CloudSolutions";
 import DevOpsEngineering from "./pages/services/DevOpsEngineering";
 import DigitalMarketing from "./pages/services/DigitalMarketing";
+import LocationsHub from "./pages/locations/LocationsHub";
+import UnitedStates from "./pages/locations/UnitedStates";
+import UnitedKingdom from "./pages/locations/UnitedKingdom";
+import UnitedArabEmirates from "./pages/locations/UnitedArabEmirates";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
@@ -172,6 +176,13 @@ const RoutesComponent = () => {
       <Route path="/gig/cloud-solutions" element={<Navigate to="/services/cloud-solutions" replace />} />
       <Route path="/gig/devops-services" element={<Navigate to="/services/devops-engineering" replace />} />
       <Route path="/gig/digital-marketing" element={<Navigate to="/services/digital-marketing" replace />} />
+      {/* The locations hub, then one regional landing page per active market.
+          One flat level under /locations: no query parameters, no subdomains,
+          no country abbreviations and no city pages. */}
+      <Route path="/locations" element={<LocationsHub />} />
+      <Route path="/locations/united-states" element={<UnitedStates />} />
+      <Route path="/locations/united-kingdom" element={<UnitedKingdom />} />
+      <Route path="/locations/united-arab-emirates" element={<UnitedArabEmirates />} />
       <Route path="/products" element={<ProductShowcase />} />
       <Route path="/project-analysis" element={<ProjectAnalysis />} />
       <Route
