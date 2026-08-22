@@ -36,6 +36,7 @@
   "nav": {
     "home": "Home",
     "services": "Services",
+    "company": "Company",
     "softwareDevelopment": "Software development",
     "moreServices": "More services",
     "aiDevelopment": "AI development",
@@ -893,6 +894,8 @@
       "unmute": "Unmute",
       "settings": "Language & speech settings",
       "restart": "Restart conversation",
+      "fullscreen": "Full screen",
+      "exitFullscreen": "Exit full screen",
       "minimize": "Minimize Buddy",
       "close": "Close Buddy"
     },

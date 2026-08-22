@@ -36,6 +36,7 @@
   "nav": {
     "home": "الرئيسية",
     "services": "الخدمات",
+    "company": "الشركة",
     "products": "المنتجات",
     "projectEstimate": "تقدير المشروع",
     "about": "من نحن",
@@ -824,6 +825,8 @@
       "unmute": "إلغاء الكتم",
       "settings": "إعدادات اللغة والنطق",
       "restart": "إعادة بدء المحادثة",
+      "fullscreen": "ملء الشاشة",
+      "exitFullscreen": "إنهاء ملء الشاشة",
       "minimize": "تصغير Buddy",
       "close": "إغلاق Buddy"
     },

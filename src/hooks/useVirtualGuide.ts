@@ -131,6 +131,7 @@ export function useVirtualGuide() {
   const [settingsMode, setSettingsMode] = useState<GuideSettingsMode>(null);
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<GuideChatMessage[]>(initialMessages);
   const [typing, setTyping] = useState(false);
   const [caption, setCaption] = useState<CaptionState | null>(null);
@@ -279,6 +280,7 @@ export function useVirtualGuide() {
   const closePanel = useCallback(() => {
     setOpen(false);
     setMinimized(false);
+    setExpanded(false);
     // Clear the queue before cancelling speech: cancel settles the current
     // utterance's onEnd, which would otherwise pull the next queued message.
     queueRef.current = [];
@@ -292,6 +294,10 @@ export function useVirtualGuide() {
     setMinimized(true);
     stopSpeaking();
   }, [stopSpeaking]);
+
+  // Full-screen chat: the panel fills the viewport so long conversations,
+  // the estimate flow and captions are comfortable to read.
+  const toggleExpand = useCallback(() => setExpanded((e) => !e), []);
 
   const dismissInvite = useCallback(() => {
     setInviteVisible(false);
@@ -547,6 +553,7 @@ export function useVirtualGuide() {
     dismissInvite();
     setOpen(true);
     setMinimized(true); // compact avatar bubble; the tour card carries captions
+    setExpanded(false); // the spotlight needs the page visible
     setResultsOpen(false);
     stopSpeaking();
     // Resume saved tour progress from this session, if any.
@@ -896,9 +903,11 @@ export function useVirtualGuide() {
     // panel
     open,
     minimized,
+    expanded,
     openPanel,
     closePanel,
     minimize,
+    toggleExpand,
     restore: openPanel,
     // conversation
     messages,

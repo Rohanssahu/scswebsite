@@ -27,16 +27,26 @@ const navLinks = [
   { key: 'nav.home', path: '/' },
   { key: 'nav.products', path: '/products' },
   { key: 'nav.projectEstimate', path: '/project-analysis' },
+];
+
+// About / Contact / Insights / Career were four separate top-level links that
+// crowded the bar next to Services and Locations. They are one "Company"
+// dropdown now — same pattern as Services — so the bar stays short. The list
+// is shared by the desktop menu and the mobile drawer so they cannot drift.
+const COMPANY_NAV = [
   { key: 'nav.about', path: '/about' },
-  { key: 'nav.contact', path: '/contact' },
   { key: 'nav.insights', path: '/insights' },
   { key: 'nav.career', path: '/careers' },
+  { key: 'nav.contact', path: '/contact' },
 ];
+
+const isCompanyPath = (pathname: string) => COMPANY_NAV.some((item) => item.path === pathname);
 
 const Header = () => {
   const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const location = useLocation();
   const reduceMotion = useReducedMotion();
   const rtl = i18n.dir() === 'rtl';
@@ -197,18 +207,41 @@ const Header = () => {
             <Link to="/project-analysis" className={linkCls('/project-analysis')}>
               {t('nav.projectEstimate')}
             </Link>
-            <Link to="/about" className={linkCls('/about')}>
-              {t('nav.about')}
-            </Link>
-            <Link to="/contact" className={linkCls('/contact')}>
-              {t('nav.contact')}
-            </Link>
-            <Link to="/insights" className={linkCls('/insights')}>
-              {t('nav.insights')}
-            </Link>
-            <Link to="/careers" className={linkCls('/careers')}>
-              {t('nav.career')}
-            </Link>
+            <div
+              className="relative"
+              onMouseEnter={() => setIsCompanyOpen(true)}
+              onMouseLeave={() => setIsCompanyOpen(false)}
+            >
+              <button
+                className={`flex items-center gap-1 whitespace-nowrap rounded-lg px-1 py-1 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 xl:text-sm ${
+                  isCompanyPath(location.pathname) ? 'text-pink-600 font-semibold' : 'text-gray-700 hover:text-pink-600'
+                }`}
+                aria-expanded={isCompanyOpen}
+                onClick={() => setIsCompanyOpen((o) => !o)}
+              >
+                {t('nav.company')}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${isCompanyOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+              {isCompanyOpen && (
+                <div className="absolute end-0 top-full z-50 w-56 pt-2">
+                  <div className="glow-card overflow-hidden rounded-2xl border border-gray-200 bg-white p-2">
+                    {COMPANY_NAV.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={menuItemCls(item.path)}
+                        onClick={() => setIsCompanyOpen(false)}
+                      >
+                        {t(item.key)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Primary CTA: the meeting starts immediately, so it leads the pair */}
             <Link
@@ -293,6 +326,20 @@ const Header = () => {
 
               <nav className="flex flex-col gap-1">
                 {navLinks.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                      isActive(item.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-700 hover:bg-gray-50 hover:text-pink-600'
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t(item.key)}
+                  </Link>
+                ))}
+
+                {/* Same four links the desktop "Company" dropdown holds */}
+                {COMPANY_NAV.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}

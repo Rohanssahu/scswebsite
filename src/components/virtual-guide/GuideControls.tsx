@@ -8,6 +8,8 @@ import {
   VolumeX,
   AudioLines,
   Languages,
+  Maximize2,
+  Minimize2,
   Minus,
   X,
   RotateCcw,
@@ -17,21 +19,25 @@ import { useTranslation } from 'react-i18next';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 
 // Video-call style control strip: tour, pause/resume, voice on/off, mute,
-// language & speech settings, restart, minimize and close.
+// language & speech settings, restart, full screen, minimize and close.
 // Every control is keyboard accessible.
 
 interface GuideControlsProps {
   guide: VirtualGuideApi;
+  // Docked desktop panel is only 380px wide: tighten the strip so the title
+  // keeps some room. Mobile and full screen have space for full-size targets.
+  compact?: boolean;
 }
 
-const btn =
-  'flex h-8 w-8 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
+const baseBtn =
+  'flex items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
 
-const GuideControls = ({ guide }: GuideControlsProps) => {
+const GuideControls = ({ guide, compact = false }: GuideControlsProps) => {
   const { t } = useTranslation();
   const tourActive = guide.tour.active;
+  const btn = `${baseBtn} ${compact ? 'h-7 w-7' : 'h-8 w-8'}`;
   return (
-    <div className="flex items-center gap-0.5" role="toolbar" aria-label={t('guide.controls.toolbar')}>
+    <div className={`flex shrink-0 items-center ${compact ? 'gap-0' : 'gap-0.5'}`} role="toolbar" aria-label={t('guide.controls.toolbar')}>
       <button
         type="button"
         className={`${btn} ${guide.settingsMode === 'voice' ? 'bg-white/15' : ''}`}
@@ -102,6 +108,17 @@ const GuideControls = ({ guide }: GuideControlsProps) => {
 
       <button type="button" className={btn} aria-label={t('guide.controls.restart')} title={t('guide.controls.restart')} onClick={guide.restartConversation}>
         <RotateCcw className="h-4 w-4" aria-hidden="true" />
+      </button>
+
+      <button
+        type="button"
+        className={`${btn} ${guide.expanded ? 'bg-white/15' : ''}`}
+        aria-label={guide.expanded ? t('guide.controls.exitFullscreen') : t('guide.controls.fullscreen')}
+        aria-pressed={guide.expanded}
+        title={guide.expanded ? t('guide.controls.exitFullscreen') : t('guide.controls.fullscreen')}
+        onClick={guide.toggleExpand}
+      >
+        {guide.expanded ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
       </button>
 
       <button type="button" className={btn} aria-label={t('guide.controls.minimize')} title={t('guide.controls.minimize')} onClick={guide.minimize}>

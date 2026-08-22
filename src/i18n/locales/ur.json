@@ -36,6 +36,7 @@
   "nav": {
     "home": "ہوم",
     "services": "خدمات",
+    "company": "کمپنی",
     "products": "پروڈکٹس",
     "projectEstimate": "پروجیکٹ تخمینہ",
     "about": "ہمارے بارے میں",
@@ -820,6 +821,8 @@
       "unmute": "آواز بحال کریں",
       "settings": "زبان اور آواز کی ترتیبات",
       "restart": "گفتگو دوبارہ شروع کریں",
+      "fullscreen": "فل اسکرین",
+      "exitFullscreen": "فل اسکرین بند کریں",
       "minimize": "Buddy کو چھوٹا کریں",
       "close": "Buddy کو بند کریں"
     },
