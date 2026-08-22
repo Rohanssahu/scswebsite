@@ -8,7 +8,6 @@ const DevOpsServices = () => {
     title: 'DevOps Services',
     description: 'Streamline your development lifecycle with comprehensive DevOps solutions including CI/CD pipelines, infrastructure automation, and monitoring.',
     icon: Settings,
-    heroImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop',
     features: [
       'CI/CD Pipeline Setup',
       'Infrastructure Automation',
@@ -85,41 +84,18 @@ const DevOpsServices = () => {
         ]
       }
     ],
-    testimonials: [
-      {
-        name: 'Alex Turner',
-        company: 'DevCorp Solutions',
-        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        quote: 'Scs Softwares reduced our deployment time from hours to minutes. The CI/CD pipeline they built is incredibly efficient and reliable.'
-      },
-      {
-        name: 'Sophia Kim',
-        company: 'TechInnovate',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQj98ecxAiufq2G0YxpRf5Zjey4NseoVl-tJw&s',
-        quote: 'Our development team productivity increased by 70% after implementing Scs Softwares\'s DevOps solutions. Deployments are now seamless.'
-      },
-      {
-        name: 'Carlos Rodriguez',
-        company: 'AgileWorks',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        quote: 'The monitoring and alerting system Scs Softwares set up helps us catch issues before they affect our users. Outstanding service!'
-      }
-    ],
     portfolio: [
       {
-        title: 'CI/CD Pipeline Implementation',
-        description: 'Automated deployment pipeline reducing release time by 90% for fintech company.',
-        image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop'
+        title: 'CI/CD Pipeline',
+        description: 'Build, test and deploy pipeline with environment promotion, rollbacks and required status checks.'
       },
       {
         title: 'Kubernetes Migration',
-        description: 'Migrated microservices to Kubernetes with improved scalability and resource utilization.',
-        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=400&fit=crop'
+        description: 'Containerised services on Kubernetes with autoscaling, health checks and resource limits.'
       },
       {
         title: 'Infrastructure Automation',
-        description: 'Implemented Infrastructure as Code reducing manual deployment errors by 95%.',
-        image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop'
+        description: 'Terraform/Ansible definitions so environments are reproducible instead of hand-configured.'
       }
     ]
   };

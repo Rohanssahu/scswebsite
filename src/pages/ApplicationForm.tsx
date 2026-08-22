@@ -111,6 +111,8 @@ const uploadFile = async (file) => {
   return (
     <div>
       <Header />
+
+      <main id="main-content">
       <section id="application-form" className="py-12 px-6 bg-white">
         <h2 className="text-3xl font-bold text-center mb-10">{t('application.title')}</h2>
         <form
@@ -316,6 +318,8 @@ const uploadFile = async (file) => {
           </div>
         </div>
       )}
+      </main>
+
       <Footer />
     </div>
   );

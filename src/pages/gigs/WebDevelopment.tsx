@@ -8,7 +8,6 @@ const WebDevelopment = () => {
     title: 'Web Development',
     description: 'Create powerful, responsive, and scalable web applications using the latest technologies and best practices. Our expert team delivers custom solutions tailored to your business needs.',
     icon: Code,
-    heroImage: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop',
     features: [
       'Custom Web Application Development',
       'Responsive Design for All Devices',
@@ -85,41 +84,18 @@ const WebDevelopment = () => {
         ]
       }
     ],
-    testimonials: [
-      {
-        name: 'David Smith',
-        company: 'RetailMax Corp',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        quote: 'The web application Scs Softwares built for us increased our online sales by 150%. Their attention to detail and technical expertise is outstanding.'
-      },
-      {
-        name: 'Lisa Chen',
-        company: 'EducaTech',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNvglVm2g2-1kuzF1YinSFHQBc2llXJarnig&s',
-        quote: 'Working with Scs Softwares was seamless. They delivered a beautiful, fast, and user-friendly platform that our students love.'
-      },
-      {
-        name: 'Marcus Johnson',
-        company: 'FinanceFlow',
-        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        quote: 'The custom dashboard Scs Softwares created helps us manage our financial data efficiently. Highly recommend their web development services.'
-      }
-    ],
     portfolio: [
       {
         title: 'E-commerce Platform',
-        description: 'Full-featured online store with inventory management, payment processing, and analytics.',
-        image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop'
+        description: 'Online store with catalogue, cart, payment gateway integration, order management and an admin back office.'
       },
       {
         title: 'Learning Management System',
-        description: 'Comprehensive LMS with course management, student tracking, and interactive features.',
-        image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=400&fit=crop'
+        description: 'Course delivery platform with enrolment, lesson content, progress tracking and instructor tooling.'
       },
       {
         title: 'Business Analytics Dashboard',
-        description: 'Real-time dashboard with data visualization, reporting, and business intelligence.',
-        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop'
+        description: 'Reporting dashboard that pulls from your existing systems and renders charts, filters and exports.'
       }
     ]
   };

@@ -43,7 +43,7 @@ const NavContent = ({
         onClick={onNavigate}
         className="flex items-center gap-3 rounded-xl px-2 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
       >
-        <img src={icon.logos} alt="SCS Softwares" className="h-9 w-9 rounded-lg object-contain" />
+        <img src={icon.logos} alt="SCS Softwares" width={36} height={36} className="h-9 w-9 rounded-lg object-contain" />
         <span className="text-sm font-semibold leading-tight text-white">
           Owner Dashboard
           <span className="block text-xs font-normal text-gray-400">SCS Softwares</span>
@@ -162,7 +162,7 @@ const AdminLayout = ({ title, children }: { title: string; children: ReactNode }
         </div>
       ) : null}
 
-      <main className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8">{children}</main>
+      <main id="main-content" className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8">{children}</main>
     </div>
   );
 };

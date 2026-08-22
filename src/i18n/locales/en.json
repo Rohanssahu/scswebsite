@@ -30,8 +30,8 @@
     "scrollUp": "Scroll up",
     "scrollDown": "Scroll down",
     "pageScrollControls": "Page scroll controls",
-    "fiveStars": "5 out of 5 stars",
-    "recommendedLanguage": "Recommended based on your browser settings"
+    "recommendedLanguage": "Recommended based on your browser settings",
+    "skipToContent": "Skip to main content"
   },
   "nav": {
     "home": "Home",
@@ -76,7 +76,7 @@
     "ourServices": "Our Services",
     "quickLinks": "Quick Links",
     "contactInfo": "Contact Info",
-    "copyright": "© 2022 Scs Softwares. All rights reserved. Built with passion and innovation."
+    "copyright": "© {{year}} Scs Softwares. All rights reserved. Built with passion and innovation."
   },
   "home": {
     "heroBadge": "AI-style project estimator · Demo analysis",
@@ -84,10 +84,10 @@
     "heroTitle2": "Before You Hire",
     "heroSub": "Share a new idea or upload an existing project. Get an estimated team, development hours, cost and delivery timeline before hiring SCS Softwares.",
     "stats": {
-      "clients": "Happy clients",
-      "projects": "Projects delivered",
-      "years": "Years experience",
-      "satisfaction": "Client satisfaction"
+      "founded": "Founded in Indore, India",
+      "services": "Service lines",
+      "products": "Ready-to-customise products",
+      "languages": "Site languages"
     },
     "how": {
       "eyebrow": "How it works",
@@ -173,21 +173,14 @@
       "title": "Everything under one roof"
     },
     "portfolio": {
-      "eyebrow": "Portfolio",
-      "title": "Recent case studies",
+      "eyebrow": "What we build",
+      "title": "Project types we build",
       "p1Title": "E-commerce Platform",
       "p1Desc": "A modern e-commerce platform with advanced features and a seamless checkout experience.",
       "p2Title": "Healthcare Mobile App",
       "p2Desc": "HIPAA-compliant mobile application for healthcare providers and patients.",
       "p3Title": "FinTech Dashboard",
       "p3Desc": "Real-time financial dashboard with advanced analytics and reporting."
-    },
-    "testimonials": {
-      "eyebrow": "Testimonials",
-      "title": "What our clients say",
-      "q1": "SCS Softwares delivered an exceptional web application that exceeded our expectations. Professional, responsive and highly skilled.",
-      "q2": "Working with SCS Softwares was a game-changer. They transformed our idea into a powerful mobile app our users love.",
-      "q3": "Their upfront estimate matched the final delivery almost exactly — no surprises, just steady weekly progress."
     },
     "call": {
       "title": "Want to talk it through right now?",
@@ -461,11 +454,21 @@
         "subtitle": "CI/CD & Infra Monitoring",
         "description": "Manage builds, servers, and deployments."
       }
-    }
+    },
+    "discuss": "Discuss this product"
   },
   "blog": {
-    "viewAll": "View All Blogs",
-    "readFullStory": "Read full story →"
+    "eyebrow": "Insights",
+    "title": "Engineering notes from the SCS Softwares team",
+    "sub": "We are writing up how we build AI voice agents, AI video consultation agents and the estimation tooling behind this site. The first articles are being prepared.",
+    "emptyTitle": "No articles published yet",
+    "emptyText": "Rather than fill this page with placeholder posts, we have left it empty until the first article is ready. In the meantime the team is happy to answer questions directly.",
+    "topicsTitle": "What we plan to write about",
+    "t1": "Building an AI voice agent on LiveKit",
+    "t2": "How our AI video consultation agent runs a meeting",
+    "t3": "Turning a requirements conversation into a project estimate",
+    "t4": "Making a React site multilingual, including RTL",
+    "cta": "Ask us about any of these"
   },
   "gig": {
     "badge": "Our services",
@@ -479,11 +482,9 @@
     "processEyebrow": "How we work",
     "processTitle1": "Our",
     "processTitle2": "process",
-    "portfolioEyebrow": "Portfolio",
-    "portfolioTitle1": "Related",
-    "portfolioTitle2": "projects",
-    "testimonialsEyebrow": "Testimonials",
-    "testimonialsTitle": "What our clients say",
+    "portfolioEyebrow": "What we build",
+    "portfolioTitle1": "Typical",
+    "portfolioTitle2": "builds",
     "estimateEyebrow": "Project estimate",
     "estimateTitle1": "Know your project cost",
     "estimateTitle2": "before you hire",

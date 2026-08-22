@@ -9,10 +9,11 @@ const PrivacyPolicy = () => {
     <div className="min-h-screen bg-white">
       <Header />
 
+      <main id="main-content">
     <div className="min-h-screen bg-gray-50 py-10 px-6 md:px-20">
 
       <div className="flex items-center mb-8">
-        <img src={icon.logos} alt="App Icon" className="w-10 h-10 mr-3" />
+        <img src={icon.logos} alt="SCS Softwares logo" width={40} height={40} decoding="async" className="w-10 h-10 mr-3" />
         <h1 className="text-3xl font-bold">{t('legal.privacy.title')}</h1>
       </div>
 
@@ -42,6 +43,8 @@ const PrivacyPolicy = () => {
         </p>
       </div>
     </div>
+      </main>
+
     <Footer />
     </div>
   );

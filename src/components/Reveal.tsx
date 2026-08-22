@@ -7,11 +7,21 @@ interface RevealProps {
   className?: string;
 }
 
+/**
+ * True during the build-time prerender, where there is no window.
+ *
+ * It matters for SEO: `whileInView` starts the wrapper at `opacity: 0`, so a
+ * server-rendered page would ship all of its copy invisible. Rendering a plain
+ * div instead means the prerendered HTML a crawler reads is fully visible text;
+ * the browser still gets the animation because the client re-renders.
+ */
+const IS_SERVER = typeof window === 'undefined';
+
 /** Lightweight scroll-reveal wrapper. Renders statically when the user prefers reduced motion. */
 const Reveal = ({ children, delay = 0, className }: RevealProps) => {
   const reduceMotion = useReducedMotion();
 
-  if (reduceMotion) {
+  if (IS_SERVER || reduceMotion) {
     return <div className={className}>{children}</div>;
   }
 

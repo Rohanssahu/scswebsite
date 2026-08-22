@@ -10,7 +10,6 @@ import {
   Settings,
   ArrowRight,
   CheckCircle,
-  Star,
   Sparkles,
   ClipboardList,
   Rocket,
@@ -30,6 +29,7 @@ import {
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
+import VisualPlaceholder from '../components/VisualPlaceholder';
 
 const DEMO_TEAM = [
   { slug: 'requirement-analyst', rate: 5 },
@@ -48,49 +48,35 @@ const SERVICES = [
   { icon: TrendingUp, nameKey: 'services.names.digital-marketing', path: '/gig/digital-marketing' },
 ];
 
+// Category tiles instead of the stock photos that used to be hotlinked from
+// Unsplash and another company's blog CDN — none of them showed our work.
 const PORTFOLIO: {
   titleKey: string;
-  categoryKey?: string;
-  category?: string;
-  image: string;
+  categoryKey: string;
+  icon: React.ElementType;
+  gradient: string;
   descKey: string;
 }[] = [
   {
     titleKey: 'home.portfolio.p1Title',
     categoryKey: 'services.names.web-development',
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
+    icon: Code,
+    gradient: 'from-pink-500 to-purple-600',
     descKey: 'home.portfolio.p1Desc',
   },
   {
     titleKey: 'home.portfolio.p2Title',
-    category: 'Mobile Development',
-    image:
-      'https://blog.elxoinc.com/hubfs/Website%20Images/Blogs/Modern%20Healthcare%20App%20Development%E2%80%99s%20Role%20in%20Staff%20%26%20IT%20Partnerships.jpg',
+    categoryKey: 'services.names.mobile-apps',
+    icon: Smartphone,
+    gradient: 'from-orange-400 to-pink-500',
     descKey: 'home.portfolio.p2Desc',
   },
   {
     titleKey: 'home.portfolio.p3Title',
     categoryKey: 'services.names.web-development',
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop',
+    icon: Gauge,
+    gradient: 'from-purple-500 to-pink-500',
     descKey: 'home.portfolio.p3Desc',
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: 'Sarah Johnson',
-    company: 'TechStart Inc.',
-    quoteKey: 'home.testimonials.q1',
-  },
-  {
-    name: 'Michael Chen',
-    company: 'Digital Ventures',
-    quoteKey: 'home.testimonials.q2',
-  },
-  {
-    name: 'Emily Rodriguez',
-    company: 'Growth Marketing Co.',
-    quoteKey: 'home.testimonials.q3',
   },
 ];
 
@@ -114,6 +100,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section data-guide-id="home-hero" className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -152,11 +139,16 @@ const Index = () => {
           </Reveal>
           <Reveal delay={0.4}>
             <div className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
+              {/* Every figure here is verifiable on this site: the founding year on
+                  the About page, the six service pages, the product catalogue
+                  and the three shipped locales. The previous set (500+ clients,
+                  1000+ projects, 10+ years, 98% satisfaction) had no evidence
+                  behind it and contradicted the 2018 founding date. */}
               {[
-                { value: '500+', labelKey: 'home.stats.clients' },
-                { value: '1000+', labelKey: 'home.stats.projects' },
-                { value: '10+', labelKey: 'home.stats.years' },
-                { value: '98%', labelKey: 'home.stats.satisfaction' },
+                { value: '2018', labelKey: 'home.stats.founded' },
+                { value: '6', labelKey: 'home.stats.services' },
+                { value: '16', labelKey: 'home.stats.products' },
+                { value: '3', labelKey: 'home.stats.languages' },
               ].map((s) => (
                 <div key={s.labelKey} className="rounded-2xl border border-gray-200 bg-white px-4 py-5">
                   <p className="text-2xl font-bold text-gray-900">{s.value}</p>
@@ -405,47 +397,15 @@ const Index = () => {
             {PORTFOLIO.map((item, i) => (
               <Reveal key={item.titleKey} delay={i * 0.08}>
                 <article className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white">
-                  <div className="overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={t(item.titleKey)}
-                      loading="lazy"
-                      className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
+                  <VisualPlaceholder icon={item.icon} gradient={item.gradient} />
                   <div className="p-6">
                     <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">
-                      {item.categoryKey ? t(item.categoryKey) : item.category}
+                      {t(item.categoryKey)}
                     </span>
                     <h3 className="mt-1 text-lg font-bold text-gray-900">{t(item.titleKey)}</h3>
                     <p className="mt-2 text-sm text-gray-600">{t(item.descKey)}</p>
                   </div>
                 </article>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Testimonials ===== */}
-      <section className="border-t border-gray-200 py-20">
-        <div className="container mx-auto px-4">
-          <SectionHeading eyebrow={t('home.testimonials.eyebrow')} title={t('home.testimonials.title')} />
-          <div className="grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((item, i) => (
-              <Reveal key={item.name} delay={i * 0.08}>
-                <figure className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-7">
-                  <div className="flex gap-1" aria-label={t('a11y.fiveStars')}>
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} className="h-4 w-4 fill-current text-amber-400" aria-hidden="true" />
-                    ))}
-                  </div>
-                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-gray-700">“{t(item.quoteKey)}”</blockquote>
-                  <figcaption className="mt-5">
-                    <p className="font-semibold text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.company}</p>
-                  </figcaption>
-                </figure>
               </Reveal>
             ))}
           </div>
@@ -492,6 +452,8 @@ const Index = () => {
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

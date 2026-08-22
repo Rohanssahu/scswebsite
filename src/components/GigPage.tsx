@@ -5,25 +5,36 @@ import { valueKey } from '@/i18n/languageConfig';
 import Header from './Header';
 import Footer from './Footer';
 import Reveal from './Reveal';
-import { ArrowRight, CheckCircle, Star, Sparkles, PhoneCall, Users, Clock, DollarSign, CalendarRange } from 'lucide-react';
+import VisualPlaceholder from './VisualPlaceholder';
+import { ArrowRight, CheckCircle, Sparkles, PhoneCall, Users, Clock, DollarSign, CalendarRange } from 'lucide-react';
 
 interface GigPageProps {
   title: string;
   description: string;
   icon: React.ElementType;
-  heroImage: string;
   features: string[];
   technologies: string[];
   process: { step: string; description: string }[];
   pricing: { plan: string; price: string; features: string[] }[];
-  testimonials: { name: string; company: string; quote: string; image: string }[];
-  portfolio: { title: string; description: string; image: string }[];
+  /**
+   * Representative builds for this service. No image field: the cards used to
+   * hotlink unrelated stock photos, and the tile is rendered locally instead.
+   */
+  portfolio: { title: string; description: string }[];
 }
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
 const secondaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-7 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
+
+// Rotated across the build cards so three tiles on one row read as three
+// distinct entries rather than one repeated block.
+const CARD_GRADIENTS = [
+  'from-orange-400 to-pink-500',
+  'from-pink-500 to-purple-600',
+  'from-purple-500 to-pink-500',
+];
 
 const SectionHeading = ({ eyebrow, title, sub }: { eyebrow: string; title: React.ReactNode; sub?: string }) => (
   <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -37,11 +48,9 @@ const GigPage: React.FC<GigPageProps> = ({
   title,
   description,
   icon: Icon,
-  heroImage,
   features,
   technologies,
   process,
-  testimonials,
   portfolio,
 }) => {
   const { t } = useTranslation();
@@ -50,6 +59,7 @@ const GigPage: React.FC<GigPageProps> = ({
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -85,12 +95,7 @@ const GigPage: React.FC<GigPageProps> = ({
             </div>
             <Reveal delay={0.2}>
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
-                <img
-                  src={heroImage}
-                  alt={serviceName}
-                  loading="lazy"
-                  className="h-64 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-80 lg:h-96"
-                />
+                <VisualPlaceholder icon={Icon} className="h-64 sm:h-80 lg:h-96" />
               </div>
             </Reveal>
           </div>
@@ -164,49 +169,12 @@ const GigPage: React.FC<GigPageProps> = ({
             {portfolio.map((item, index) => (
               <Reveal key={item.title} delay={index * 0.08}>
                 <article className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-pink-300">
-                  <div className="overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      loading="lazy"
-                      className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
+                  <VisualPlaceholder icon={Icon} gradient={CARD_GRADIENTS[index % CARD_GRADIENTS.length]} />
                   <div className="p-6">
                     <h3 className="text-lg font-bold text-gray-900">{item.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.description}</p>
                   </div>
                 </article>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Testimonials ===== */}
-      <section className="border-t border-gray-200 py-20">
-        <div className="container mx-auto px-4">
-          <SectionHeading eyebrow={t('gig.testimonialsEyebrow')} title={t('gig.testimonialsTitle')} />
-          <div className="grid gap-6 md:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
-              <Reveal key={testimonial.name} delay={index * 0.08}>
-                <figure className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-7">
-                  <div className="flex gap-1" aria-label={t('a11y.fiveStars')}>
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current text-amber-400" aria-hidden="true" />
-                    ))}
-                  </div>
-                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-gray-700">“{testimonial.quote}”</blockquote>
-                  <figcaption className="mt-5 flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-sm font-bold text-white">
-                      {testimonial.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                      <p className="text-xs text-gray-500">{testimonial.company}</p>
-                    </div>
-                  </figcaption>
-                </figure>
               </Reveal>
             ))}
           </div>
@@ -271,6 +239,8 @@ const GigPage: React.FC<GigPageProps> = ({
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

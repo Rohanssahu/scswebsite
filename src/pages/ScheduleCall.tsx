@@ -223,6 +223,7 @@ const ScheduleCall = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       <main className="container mx-auto max-w-4xl px-4 py-8 sm:py-10">
         {confirmed ? (
           <div className="glow-card rounded-2xl border border-gray-200 bg-white p-8 text-center">
@@ -671,6 +672,8 @@ const ScheduleCall = () => {
             </form>
           </>
         )}
+      </main>
+
       </main>
 
       <Footer />

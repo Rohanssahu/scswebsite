@@ -8,7 +8,6 @@ const CloudSolutions = () => {
     title: 'Cloud Solutions',
     description: 'Comprehensive cloud services including migration, infrastructure setup, and optimization for scalable, secure, and cost-effective business operations.',
     icon: Cloud,
-    heroImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=400&fit=crop',
     features: [
       'Cloud Migration Services',
       'Infrastructure as Code',
@@ -85,41 +84,18 @@ const CloudSolutions = () => {
         ]
       }
     ],
-    testimonials: [
-      {
-        name: 'Thomas Anderson',
-        company: 'DataCorp Inc',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        quote: 'Scs Softwares migrated our entire infrastructure to the cloud seamlessly. Our costs decreased by 40% while performance improved significantly.'
-      },
-      {
-        name: 'Maria Gonzalez',
-        company: 'GlobalTech',
-        image: 'https://ayaladelatorreabogados.com/wp-content/uploads/2021/05/maria-gonzalez-romero.jpg',
-        quote: 'The cloud solution Scs Softwares implemented scales automatically with our business needs. No more worrying about server capacity.'
-      },
-      {
-        name: 'John Mitchell',
-        company: 'StartupXYZ',
-        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        quote: 'Our disaster recovery plan saved us during a recent outage. Scs Softwares\'s cloud architecture is robust and reliable.'
-      }
-    ],
     portfolio: [
       {
-        title: 'Enterprise Cloud Migration',
-        description: 'Migrated legacy systems to AWS with 99.9% uptime and 50% cost reduction.',
-        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=400&fit=crop'
+        title: 'Cloud Migration',
+        description: 'Lift-and-shift or re-architecture of an existing application onto AWS, Azure or Google Cloud.'
       },
       {
         title: 'Serverless Application',
-        description: 'Built scalable serverless application handling millions of requests per day.',
-        image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop'
+        description: 'Event-driven backend built on managed functions and queues, with infrastructure defined as code.'
       },
       {
-        title: 'Multi-Cloud Strategy',
-        description: 'Implemented multi-cloud architecture for improved redundancy and performance.',
-        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=400&fit=crop'
+        title: 'Multi-Cloud Architecture',
+        description: 'Workloads spread across providers for redundancy, with shared monitoring and deployment tooling.'
       }
     ]
   };

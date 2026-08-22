@@ -1,174 +1,107 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import './BlogPage.css';
+import { Notebook, ArrowRight, PhoneCall } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Reveal from '../components/Reveal';
 
-const blogPosts = [
-  {
-    title: "How AI is Shaping the Metaverse: Unlocking New Opportunities",
-    image: "https://cdn.prod.website-files.com/6320125ace536b6ad148eca3/682ad06a74f17c58e6ba13a2_Metaverse%20avatar%20collage%20concept-p-800.webp",
-    tag: "Artificial Intelligence",
-  },
-  {
-    title: "Smart Project Management with AI Agents: Capabilities, Tools, and Reality Check",
-    image: "https://sixtysixten.com/wp-content/uploads/2024/12/ai-agent-for-project-management-1024x585.jpg",
-    tag: "Artificial Intelligence",
-  },
-  {
-    title: "From Smart to Sensitive: The Evolution of Emotional AI Agents",
-    image: "https://aigptjournal.com/wp-content/uploads/2024/04/DALL%C2%B7E-2024-04-09-18.42.19-Two-side-by-side-images-in-a-3-to-2-ratio.-On-the-left-an-image-of-a-human-face-expressing-a-clear-emotion-such-as-happiness-or-surprise.-On-the-righ-1536x878.webp",
-    tag: "Artificial Intelligence",
-  },
-  {
-    title: "AI in Healthcare: Predicting Diseases Before Symptoms Appear",
-    image: "https://www.scssoftwares.com/images/AIinHealthcare.jpeg",
-    tag: "Healthcare AI",
-  },
-  {
-    title: "AI-Powered Chatbots: Transforming Customer Support Forever",
-    image: "https://www.scssoftwares.com/images/AIPoweredChatbots.jpeg",
-    tag: "Customer Support",
-  },
-  {
-    title: "Revolutionizing Education with Personalized AI Tutors",
-    image: "https://www.scssoftwares.com/images/AITutors.jpeg",
-    tag: "Education",
-  },
-  {
-    title: "How AI Detects Fake News: Tools and Techniques Explained",
-    image: "https://www.scssoftwares.com/images/DetectsFakeNews.jpeg",
-    tag: "AI Ethics",
-  },
-  {
-    title: "Using AI to Analyze Emotions in Video Calls",
-    image: "https://www.scssoftwares.com/images/VideoCalls.jpeg",
-    tag: "Communication",
-  },
-  {
-    title: "AI in Finance: From Fraud Detection to Smart Investments",
-    image: "https://www.scssoftwares.com/images/AIFinance.jpeg",
-    tag: "Finance",
-  },
-  {
-    title: "How Developers are Leveraging AI in Web Development",
-    image: "https://www.scssoftwares.com/images/WebDevelopment.jpeg",
-    tag: "Development",
-  },
-  {
-    title: "Ethical Dilemmas in Generative AI: What Creators Need to Know",
-    image: "https://cdn.analyticsvidhya.com/wp-content/uploads/2023/07/Gen-AI-Article.png",
-    tag: "Ethics",
-  },
-  {
-    title: "Voice AI: The Future of Human-Machine Interaction",
-    image: "https://www.speechmatics.com/wp-content/uploads/2022/07/Voice-AI.png",
-    tag: "Voice AI",
-  },
-  {
-    title: "IoT in Automobiles: The Rise of Connected Cars",
-    image: "https://iot.electronicsforu.com/wp-content/uploads/2021/01/Connected-car.jpg",
-    tag: "IoT / Automobile",
-  },
-  {
-    title: "How IoT is Revolutionizing Smart Homes",
-    image: "https://www.link-labs.com/hubfs/smart-home-iot-devices.jpg",
-    tag: "IoT / Smart Home",
-  },
-  {
-    title: "IoT-Based Wearables: Health Monitoring in Real-Time",
-    image: "https://iotbusinessnews.com/wp-content/uploads/2022/01/iot-wearable-devices.jpg",
-    tag: "IoT / Wearables",
-  },
-  {
-    title: "Industrial IoT (IIoT): Smart Factories of the Future",
-    image: "https://www.analyticsinsight.net/wp-content/uploads/2021/08/Industrial-IoT-1.jpg",
-    tag: "IoT / Industrial",
-  },
-  {
-    title: "Smart Agriculture with IoT Sensors and Automation",
-    image: "https://www.researchsnipers.com/wp-content/uploads/2022/03/smart-agriculture.jpg",
-    tag: "IoT / Agriculture",
-  },
-  {
-    title: "Smart Cities: Building Urban Intelligence with IoT",
-    image: "https://stl.tech/wp-content/uploads/2022/02/Smart-City-Technology.jpg",
-    tag: "IoT / Smart Cities",
-  },
-  {
-    title: "IoT in Retail: Enhancing Customer Experience and Logistics",
-    image: "https://www.iotforall.com/wp-content/uploads/2021/02/IoT-in-Retail.png",
-    tag: "IoT / Retail",
-  },
-  {
-    title: "Fleet Management Using IoT Telematics",
-    image: "https://telematicswire.net/wp-content/uploads/2020/07/fleet.jpg",
-    tag: "IoT / Automotive",
-  },
-  {
-    title: "IoT in Smart Grid and Energy Monitoring Systems",
-    image: "https://www.scnsoft.com/blog-pictures/iot/iot-energy-management-system.png",
-    tag: "IoT / Energy",
-  },
-  {
-    title: "IoT in Electronic Devices: From Lights to Appliances",
-    image: "https://www.investopedia.com/thmb/lNn8MJghbgEPxNUf7sjyaEp8FjQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/what-is-internet-of-things-IOT-5194356-FINAL-23710ad5efc142e6a187c3b94ae699ff.png",
-    tag: "IoT / Consumer Electronics",
-  },
-  {
-    title: "IoT in Automotive Safety: Accident Prevention & Tracking",
-    image: "https://media.istockphoto.com/id/1032276718/photo/modern-car-digital-infotainment-system.jpg?s=612x612&w=0&k=20&c=rvo23xBrxuGPRRCgxMiLG67m5Kn6A7TF-6SNTF6XpAo=",
-    tag: "IoT / Automotive",
-  },
-];
+/**
+ * Insights index.
+ *
+ * This page previously listed 23 invented article headlines whose cards linked
+ * to `href={undefined}`, illustrated with images hotlinked from 20 unrelated
+ * third-party sites, plus a "View all" button pointing at `/blogs` — a route
+ * that does not exist. None of those articles were ever written.
+ *
+ * Rather than invent articles, the page now states the truth: nothing is
+ * published yet, here is what we intend to write, and here is how to reach the
+ * team meanwhile. The SEO registry marks the route `noindex,follow` and keeps
+ * it out of `sitemap.xml` until real articles exist (Phase 2).
+ */
+const TOPIC_KEYS = ['blog.t1', 'blog.t2', 'blog.t3', 'blog.t4'];
 
-
-const BlogCard = ({ title, image, tag, link }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:scale-105">
-      <img src={image} alt={title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <div className="text-sm text-purple-600 font-semibold mb-2">{tag}</div>
-        <h4 className="text-lg font-bold text-gray-800 mb-2">{title}</h4>
-        <a href={link} className="text-blue-500 hover:underline">{t('blog.readFullStory')}</a>
-      </div>
-    </div>
-  );
-};
+const primaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
+const secondaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-7 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
 
 const BlogPage = () => {
   const { t } = useTranslation();
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
-      <header className="bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-white text-center py-16 px-4 mb-10">
-  <h1 className="text-3xl md:text-4xl font-bold mb-4">
-    How AI is Shaping the Metaverse: Unlocking New Opportunities
-  </h1>
-  <p className="max-w-2xl mx-auto text-lg">
-    Learn how AI powers avatars, shopping, learning, healthcare, and more in the metaverse—with real examples and practical benefits for businesses.
-  </p>
-</header>
+      <main id="main-content">
+        {/* ===== Hero ===== */}
+        <section className="relative overflow-hidden">
+          <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[50rem] -translate-x-1/2 animate-pulse-glow rounded-full bg-pink-200/60 blur-3xl" aria-hidden="true" />
 
-<section className="max-w-6xl mx-auto px-4 pt-4 pb-10">
-  <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-    {blogPosts.map((post, index) => (
-      <BlogCard key={index} {...post} />
-    ))}
-  </div>
+          <div className="container relative mx-auto px-4 py-20 text-center sm:py-24">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-pink-300 bg-pink-50 px-4 py-1.5 text-xs font-medium text-pink-700">
+                <Notebook className="h-3.5 w-3.5" aria-hidden="true" /> {t('blog.eyebrow')}
+              </span>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl">
+                {t('blog.title')}
+              </h1>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">{t('blog.sub')}</p>
+            </Reveal>
+          </div>
+        </section>
 
-  <div className="flex justify-center mt-10">
-    <button
-      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
-      onClick={() => window.location.href = '/blogs'}
-    >
-      {t('blog.viewAll')}
-    </button>
-  </div>
-</section>
+        {/* ===== Honest empty state + planned topics ===== */}
+        <section className="border-t border-gray-200 py-16">
+          <div className="container mx-auto px-4">
+            <Reveal>
+              <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center">
+                <h2 className="text-2xl font-bold text-gray-900">{t('blog.emptyTitle')}</h2>
+                <p className="mt-4 leading-relaxed text-gray-600">{t('blog.emptyText')}</p>
+              </div>
+            </Reveal>
 
+            <Reveal delay={0.1}>
+              <h3 className="mt-14 text-center text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+                {t('blog.topicsTitle')}
+              </h3>
+            </Reveal>
+            <ul className="mx-auto mt-6 grid max-w-4xl gap-4 sm:grid-cols-2">
+              {TOPIC_KEYS.map((key, i) => (
+                <Reveal key={key} delay={i * 0.06}>
+                  <li className="h-full rounded-2xl border border-gray-200 bg-white p-5 text-sm font-medium text-gray-700">
+                    {t(key)}
+                  </li>
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* ===== CTA ===== */}
+        <section className="py-20 pt-4">
+          <div className="container mx-auto px-4">
+            <Reveal>
+              <div className="glow-card mx-auto flex max-w-4xl flex-col items-center gap-6 rounded-3xl border border-gray-300 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 p-8 text-center sm:p-12">
+                <PhoneCall className="h-9 w-9 text-pink-600" aria-hidden="true" />
+                <h2 className="text-2xl font-bold sm:text-3xl">{t('blog.cta')}</h2>
+                <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <Link to="/contact" className={primaryBtn}>
+                    {t('common.contactUs')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link to="/schedule-call" className={secondaryBtn}>
+                    {t('common.scheduleCall')}
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

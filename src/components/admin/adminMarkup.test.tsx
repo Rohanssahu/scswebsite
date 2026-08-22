@@ -666,8 +666,11 @@ describe('admin routes are hidden and chrome-free', () => {
 
   it('disallows /admin in robots.txt for every crawler group', () => {
     const robots = readFileSync(join(process.cwd(), 'public', 'robots.txt'), 'utf8');
-    const groups = robots.split(/\n(?=User-agent:)/);
-    expect(groups.length).toBeGreaterThan(1);
+    // Only the crawler groups are asserted; the file also opens with a comment
+    // block explaining which routes are blocked and which are left crawlable so
+    // their `noindex` meta tag can be read.
+    const groups = robots.split(/\n(?=User-agent:)/).filter((group) => group.startsWith('User-agent:'));
+    expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) {
       expect(group, group.split('\n')[0]).toContain('Disallow: /admin');
     }

@@ -104,6 +104,7 @@ const ProjectAnalysis = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       <main className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
         <div
@@ -178,6 +179,8 @@ const ProjectAnalysis = () => {
             </div>
           )}
         </div>
+      </main>
+
       </main>
 
       <Footer />

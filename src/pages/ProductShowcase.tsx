@@ -15,6 +15,7 @@ import {
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
+import VisualPlaceholder from '../components/VisualPlaceholder';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -24,9 +25,15 @@ const secondaryBtn =
 interface Product {
   title: string;
   slug: string;
-  image?: string;
-  path: string;
   type: 'mobile' | 'web' | 'cloud' | 'marketing' | 'devops';
+  /**
+   * Only set for products that really have a detail page. Fifteen of the
+   * sixteen cards used to link to routes that were never registered
+   * (`/QRMenuDetailsPage`, `/HRMSDetailsPage`, ...), so every one of them
+   * landed on the 404 screen. Cards without a page now stay on this page and
+   * offer a route to `/contact` instead of inventing product pages.
+   */
+  detailPath?: string;
 }
 
 // Product titles are brand/product names and stay in English.
@@ -35,98 +42,82 @@ const products: Product[] = [
   {
     title: 'RoomJi',
     slug: 'roomji',
-    image: 'https://www.scssoftwares.com/images/roomji.png',
-    path: '/ProductDetailsPage',
     type: 'mobile',
+    detailPath: '/ProductDetailsPage',
   },
   {
     title: 'Smart Service Booking App',
     slug: 'smart-service-booking-app',
-    path: '/ServiceBookingDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Digital Business Card App',
     slug: 'digital-business-card-app',
-    path: '/DigitalCardDetailsPage',
     type: 'web',
   },
   {
     title: 'Clinic/Doctor Appointment System',
     slug: 'clinic-doctor-appointment-system',
-    path: '/DoctorAppDetailsPage',
     type: 'web',
   },
   {
     title: 'QR Menu App',
     slug: 'qr-menu-app',
-    path: '/QRMenuDetailsPage',
     type: 'web',
   },
   {
     title: 'E-learning Platform',
     slug: 'e-learning-platform',
-    path: '/ElearningPlatformDetailsPage',
     type: 'web',
   },
   {
     title: 'Real Estate Listing App',
     slug: 'real-estate-listing-app',
-    path: '/RealEstateAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'HR Management System',
     slug: 'hr-management-system',
-    path: '/HRMSDetailsPage',
     type: 'cloud',
   },
   {
     title: 'Inventory & Billing Software',
     slug: 'inventory-billing-software',
-    path: '/InventoryBillingDetailsPage',
     type: 'cloud',
   },
   {
     title: 'Gym Management System',
     slug: 'gym-management-system',
-    path: '/GymAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Grocery Store',
     slug: 'online-grocery-store',
-    path: '/GroceryAppDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Donation Platform',
     slug: 'online-donation-platform',
-    path: '/DonationPlatformDetailsPage',
     type: 'web',
   },
   {
     title: 'Online Food Delivery App',
     slug: 'online-food-delivery-app',
-    path: '/FoodDeliveryDetailsPage',
     type: 'mobile',
   },
   {
     title: 'Online Exam/Test Portal',
     slug: 'online-exam-test-portal',
-    path: '/ExamPortalDetailsPage',
     type: 'cloud',
   },
   {
     title: 'SEO & Digital Marketing Tools',
     slug: 'seo-digital-marketing-tools',
-    path: '/MarketingToolsDetailsPage',
     type: 'marketing',
   },
   {
     title: 'DevOps Dashboard System',
     slug: 'devops-dashboard-system',
-    path: '/DevOpsDetailsPage',
     type: 'devops',
   },
 ];
@@ -151,6 +142,7 @@ const ProductShowcase = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -204,35 +196,23 @@ const ProductShowcase = () => {
               const meta = TYPE_META[product.type];
               const TypeIcon = meta.icon;
               return (
-                <Reveal key={product.path} delay={(i % 3) * 0.06}>
-                  <Link
-                    to={product.path}
-                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
-                  >
-                    {product.image ? (
-                      <div className="overflow-hidden">
-                        <img
-                          src={product.image}
-                          alt={product.title}
-                          loading="lazy"
-                          className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
-                    ) : (
-                      <div className={`flex h-48 w-full items-center justify-center bg-gradient-to-br ${meta.gradient}`}>
-                        <TypeIcon className="h-14 w-14 text-white/90 transition-transform duration-300 group-hover:scale-110" aria-hidden="true" />
-                      </div>
-                    )}
+                <Reveal key={product.slug} delay={(i % 3) * 0.06}>
+                  <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-pink-300">
+                    <VisualPlaceholder icon={TypeIcon} gradient={meta.gradient} />
                     <div className="flex flex-1 flex-col p-6">
                       <span className="text-xs font-semibold uppercase tracking-wide text-pink-600">{t(`products.types.${product.type}`)}</span>
                       <h3 className="mt-1 text-lg font-bold text-gray-900">{product.title}</h3>
                       <p className="mt-1 text-sm font-medium text-gray-700">{t(`products.items.${product.slug}.subtitle`)}</p>
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">{t(`products.items.${product.slug}.description`)}</p>
-                      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-pink-600 group-hover:text-gray-900">
-                        {t('common.viewDetails')} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                      </span>
+                      <Link
+                        to={product.detailPath ?? '/contact'}
+                        className="mt-4 inline-flex items-center gap-1.5 rounded text-sm font-medium text-pink-600 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                      >
+                        {product.detailPath ? t('common.viewDetails') : t('products.discuss')}
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                      </Link>
                     </div>
-                  </Link>
+                  </article>
                 </Reveal>
               );
             })}
@@ -262,6 +242,8 @@ const ProductShowcase = () => {
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

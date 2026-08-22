@@ -53,11 +53,11 @@ const BENEFITS = [
 ];
 
 const EVENTS = [
-  { key: 'e1', image: 'https://www.scssoftwares.com/images/aa.png' },
-  { key: 'e2', image: 'https://www.scssoftwares.com/images/cc.png' },
-  { key: 'e3', image: 'https://www.scssoftwares.com/images/bb2.png' },
-  { key: 'e4', image: 'https://www.scssoftwares.com/images/dd.png' },
-  { key: 'e5', image: 'https://www.scssoftwares.com/images/ff.png' },
+  { key: 'e1', image: '/images/aa.jpg' },
+  { key: 'e2', image: '/images/cc.jpg' },
+  { key: 'e3', image: '/images/bb2.jpg' },
+  { key: 'e4', image: '/images/dd.jpg' },
+  { key: 'e5', image: '/images/ff.jpg' },
 ];
 
 const HIRING_STEPS = [
@@ -74,6 +74,7 @@ const CareersPage = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -122,9 +123,11 @@ const CareersPage = () => {
             <Reveal>
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
                 <img
-                  src="https://www.scssoftwares.com/images/reception.jpeg"
+                  src="/images/reception.jpeg"
                   alt={t('careers.culture.imageAlt')}
                   loading="lazy"
+                  width={828}
+                  height={555}
                   className="h-64 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-80"
                 />
               </div>
@@ -186,6 +189,8 @@ const CareersPage = () => {
                       src={event.image}
                       alt={t(`careers.events.${event.key}Title`)}
                       loading="lazy"
+                      width={840}
+                      height={560}
                       className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
@@ -279,6 +284,8 @@ const CareersPage = () => {
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

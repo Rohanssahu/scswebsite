@@ -520,6 +520,8 @@ const AiConsultation: React.FC = () => {
                 <img
                   src={BUDDY_AVATAR_URL}
                   alt=""
+                  width={48}
+                  height={48}
                   className="h-12 w-12 shrink-0 rounded-full bg-white ring-2 ring-pink-500/30"
                 />
                 <div className="min-w-0 flex-1">
@@ -785,7 +787,7 @@ const AiConsultation: React.FC = () => {
         </p>
       )}
 
-      <main className="flex min-h-0 flex-1 overflow-hidden">
+      <main id="main-content" className="flex min-h-0 flex-1 overflow-hidden">
         {/* meeting stage: client left, Buddy right */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-3 pb-2 sm:px-4">
           <div className="flex min-h-0 flex-1 overflow-y-auto">
@@ -938,7 +940,7 @@ const useIsDesktop = (): boolean => {
 
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="min-h-screen bg-gray-50 text-gray-900">
-    <main className="container mx-auto px-4 py-10 sm:py-14">{children}</main>
+    <main id="main-content" className="container mx-auto px-4 py-10 sm:py-14">{children}</main>
   </div>
 );
 

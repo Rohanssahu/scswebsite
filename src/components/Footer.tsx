@@ -57,7 +57,7 @@ const Footer = () => {
               className="inline-flex items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
             >
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
-                <img src={icon.logos} alt="SCS Softwares logo" className="h-full w-full object-contain" />
+                <img src={icon.logos} alt="SCS Softwares logo" width={32} height={32} loading="lazy" decoding="async" className="h-full w-full object-contain" />
               </div>
               <span className="text-xl font-bold">
                 Scs <span className="text-gradient-ai">Softwares</span>
@@ -151,7 +151,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-6 flex flex-col items-center gap-3 border-t border-gray-800 pt-4 text-center sm:flex-row sm:justify-between sm:text-start">
-          <p className="text-xs text-gray-500">{t('footer.copyright')}</p>
+          <p className="text-xs text-gray-500">{t('footer.copyright', { year: new Date().getFullYear() })}</p>
           {/* Language choice lives here so the navbar stays focused on the CTAs */}
           <LanguageSwitcher />
         </div>

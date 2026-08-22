@@ -38,25 +38,25 @@ const TEAM = [
   {
     name: 'Rohan Sahu',
     roleKey: 'about.team.role1',
-    image: 'https://scssoftwares.com/images/rohansahu.jpeg',
+    image: '/images/rohansahu.jpg',
     bioKey: 'about.team.bio1',
   },
   {
     name: 'Raju Burde',
     roleKey: 'about.team.role2',
-    image: 'https://scssoftwares.com/images/cto.png',
+    image: '/images/cto.jpg',
     bioKey: 'about.team.bio2',
   },
   {
     name: 'Sachin Basaiye',
     roleKey: 'about.team.role3',
-    image: 'https://scssoftwares.com/images/project.png',
+    image: '/images/project.jpg',
     bioKey: 'about.team.bio3',
   },
   {
     name: 'Priyanka Dalwani',
     roleKey: 'about.team.role4',
-    image: 'https://scssoftwares.com/images/vp.png',
+    image: '/images/vp.jpg',
     bioKey: 'about.team.bio4',
   },
 ];
@@ -89,6 +89,7 @@ const About = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section data-guide-id="about-hero" className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -148,9 +149,11 @@ const About = () => {
             <Reveal delay={0.1}>
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
                 <img
-                  src="https://www.scssoftwares.com/images/inside.jpeg"
+                  src="/images/inside.jpeg"
                   alt={t('about.story.imageAlt')}
                   loading="lazy"
+                  width={828}
+                  height={833}
                   className="h-72 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-96"
                 />
               </div>
@@ -199,6 +202,8 @@ const About = () => {
                     src={member.image}
                     alt={member.name}
                     loading="lazy"
+                    width={112}
+                    height={112}
                     className="mx-auto h-28 w-28 rounded-full object-cover ring-2 ring-gray-100 transition-transform duration-300 group-hover:scale-105 group-hover:ring-pink-200"
                   />
                   <h3 className="mt-4 font-semibold text-gray-900">{member.name}</h3>
@@ -273,6 +278,8 @@ const About = () => {
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

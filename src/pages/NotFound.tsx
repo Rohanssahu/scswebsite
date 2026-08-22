@@ -14,7 +14,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <main id="main-content" className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">{t('notFound.title')}</h1>
         <p className="text-xl text-gray-600 mb-4">{t('notFound.message')}</p>
@@ -22,7 +22,7 @@ const NotFound = () => {
           {t('notFound.returnHome')}
         </a>
       </div>
-    </div>
+    </main>
   );
 };
 

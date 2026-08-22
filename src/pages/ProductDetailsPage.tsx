@@ -4,19 +4,12 @@ import { CheckCircle, MapPin, ArrowRight, Smartphone, Sparkles, PhoneCall } from
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
+import VisualPlaceholder from '../components/VisualPlaceholder';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
 const secondaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-7 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
-
-const images = [
-  'https://www.scssoftwares.com/images/roomji1.png',
-  'https://www.scssoftwares.com/images/roomji2.png',
-  'https://www.scssoftwares.com/images/roomji3.png',
-  'https://www.scssoftwares.com/images/roomji4.png',
-  'https://www.scssoftwares.com/images/roomji5.png',
-];
 
 const product = {
   title: 'RoomJi',
@@ -25,10 +18,10 @@ const product = {
     'Search nearby rooms, flats, and all types of properties, with easy online booking and image galleries.',
   location: 'Indore MP, India',
   features: [
-    'Instant booking confirmation',
-    'High-quality images with virtual tours',
-    '24/7 customer support',
-    'Flexible cancellation policies',
+    'Search rooms, flats and PGs near a chosen location',
+    'Listing pages with photo galleries and amenity details',
+    'Online booking requests with owner contact details',
+    'Saved searches and shortlisted properties',
   ],
 };
 
@@ -37,6 +30,7 @@ const ProductDetailsPage = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -80,12 +74,7 @@ const ProductDetailsPage = () => {
             </div>
             <Reveal delay={0.2}>
               <div className="glow-card overflow-hidden rounded-3xl border border-gray-200 bg-white">
-                <img
-                  src={images[0]}
-                  alt={`${product.title} app preview`}
-                  loading="lazy"
-                  className="h-72 w-full object-cover transition-transform duration-300 hover:scale-105 sm:h-96"
-                />
+                <VisualPlaceholder icon={Smartphone} className="h-72 sm:h-96" />
               </div>
             </Reveal>
           </div>
@@ -107,30 +96,6 @@ const ProductDetailsPage = () => {
                 <div className="flex h-full items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5 transition-colors hover:border-pink-300">
                   <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
                   <span className="text-sm font-medium text-gray-700">{feature}</span>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Screenshots ===== */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Gallery</span>
-            <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">A look inside the app</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-            {images.map((img, i) => (
-              <Reveal key={img} delay={i * 0.05}>
-                <div className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-pink-300">
-                  <img
-                    src={img}
-                    alt={`${product.title} screenshot ${i + 1}`}
-                    loading="lazy"
-                    className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-64"
-                  />
                 </div>
               </Reveal>
             ))}
@@ -161,6 +126,8 @@ const ProductDetailsPage = () => {
           </Reveal>
         </div>
       </section>
+
+      </main>
 
       <Footer />
     </div>

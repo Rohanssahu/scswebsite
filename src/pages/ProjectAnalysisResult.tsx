@@ -97,6 +97,7 @@ const ProjectAnalysisResult = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       <main className="container mx-auto px-4 py-10 sm:py-14 print-area">
         {/* Title + actions */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -302,6 +303,8 @@ const ProjectAnalysisResult = () => {
             answers={draftAnswers}
           />
         )}
+      </main>
+
       </main>
 
       <Footer />

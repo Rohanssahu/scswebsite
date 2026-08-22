@@ -163,6 +163,7 @@ const Contact = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <Header />
 
+      <main id="main-content">
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-glow pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -432,6 +433,8 @@ const Contact = () => {
           </div>
         </div>
       )}
+
+      </main>
 
       <Footer />
     </div>

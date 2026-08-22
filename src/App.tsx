@@ -40,6 +40,8 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
 import VirtualGuide from "./components/virtual-guide/VirtualGuide";
 import ScrollButtons from "./components/ScrollButtons";
+import SkipToContent from "./components/SkipToContent";
+import Seo from "./seo/Seo";
 import AdminBoundary from "./components/admin/AdminBoundary";
 import AdminGuard from "./components/admin/AdminGuard";
 import { isAdminPath } from "./components/admin/adminSeo";
@@ -75,21 +77,45 @@ const GlobalScrollButtons = () => {
   return <ScrollButtons />;
 };
 
+/**
+ * Data/UI providers shared by the browser app and the build-time prerender.
+ * Client-only chrome (toasters, floating widgets) stays out so the prerender
+ * step can reuse this without touching browser APIs.
+ */
+export const AppProviders = ({ children }: { children: React.ReactNode }) => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>{children}</TooltipProvider>
+  </QueryClientProvider>
+);
+
+/**
+ * The routed page tree plus the accessibility skip link. Router-agnostic: the
+ * browser mounts it under BrowserRouter, `src/prerender/entry-server.tsx`
+ * mounts it under StaticRouter to emit physical HTML per route.
+ */
+export const SiteRoutes = () => (
+  <>
+    <SkipToContent />
+    <RoutesComponent />
+  </>
+);
+
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <LanguageAnnouncer />
-          <RoutesComponent />
-          <GlobalVirtualGuide />
-          <GlobalScrollButtons />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppProviders>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <ScrollToTop />
+        <LanguageAnnouncer />
+        <SiteRoutes />
+        {/* After the routes: page-level head patching (e.g. the admin noindex
+            hook) runs first, so the registry always has the last word. */}
+        <Seo />
+        <GlobalVirtualGuide />
+        <GlobalScrollButtons />
+      </BrowserRouter>
+    </AppProviders>
   );
 };
 

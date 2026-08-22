@@ -8,7 +8,6 @@ const DigitalMarketing = () => {
     title: 'Digital Marketing',
     description: 'Comprehensive digital marketing strategies to boost your online presence, drive traffic, and increase conversions across all digital channels.',
     icon: TrendingUp,
-    heroImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop',
     features: [
       'Search Engine Optimization (SEO)',
       'Pay-Per-Click Advertising (PPC)',
@@ -85,41 +84,18 @@ const DigitalMarketing = () => {
         ]
       }
     ],
-    testimonials: [
-      {
-        name: 'Michael Thompson',
-        company: 'TechStartup Co',
-        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        quote: 'Scs Softwares increased our website traffic by 400% and our leads by 250% within 6 months. Their digital marketing expertise is exceptional.'
-      },
-      {
-        name: 'Amanda Davis',
-        company: 'E-commerce Plus',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-        quote: 'Our online sales have tripled since working with Scs Softwares. Their comprehensive approach to digital marketing delivers real results.'
-      },
-      {
-        name: 'Robert Lee',
-        company: 'Local Business Hub',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        quote: 'The ROI on our marketing spend has improved dramatically. Scs Softwares knows how to drive quality traffic that converts.'
-      }
-    ],
     portfolio: [
       {
-        title: 'E-commerce SEO Campaign',
-        description: 'Increased organic traffic by 500% for online retail store through comprehensive SEO strategy.',
-        image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop'
+        title: 'E-commerce SEO Programme',
+        description: 'Technical audit, information architecture, on-page work and content planning for a product catalogue.'
       },
       {
-        title: 'SaaS Lead Generation',
-        description: 'Generated 1000+ qualified leads monthly for B2B software company through multi-channel approach.',
-        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop'
+        title: 'B2B Lead Generation',
+        description: 'Paid search, landing pages and lifecycle email wired into your CRM so every enquiry is attributable.'
       },
       {
         title: 'Social Media Growth',
-        description: 'Grew social media following from 5k to 100k+ and increased engagement by 800%.',
-        image: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=400&fit=crop'
+        description: 'Content calendar, creative production and paid amplification, reported against agreed goals.'
       }
     ]
   };

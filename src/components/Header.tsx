@@ -75,7 +75,7 @@ const Header = () => {
             className="flex shrink-0 items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
           >
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
-              <img src={icon.logos} alt="SCS Softwares logo" className="h-full w-full object-contain" />
+              <img src={icon.logos} alt="SCS Softwares logo" width={40} height={40} decoding="async" className="h-full w-full object-contain" />
             </div>
             <span className="text-xl font-bold xl:text-2xl">
               Scs <span className="text-gradient-ai">Softwares</span>

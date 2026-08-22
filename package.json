@@ -1,18 +1,21 @@
 {
   "name": "vite_react_shadcn_ts",
-  "homepage": "https://rohanssahu.github.io/scswebsite/",
+  "homepage": "https://scssoftwares.com",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "build:spa": "vite build",
+    "prerender": "node scripts/prerender.mjs",
+    "verify:dist": "node scripts/verify-dist.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

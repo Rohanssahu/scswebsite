@@ -41,7 +41,7 @@ const AdminLoginCard = ({
       <div className="flex flex-col items-center text-center">
         <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 p-[2px]">
           <span className="flex h-full w-full items-center justify-center rounded-2xl bg-gray-900">
-            <img src={icon.logos} alt="SCS Softwares" className="h-8 w-8 object-contain" />
+            <img src={icon.logos} alt="SCS Softwares" width={32} height={32} className="h-8 w-8 object-contain" />
           </span>
         </span>
         <h1 className="mt-4 text-lg font-semibold text-white">Owner Dashboard</h1>

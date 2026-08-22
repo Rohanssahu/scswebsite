@@ -1,0 +1,300 @@
+#!/usr/bin/env node
+/**
+ * Post-build gate for `dist/`.
+ *
+ * Runs five scans and one live check, and exits non-zero on any failure:
+ *
+ *   1. broken internal links   — every internal href resolves to a real file
+ *   2. missing local assets    — every src/href asset exists in dist
+ *   3. duplicate metadata      — one title and one tag per key, per document
+ *   4. secrets                 — no service-role keys or private keys shipped
+ *   5. host discipline         — no www / github.io / localhost URLs
+ *   6. static-server check     — serve dist with GitHub Pages path resolution
+ *                                and GET every generated route, asserting the
+ *                                status, title, canonical and robots directive
+ *
+ * Usage: node scripts/verify-dist.mjs
+ */
+
+import http from 'node:http';
+import fs from 'node:fs/promises';
+import fss from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DIST = path.join(ROOT, 'dist');
+const ORIGIN = 'https://scssoftwares.com';
+
+const failures = [];
+const notes = [];
+const fail = (scan, message) => failures.push(`[${scan}] ${message}`);
+
+// ---------------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------------
+
+async function walk(dir, filter, out = []) {
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) await walk(full, filter, out);
+    else if (filter(full)) out.push(full);
+  }
+  return out;
+}
+
+const rel = (file) => path.relative(DIST, file);
+
+/** GitHub Pages path resolution: exact file, then `.html`, then `/index.html`. */
+function resolveDistPath(urlPath) {
+  const clean = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
+  const trimmed = clean.replace(/^\/+/, '');
+  const candidates = trimmed === ''
+    ? ['index.html']
+    : [trimmed, `${trimmed}.html`, path.posix.join(trimmed, 'index.html')];
+  for (const candidate of candidates) {
+    const full = path.join(DIST, candidate);
+    if (fss.existsSync(full) && fss.statSync(full).isFile()) return full;
+  }
+  return null;
+}
+
+const CONTENT_TYPES = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
+  '.json': 'application/json', '.xml': 'application/xml', '.txt': 'text/plain',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg', '.ico': 'image/x-icon', '.webp': 'image/webp',
+};
+
+// ---------------------------------------------------------------------------
+// 1-5: static scans
+// ---------------------------------------------------------------------------
+
+async function scanDocuments() {
+  const htmlFiles = await walk(DIST, (f) => f.endsWith('.html'));
+  if (htmlFiles.length === 0) fail('dist', 'no HTML files found — did the build run?');
+
+  for (const file of htmlFiles) {
+    const html = await fs.readFile(file, 'utf8');
+    const name = rel(file);
+
+    // --- 3. duplicate metadata ---------------------------------------------
+    const titles = html.match(/<title>/g) ?? [];
+    if (titles.length !== 1) fail('duplicate-metadata', `${name}: ${titles.length} <title> tags`);
+
+    const keys = [
+      ...[...html.matchAll(/<meta\s+(?:name|property)="([^"]+)"/g)].map((m) => `meta:${m[1]}`),
+      ...[...html.matchAll(/<link\s+rel="(canonical)"/g)].map((m) => `link:${m[1]}`),
+    ];
+    const seen = new Map();
+    for (const key of keys) seen.set(key, (seen.get(key) ?? 0) + 1);
+    for (const [key, count] of seen) {
+      if (count > 1) fail('duplicate-metadata', `${name}: ${count}x ${key}`);
+    }
+
+    // --- 5. host discipline -------------------------------------------------
+    for (const pattern of [/https?:\/\/www\.scssoftwares\.com/, /github\.io/, /localhost:\d+/, /127\.0\.0\.1/]) {
+      const hit = html.match(pattern);
+      if (hit) fail('host-discipline', `${name}: contains ${hit[0]}`);
+    }
+
+    // --- 1. broken internal links ------------------------------------------
+    for (const match of html.matchAll(/\shref="([^"]+)"/g)) {
+      let href = match[1];
+      if (href.startsWith(ORIGIN)) href = href.slice(ORIGIN.length) || '/';
+      if (!href.startsWith('/') || href.startsWith('//')) continue; // external / anchor
+      if (!resolveDistPath(href)) fail('broken-links', `${name}: href="${match[1]}" does not resolve`);
+    }
+
+    // --- 2. missing local assets -------------------------------------------
+    for (const match of html.matchAll(/\ssrc="([^"]+)"/g)) {
+      const src = match[1];
+      if (!src.startsWith('/') || src.startsWith('//')) continue;
+      if (!resolveDistPath(src)) fail('missing-assets', `${name}: src="${src}" not found in dist`);
+    }
+  }
+  notes.push(`scanned ${htmlFiles.length} HTML documents`);
+}
+
+async function scanSecrets() {
+  const files = await walk(DIST, () => true);
+  // Patterns for material that must never reach a browser bundle. The public
+  // Supabase anon key and the Turnstile SITE key are expected and allowed.
+  const patterns = [
+    [/service_role/i, 'service_role reference'],
+    [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'PEM private key'],
+    [/SUPABASE_SERVICE_ROLE/i, 'service-role env name'],
+    [/TURNSTILE_SECRET/i, 'Turnstile secret env name'],
+    [/\bsk-[A-Za-z0-9]{20,}/, 'OpenAI-style secret key'],
+    [/\bAIza[0-9A-Za-z_-]{35}\b/, 'Google API key'],
+    [/\bAPI[a-zA-Z0-9]{10,}\b(?=[^A-Za-z0-9])/, null], // too noisy; skipped below
+    [/LIVEKIT_API_SECRET/i, 'LiveKit API secret env name'],
+  ].filter(([, label]) => label);
+
+  for (const file of files) {
+    const buffer = await fs.readFile(file);
+    if (buffer.includes(0)) continue; // binary asset
+    const text = buffer.toString('utf8');
+    for (const [pattern, label] of patterns) {
+      if (pattern.test(text)) fail('secrets', `${rel(file)}: ${label}`);
+    }
+  }
+  notes.push(`secret-scanned ${files.length} files`);
+}
+
+async function scanSitemapAndRobots() {
+  const sitemapPath = path.join(DIST, 'sitemap.xml');
+  if (!fss.existsSync(sitemapPath)) {
+    fail('sitemap', 'dist/sitemap.xml is missing');
+    return [];
+  }
+  const xml = await fs.readFile(sitemapPath, 'utf8');
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  if (locs.length === 0) fail('sitemap', 'sitemap contains no <loc> entries');
+
+  for (const loc of locs) {
+    if (!loc.startsWith(`${ORIGIN}/`)) fail('sitemap', `${loc} is not on ${ORIGIN}`);
+    const urlPath = loc.slice(ORIGIN.length) || '/';
+    const file = resolveDistPath(urlPath);
+    if (!file) {
+      fail('sitemap', `${loc} has no prerendered file in dist`);
+      continue;
+    }
+    const html = await fs.readFile(file, 'utf8');
+    const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1];
+    if (robots !== 'index,follow') fail('sitemap', `${loc} is in the sitemap but robots="${robots}"`);
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+    if (canonical !== loc) fail('sitemap', `${loc} declares canonical "${canonical}"`);
+  }
+
+  const robotsPath = path.join(DIST, 'robots.txt');
+  if (!fss.existsSync(robotsPath)) fail('robots', 'dist/robots.txt is missing');
+  else {
+    const robots = await fs.readFile(robotsPath, 'utf8');
+    if (!robots.includes(`Sitemap: ${ORIGIN}/sitemap.xml`)) {
+      fail('robots', 'robots.txt does not declare the sitemap URL');
+    }
+  }
+
+  const cnamePath = path.join(DIST, 'CNAME');
+  if (!fss.existsSync(cnamePath)) fail('cname', 'dist/CNAME is missing');
+  else {
+    const cname = (await fs.readFile(cnamePath, 'utf8')).trim();
+    if (cname !== 'scssoftwares.com') fail('cname', `dist/CNAME is "${cname}"`);
+  }
+
+  notes.push(`sitemap declares ${locs.length} URLs`);
+  return locs;
+}
+
+// ---------------------------------------------------------------------------
+// 6: live static server check
+// ---------------------------------------------------------------------------
+
+function startServer() {
+  const server = http.createServer((req, res) => {
+    const file = resolveDistPath(req.url ?? '/');
+    if (file) {
+      res.writeHead(200, { 'Content-Type': CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream' });
+      fss.createReadStream(file).pipe(res);
+      return;
+    }
+    // GitHub Pages behaviour: serve 404.html *at the requested URL*, status 404.
+    const fallback = path.join(DIST, '404.html');
+    if (fss.existsSync(fallback)) {
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      fss.createReadStream(fallback).pipe(res);
+      return;
+    }
+    res.writeHead(404).end('not found');
+  });
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
+}
+
+async function serveAndCheck() {
+  const server = await startServer();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const meta = (html, name) => html.match(new RegExp(`<meta name="${name}" content="([^"]+)"`))?.[1];
+
+  try {
+    const htmlFiles = await walk(DIST, (f) => f.endsWith('.html'));
+    // Every generated document, reached through its public URL form(s).
+    const urls = new Set(['/']);
+    for (const file of htmlFiles) {
+      const name = rel(file).replace(/\\/g, '/');
+      if (name === '404.html' || name === 'scs-agent-widget.html') continue;
+      if (name === 'index.html') continue;
+      urls.add(`/${name.replace(/\/index\.html$/, '').replace(/\.html$/, '')}`);
+    }
+
+    for (const url of [...urls].sort()) {
+      const response = await fetch(`${base}${url}`);
+      const html = await response.text();
+      if (response.status !== 200) {
+        fail('static-server', `GET ${url} -> ${response.status}`);
+        continue;
+      }
+      if (!/<title>[^<]+<\/title>/.test(html)) fail('static-server', `GET ${url}: no <title>`);
+      if (!meta(html, 'description')) fail('static-server', `GET ${url}: no meta description`);
+      if (!meta(html, 'robots')) fail('static-server', `GET ${url}: no meta robots`);
+      // The landmark is required on any page a crawler may index. The
+      // session-scoped result page prerenders to its Suspense fallback (its
+      // content depends on the visitor's own stored analysis), and a redirect
+      // stub has no page body at all.
+      const indexable = meta(html, 'robots') === 'index,follow';
+      if (indexable && !html.includes('id="main-content"')) {
+        fail('static-server', `GET ${url}: no <main id="main-content"> landmark`);
+      }
+      if (indexable && !/<h1[\s>]/.test(html)) {
+        fail('static-server', `GET ${url}: no <h1> in the prerendered markup`);
+      }
+    }
+    notes.push(`served and checked ${urls.size} routes`);
+
+    // Dynamic routes must fall through to the noindex SPA shell, not a real page.
+    for (const url of ['/ai-consultation/ABC123', '/admin', '/admin/leads/42', '/no-such-page']) {
+      const response = await fetch(`${base}${url}`);
+      const html = await response.text();
+      if (response.status !== 404) {
+        fail('spa-fallback', `GET ${url} -> ${response.status} (expected the 404.html fallback)`);
+      }
+      if (meta(html, 'robots') !== 'noindex,nofollow') {
+        fail('spa-fallback', `GET ${url}: robots="${meta(html, 'robots')}"`);
+      }
+      if (!html.includes('<script type="module"')) {
+        fail('spa-fallback', `GET ${url}: fallback does not load the app bundle`);
+      }
+    }
+    notes.push('verified the SPA fallback for 4 dynamic/unknown paths');
+  } finally {
+    server.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+async function main() {
+  if (!fss.existsSync(DIST)) {
+    console.error('dist/ does not exist — run `npm run build` first.');
+    process.exitCode = 1;
+    return;
+  }
+  await scanDocuments();
+  await scanSecrets();
+  await scanSitemapAndRobots();
+  await serveAndCheck();
+
+  for (const note of notes) console.log(`  · ${note}`);
+  if (failures.length > 0) {
+    console.error(`\n${failures.length} problem(s):`);
+    for (const failure of failures) console.error(`  ✗ ${failure}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log('\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes.');
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

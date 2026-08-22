@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Apply the saved/auto-detected language direction before first paint
+         (RTL for Arabic/Urdu). The i18n runtime keeps it in sync afterwards. -->
+    <script>
+      (function () {
+        try {
+          var rtl = { ar: 1, ur: 1 };
+          var raw = localStorage.getItem('scs-lang-v2') || sessionStorage.getItem('scs-lang-v2');
+          var code = raw ? (JSON.parse(raw) || {}).code : null;
+          if (!code) {
+            var langs = navigator.languages || [navigator.language];
+            for (var i = 0; i < langs.length; i++) {
+              var base = (langs[i] || '').toLowerCase().split('-')[0];
+              if (base === 'ar' || base === 'ur' || base === 'en') { code = base; break; }
+            }
+          }
+          if (code) {
+            document.documentElement.lang = code;
+            document.documentElement.dir = rtl[code] ? 'rtl' : 'ltr';
+          }
+        } catch (e) { /* defaults stay English LTR */ }
+      })();
+    </script>
+
+    <title>Your Project Analysis | SCS Softwares</title>
+    <meta name="description" content="Your indicative project estimate. This result belongs to your browser session and is not a public page." data-scs-seo="description" />
+    <meta name="robots" content="noindex,nofollow" data-scs-seo="robots" />
+    <meta name="googlebot" content="noindex,nofollow" data-scs-seo="googlebot" />
+    <meta name="author" content="SCS Softwares" data-scs-seo="author" />
+    <link rel="canonical" href="https://scssoftwares.com/project-analysis/result" data-scs-seo="canonical" />
+    <meta property="og:url" content="https://scssoftwares.com/project-analysis/result" data-scs-seo="og:url" />
+    <meta property="og:title" content="Your Project Analysis | SCS Softwares" data-scs-seo="og:title" />
+    <meta property="og:description" content="Your indicative project estimate. This result belongs to your browser session and is not a public page." data-scs-seo="og:description" />
+    <meta property="og:type" content="website" data-scs-seo="og:type" />
+    <meta property="og:site_name" content="SCS Softwares" data-scs-seo="og:site_name" />
+    <meta property="og:locale" content="en_IN" data-scs-seo="og:locale" />
+    <meta property="og:image" content="https://scssoftwares.com/images/og-cover.png" data-scs-seo="og:image" />
+    <meta property="og:image:alt" content="SCS Softwares" data-scs-seo="og:image:alt" />
+    <meta name="twitter:card" content="summary_large_image" data-scs-seo="twitter:card" />
+    <meta name="twitter:title" content="Your Project Analysis | SCS Softwares" data-scs-seo="twitter:title" />
+    <meta name="twitter:description" content="Your indicative project estimate. This result belongs to your browser session and is not a public page." data-scs-seo="twitter:description" />
+    <meta name="twitter:image" content="https://scssoftwares.com/images/og-cover.png" data-scs-seo="twitter:image" />
+    <meta name="twitter:image:alt" content="SCS Softwares" data-scs-seo="twitter:image:alt" />
+    <meta name="twitter:site" content="@scssoftwares" data-scs-seo="twitter:site" />
+    <meta name="twitter:creator" content="@scssoftwares" data-scs-seo="twitter:creator" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- ✅ Google Tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1VQ1H1Y6S1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1VQ1H1Y6S1');
+    </script>
+    <script type="module" crossorigin src="/assets/index-CV7uxlzB.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CsXRqZ2u.css">
+  </head>
+
+<body>
+  <div id="root"><a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-pink-700 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500">Skip to main content</a><!--$!--><template data-msg="The server did not finish this Suspense boundary: The server used &quot;renderToString&quot; which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to &quot;renderToPipeableStream&quot; which supports Suspense on the server" data-stck="
+    at Suspense
+    at RenderedRoute (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:539:7)
+    at Routes (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:1240:7)
+    at RoutesComponent (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:218:41)
+    at SiteRoutes
+    at Router (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:1174:17)
+    at StaticRouter (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router-dom/server.js:35:3)
+    at Provider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@radix-ui/react-context/dist/index.mjs:27:15)
+    at TooltipProvider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
+    at QueryClientProvider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at AppProviders (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:125:29)"></template><div class="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">Loading…</div><!--/$--></div>
+
+</body>
+</html>

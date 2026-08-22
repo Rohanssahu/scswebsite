@@ -8,7 +8,6 @@ const MobileDevelopment = () => {
     title: 'Mobile App Development',
     description: 'Build native and cross-platform mobile applications that deliver exceptional user experiences on iOS and Android platforms.',
     icon: Smartphone,
-    heroImage: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&h=400&fit=crop',
     features: [
       'Native iOS & Android Development',
       'Cross-Platform Solutions',
@@ -85,41 +84,18 @@ const MobileDevelopment = () => {
         ]
       }
     ],
-    testimonials: [
-      {
-        name: 'Sarah Williams',
-        company: 'HealthTrack Inc',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-        quote: 'Our fitness app built by Scs Softwares has over 100k downloads. The user experience is fantastic and the app performance is excellent.'
-      },
-      {
-        name: 'James Rodriguez',
-        company: 'FoodieApp',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        quote: 'Scs Softwares delivered our food delivery app on time and within budget. The cross-platform solution works flawlessly on both iOS and Android.'
-      },
-      {
-        name: 'Emily Foster',
-        company: 'EduMobile',
-        image: 'https://media.licdn.com/dms/image/v2/D4D03AQErla-5-66-kA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1732304493886?e=2147483647&v=beta&t=c5nYJahCY3JJUSMCVr2_4dwePATn4tiBUIQgzHTPW3U',
-        quote: 'The educational app Scs Softwares created helps thousands of students learn effectively. Their mobile development expertise is top-notch.'
-      }
-    ],
     portfolio: [
       {
         title: 'Fitness Tracking App',
-        description: 'Comprehensive fitness app with workout tracking, nutrition monitoring, and social features.',
-        image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop'
+        description: 'Workout and nutrition logging, progress history, reminders and optional social features.'
       },
       {
         title: 'Food Delivery Platform',
-        description: 'Multi-vendor food delivery app with real-time tracking and payment integration.',
-        image: 'https://static.wixstatic.com/media/b42049_ca10b25a2d0043bead431dccdeea9202~mv2.png/v1/fill/w_710,h_398,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/b42049_ca10b25a2d0043bead431dccdeea9202~mv2.png'
+        description: 'Multi-vendor ordering app with live order status, driver assignment and payment integration.'
       },
       {
-        title: 'Healthcare Management',
-        description: 'Patient management app with appointment scheduling and telemedicine features.',
-        image: 'https://blog.elxoinc.com/hubfs/Website%20Images/Blogs/Modern%20Healthcare%20App%20Development%E2%80%99s%20Role%20in%20Staff%20%26%20IT%20Partnerships.jpg'
+        title: 'Healthcare Management App',
+        description: 'Patient records, appointment scheduling and video consultation, built with access controls in mind.'
       }
     ]
   };
