@@ -248,9 +248,17 @@ describe.skipIf(!built)('prerender output', () => {
     for (const location of LOCATION_CONTENT) {
       expect(html, `hub does not link to ${location.path}`).toContain(`href="${location.path}"`);
     }
-    // Countries without a page must not be linked from anywhere in the build.
-    for (const slug of ['germany', 'netherlands', 'turkey']) {
-      expect(html.includes(`href="/locations/${slug}"`), `hub links to /locations/${slug}`).toBe(false);
+    // And nothing else: every /locations URL in the built hub is either the hub
+    // itself or one of the nine live markets. Phase 3B named the three unwritten
+    // countries here; Phase 3C gave all three a page, so the check is derived
+    // from the live list instead of from a hard-coded absence.
+    const live = new Set(LOCATION_CONTENT.map((location) => location.path));
+    for (const match of html.matchAll(/href="(\/locations[^"]*)"/g)) {
+      const target = match[1];
+      expect(
+        target === LOCATIONS_HUB_PATH || live.has(target),
+        `hub links to the unknown locations URL ${target}`,
+      ).toBe(true);
     }
     for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
       expect(html, `hub has no link to ${target}`).toContain(`href="${target}"`);

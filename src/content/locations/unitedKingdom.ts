@@ -373,6 +373,24 @@ export const unitedKingdom: LocationBody = {
       blurb:
         'Regional operations systems for companies working across several neighbouring markets from one head office.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'A comparable appetite for documentation, pointed at the specification itself rather than at the supplier assessment around it.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'A faster decision loop: a paragraph recorded the same day instead of a document circulated for approval over three weeks.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'Public-facing products judged on a campaign weekend, with load targets written into the scope and tested before release.',
+    },
   ],
   cta: {
     title: 'Send the requirement and we will tell you what is missing from it',

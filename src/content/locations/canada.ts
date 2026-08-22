@@ -380,6 +380,24 @@ export const canada: LocationBody = {
       blurb:
         'Regional operations platforms and integration-heavy builds, run across the shortest working-day gap of any market we serve.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'One time zone and a documentation-first buyer: acceptance criteria are settled before implementation rather than reachable hours before anything else.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'Connected business systems and reporting that finally agrees with itself, run on a short and deliberately informal decision cycle.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'Customer-facing products and spoken AI agents, with currency, hosting and provider integrations confirmed before development begins.',
+    },
   ],
   cta: {
     title: 'Tell us what the system has to do and who has to sign it off',

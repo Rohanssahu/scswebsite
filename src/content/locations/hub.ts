@@ -9,6 +9,11 @@
  * Phase 3B moved the hub's own metadata into `./manifest.ts` and the homepage
  * and About blocks into `./siteBlocks.ts`, leaving this module as pure body
  * copy for the `/locations` route chunk.
+ *
+ * Phase 3C removed the future-markets block entirely. Germany, the Netherlands
+ * and Turkey were the only countries it named, and all three now have a page,
+ * so the section had nothing left to say. An empty heading would have been
+ * worse than no section, so there is no section.
  */
 
 import { locationsHubMeta } from './manifest';
@@ -30,7 +35,8 @@ export const locationsHub = {
   intro: [
     'SCS Softwares is a software and AI development company based in Indore, Madhya Pradesh, India. Everything we build is built there. When we work with a business in another country, the engagement is remote from end to end: there is no branch, no local representative and no second office involved.',
     'The pages below exist because the practical questions differ by market. A buyer in the United States is mostly asking about accountability and time-zone distance; a buyer in the United Kingdom usually starts with documented requirements and supplier assurance; a buyer in the UAE is often launching a customer-facing app into a working day that already overlaps ours. Those are different conversations, so they get different pages.',
-    'The three markets added most recently ask their own questions. Canadian enquiries usually begin with which hours we will actually be reachable and where records will be stored; Australian ones with release planning and who maintains the product after launch; Singapore ones with integrations, regional roll-out and how approvals get recorded. None of that is interchangeable, which is why each market has its own page rather than a shared template.',
+    'The same is true further down the list. Canadian enquiries usually begin with which hours we will actually be reachable and where records will be stored; Australian ones with release planning and who maintains the product after launch; Singapore ones with integrations, regional roll-out and how approvals get recorded. None of that is interchangeable, which is why each market has its own page rather than a shared template.',
+    'The three most recent additions continue the pattern. A German enquiry usually opens on the specification and how a milestone will be judged finished; a Dutch one on the systems that have to be joined together and how quickly a decision can be made and recorded; a Turkish one on consumer scale, on which payment and messaging providers have to be integrated, and on who writes the interface text. Those three pages also say plainly that the engagement runs in English and that German, Dutch or Turkish content is separately scoped professional work.',
     'What does not differ is the disclosure. Each of these pages describes where a service is available. None of them describes a physical location, and none of them should be read as one.',
   ],
   /** The truthful mechanics of a remote international engagement. */
@@ -72,7 +78,7 @@ export const locationsHub = {
       },
     ],
   },
-  /** The six markets that have a real page today. Nothing else is linked. */
+  /** Every market with a real page. Nothing that has no page is named here. */
   markets: [
     {
       path: '/locations/united-states',
@@ -110,20 +116,25 @@ export const locationsHub = {
         'Regional operations platforms, API integrations and AI assistants for Singapore businesses, with every decision recorded in writing.',
       distinctive: 'Two and a half hours apart, which makes a genuinely shared working day the easiest one we have.',
     },
+    {
+      path: '/locations/germany',
+      blurb:
+        'Specification-led builds for German businesses: acceptance criteria agreed before implementation, and documentation and test evidence delivered with the release.',
+      distinctive: 'The only market whose first question is almost always about the specification rather than about us.',
+    },
+    {
+      path: '/locations/netherlands',
+      blurb:
+        'Integration-led platforms, APIs, dashboards and SaaS products for Dutch businesses, decided in short written notes and demonstrated every cycle.',
+      distinctive: 'The same clock as Germany and the opposite working style: decide in the call, write it down in a paragraph.',
+    },
+    {
+      path: '/locations/turkey',
+      blurb:
+        'Consumer products, marketplaces, booking platforms and AI voice agents for Turkish businesses, with each local provider integration scoped separately.',
+      distinctive: 'The one market where the interface language is a costed line in the scope from the first conversation.',
+    },
   ] satisfies MarketEntry[],
-  /**
-   * Markets we take enquiries from but have no page for yet. Deliberately plain
-   * text with no links: a link to a page that does not exist is worse than no
-   * link, and a page per country will be written when there is something
-   * specific to say about it.
-   */
-  futureMarkets: {
-    heading: 'Other countries we take enquiries from',
-    body:
-      'We also work with businesses in Germany, the Netherlands and Turkey. There are no dedicated pages for those markets yet — when we write one it will be because there is something specific to say about working with that country, not to fill a list. Until then, the enquiry route is the same as for anywhere else.',
-    note:
-      'Delivery for every country on that list is remote from Indore, India, on exactly the terms described above.',
-  },
   /** What the hub will not claim, stated where a visitor can read it. */
   boundaries: {
     heading: 'What you will not find on these pages',
@@ -134,6 +145,7 @@ export const locationsHub = {
       'No certification, accreditation or regulatory approval claimed in any market.',
       'No legal, tax or regulatory advice — we build to what your own advisers specify.',
       'No market statistics, client counts or rankings, because we cannot evidence them.',
+      'No promise of coverage across a region — the DACH countries, the EU, the Gulf or Asia — beyond the markets named in a scope.',
     ],
   },
   cta: {

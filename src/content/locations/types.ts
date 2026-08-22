@@ -90,6 +90,26 @@ export interface DeliveryDisclosure {
 }
 
 /**
+ * The language and localization section, added in Phase 3C.
+ *
+ * Optional, because it only earns a place on a page where a buyer would
+ * otherwise reasonably assume we work in their language. The three markets
+ * added in Phase 3C are all non-English-speaking, so each of them carries one;
+ * the six earlier markets handle the question inside their own prose.
+ *
+ * It says three things, as ordinary visible copy: this page and the engagement
+ * are in English, a translated interface is separately scoped professional
+ * work, and machine translation is not client-facing copy. It never claims a
+ * speaker of the local language, because none is verified.
+ */
+export interface LocalizationSection {
+  title: string;
+  body: string;
+  points: string[];
+  note: string;
+}
+
+/**
  * The lightweight half of a regional page: what the SEO registry, the sitemap,
  * the navigation lists and the breadcrumbs need. Lives in `./manifest.ts`, the
  * only locations module the main JavaScript bundle imports.
@@ -149,6 +169,8 @@ export interface LocationBody {
   security: LocationSectionHeader & { points: string[]; note: string };
   /** Human review over AI output. Required on every regional page. */
   oversight: { title: string; body: string; points: string[] };
+  /** Language of delivery and what localization would actually involve. */
+  localization?: LocalizationSection;
   /** How the commercial side is arranged. */
   engagement: LocationSectionHeader & { options: EngagementOption[] };
   faqs: LocationFaq[];

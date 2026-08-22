@@ -151,18 +151,19 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Markets — the hub first, then the markets with a live page */}
+          {/* Markets — the hub first, then every market with a live page.
+              A wrapping single line held six markets comfortably and nine
+              badly, so the markets sit in their own column grid underneath the
+              hub link rather than trailing off the end of it. */}
           <div className="sm:col-span-2 lg:col-span-4">
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('nav.markets')}</h3>
-            <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-              <li>
-                <Link
-                  to={LOCATIONS_HUB.path}
-                  className="rounded text-sm font-semibold text-pink-400 transition-colors hover:text-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
-                >
-                  {t('nav.locations')}
-                </Link>
-              </li>
+            <Link
+              to={LOCATIONS_HUB.path}
+              className="mt-3 inline-block rounded text-sm font-semibold text-pink-400 transition-colors hover:text-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+            >
+              {t('nav.locations')}
+            </Link>
+            <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 sm:grid-cols-3">
               {LOCATION_NAV.map((market) => (
                 <li key={market.path}>
                   <Link to={market.path} className={footerLinkCls}>

@@ -372,6 +372,24 @@ export const unitedStates: LocationBody = {
       blurb:
         'Head-office platforms designed for several markets at once, heavy on integrations and on a written decision trail.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'A market that starts from the specification: acceptance criteria written and agreed before implementation, and release evidence handed over with the build.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'Integration work across systems already in daily use, decided in short written notes and shown working at the end of every cycle.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'Consumer marketplaces and booking products, with each payment or messaging provider integrated as its own scoped piece of work.',
+    },
   ],
   cta: {
     title: 'Describe the build and we will tell you what it takes',

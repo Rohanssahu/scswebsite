@@ -375,6 +375,24 @@ export const unitedArabEmirates: LocationBody = {
       blurb:
         'Multi-entity operations platforms and document automation, run across the smallest clock gap of any market we serve.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'Internal systems and modernization work, bought against a written specification and handed over with its test results.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'Platforms whose value sits in the connections between existing systems rather than in a new customer-facing application.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'Another consumer-app market, with Turkish interface engineering and marketplace settlement logic in place of right-to-left layout work.',
+    },
   ],
   cta: {
     title: 'Tell us what your customer is trying to do on their phone',

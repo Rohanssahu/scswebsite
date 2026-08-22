@@ -496,7 +496,9 @@ const Index = () => {
             title={homeInternationalSection.title}
             sub={homeInternationalSection.sub}
           />
-          {/* Six active markets: two rows of three on desktop, two columns on tablet. */}
+          {/* Nine active markets: three rows of three on desktop, three columns
+              on tablet. Every market with a page is linked from here, which is
+              what `verify-dist.mjs` checks on the built homepage. */}
           <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {LOCATION_NAV.map((market, i) => (
               <Reveal key={market.path} delay={i * 0.06}>

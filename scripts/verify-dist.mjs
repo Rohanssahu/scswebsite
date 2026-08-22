@@ -31,7 +31,7 @@
  *                                fabricated-location scan that fails the build
  *                                on any local office / entity / registration /
  *                                phone / certification / guaranteed-coverage
- *                                claim in any of the six markets, and requires
+ *                                claim in any of the nine markets, and requires
  *                                the India + remote + no-local-office
  *                                disclosure as visible copy
  *   9. site-wide honesty scan  — the same unsupported-claim discipline applied
@@ -542,13 +542,22 @@ const LOCATION_PATHS = [
   '/locations/canada',
   '/locations/australia',
   '/locations/singapore',
+  '/locations/germany',
+  '/locations/netherlands',
+  '/locations/turkey',
 ];
 
 /**
- * Countries named on the hub as future markets. None may be linked anywhere.
- * Canada, Australia and Singapore graduated to real pages in Phase 3B.
+ * There is no unwritten-market list any more.
+ *
+ * Phase 3B carried one naming Germany, the Netherlands and Turkey, and Phase 3C
+ * gave all three a page, which emptied it. Rather than leave an empty constant
+ * behind, the check that used to read it was replaced by the derived one in
+ * `checkLocationPages`: every `/locations/*` href in the whole build must be
+ * either the hub or one of `LOCATION_PATHS`. That catches a link to a market
+ * that does not exist without anyone having to maintain a list of the ones that
+ * do not.
  */
-const UNWRITTEN_MARKET_SLUGS = ['germany', 'netherlands', 'turkey'];
 
 /** The global service pages every regional page has to link to. */
 const REQUIRED_SERVICE_LINKS = [
@@ -719,23 +728,42 @@ async function checkServicePages(sitemapLocs) {
  * Claims that are a lie on a regional page in any context whatsoever. No
  * negation rescues these — the phrasing itself is the problem.
  *
- * Extended in Phase 3B to the three new markets: Canadian, Australian and
- * Singapore offices, teams, staff and entities, the +61 and +65 dialling codes,
- * and the PIPEDA / PDPA / Privacy Act certification claims that would be the
- * obvious thing to fabricate on those pages.
+ * Extended in Phase 3B to Canada, Australia and Singapore, and in Phase 3C to
+ * Germany, the Netherlands and Turkey: German, Dutch and Turkish offices, teams,
+ * staff and entities, the +49, +31 and +90 dialling codes, the European- and
+ * EU-office phrasing that two EU market pages invite, the local commercial
+ * registers, and the GDPR / KVKK / TÜV credentials that would be the obvious
+ * thing to fabricate on those three pages.
+ *
+ * Bare "GDPR compliant" and "KVKK compliant" are deliberately not here: all
+ * three new pages carry a buyer question that uses the phrase and then answers
+ * it honestly, and the question exemption in `scanFabricatedLocation` covers
+ * that. What is banned is asserting it, or claiming a certification, an approval
+ * or a guarantee under any of those names.
  */
 const FABRICATED_LOCATION_PATTERNS = [
-  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a local office, team or entity'],
-  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth)\b/i, 'a foreign office'],
-  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth)\b/i, 'a foreign base'],
+  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean|German|Germany|Dutch|Netherlands|Turkish|Turkey) (?:office|team|staff|branch|headquarters|entity|employees|developers)\b/i, 'a local office, team or entity'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Germany|Netherlands|Turkey|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth|Berlin|Munich|Hamburg|Frankfurt|Cologne|Amsterdam|Rotterdam|The Hague|Utrecht|Eindhoven|Istanbul|Ankara|Izmir)\b/i, 'a foreign office'],
+  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Germany|Netherlands|Turkey|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Berlin|Munich|Frankfurt|Amsterdam|Rotterdam|Istanbul|Ankara)\b/i, 'a foreign base'],
   [/\+1[\s-]?\(?\d{3}/, 'a North American telephone number'],
   [/\+44[\s-]?\d{2}/, 'a UK telephone number'],
   [/\+971[\s-]?\d/, 'a UAE telephone number'],
   [/\+61[\s-]?\d/, 'an Australian telephone number'],
   [/\+65[\s-]?\d/, 'a Singapore telephone number'],
+  [/\+49[\s-]?\d/, 'a German telephone number'],
+  [/\+31[\s-]?\d/, 'a Netherlands telephone number'],
+  [/\+90[\s-]?\d/, 'a Turkish telephone number'],
   [/\bfully (?:compliant|certified|secure|GDPR)\b/i, 'an absolute compliance claim'],
-  [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2|PIPEDA|PDPA) compliant\b/i, 'a compliance claim'],
+  [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2|PIPEDA|PDPA|KVKK|DSGVO|BDSG|AVG|UAVG) compliant\b/i, 'a compliance claim'],
   [/\b(?:PIPEDA|PDPA|Privacy Act|Australian Privacy Principles)[- ]?(?:certified|compliant|accredited|approved)\b/i, 'a named privacy-framework certification'],
+  [/\b(?:GDPR|KVKK|DSGVO|BDSG|AVG|UAVG)[- ]?(?:certified|accredited|approved|registered)\b/i, 'a data-protection certification'],
+  [/\bguaranteed (?:GDPR|KVKK|DSGVO|BDSG|AVG|UAVG)\b/i, 'a guaranteed data-protection outcome'],
+  [/\bT(?:Ü|U)V[- ]?(?:certified|approved|tested|audited)\b/i, 'a TÜV certification'],
+  [/\bour (?:European|EU|DACH|Benelux) (?:office|entity|branch|team|presence|subsidiary)\b/i, 'a European presence'],
+  [/\b(?:German|Dutch|Turkish|Netherlands)[- ]registered\b/i, 'a local company registration'],
+  [/\bhandelsregister\b/i, 'a German commercial-register entry'],
+  [/\bkvk[- ]?(?:number|nummer|registered)\b/i, 'a Dutch commercial-register entry'],
+  [/\bmersis\b/i, 'a Turkish trade-register entry'],
   [/\bgovernment[- ](?:approved|certified|licensed)\b/i, 'a government approval'],
   [/\blocal government (?:approval|approved|endorsement)\b/i, 'a local government approval'],
   [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|results?|timezone|time[- ]zone)\b/i, 'a guaranteed outcome or coverage'],
@@ -765,6 +793,12 @@ const FABRICATED_LOCATION_PATTERNS = [
 const DENIAL_ONLY_PATTERNS = [
   [/\blocal offices?\b/i, 'a local office'],
   [/\blocal team\b/i, 'a local team'],
+  [/\blocal branch\b/i, 'a local branch'],
+  // Phase 3C. Two of the three new markets are in the EU, which makes
+  // "European office" and "EU entity" the phrases most likely to be written
+  // carelessly — and both pages need to be able to deny them out loud.
+  [/\bT(?:Ü|U)V\b/, 'a TÜV credential'],
+  [/\b(?:Turkish|German|Dutch) (?:bank|banks|payment institution|payment provider) (?:relationship|agreement|partnership|licence|license)\b/i, 'a local banking relationship'],
   [/\blocal (?:employees|staff)\b/i, 'local employees'],
   [/\blocal (?:phone|telephone)\b/i, 'a local phone number'],
   [/\blocal (?:entity|registration|licence|license)\b/i, 'a local entity or registration'],
@@ -779,6 +813,36 @@ const DENIAL_ONLY_PATTERNS = [
   [/\btrade licen[cs]e\b/i, 'a trade licence'],
   [/\b(?:HIPAA|SOC ?2|PCI ?DSS|ISO ?\d{4,}|Cyber Essentials)[- ]?(?:certified|compliant|accredited)\b/i, 'a named-framework certification'],
 ];
+
+/**
+ * Phrases whose denial has to sit in the *same sentence*, not merely somewhere
+ * in the preceding 140 characters.
+ *
+ * The wider window is right for most of `DENIAL_ONLY_PATTERNS`: a disclosure
+ * block often denies several things across consecutive sentences. But on a
+ * rendered page the FAQ answers run into one another, so a denial ending one
+ * answer ("…no European office and no EU entity") sits inside the window of a
+ * claim opening the next — and "Our Dutch-speaking team handles this directly"
+ * would pass the scan. These three claims are the ones where that matters:
+ * each is easy to write by accident and impossible to substantiate. All three
+ * are denied inside a single sentence in the real copy.
+ */
+const SAME_SENTENCE_DENIAL_PATTERNS = [
+  [/\b(?:German|Dutch|Turkish)[- ]speaking (?:team|staff|developers?|engineers?|colleagues?|consultants?|support)\b/i, 'staff who speak the local language'],
+  [/\b(?:our|existing|previous|past|several|many|numerous|\d+\+?) (?:German|Dutch|Turkish) (?:clients|customers|references|partners|partnerships|resellers)\b/i, 'local clients or partners'],
+  [/\b(?:European|EU) (?:office|entity|branch|presence|subsidiary|company)\b/i, 'a European presence'],
+];
+
+/** The text from the start of the current sentence up to `index`. */
+function sentencePrefix(text, index) {
+  const start = Math.max(
+    text.lastIndexOf('.', index),
+    text.lastIndexOf('?', index),
+    text.lastIndexOf('!', index),
+    text.lastIndexOf(';', index),
+  );
+  return text.slice(start + 1, index);
+}
 
 /**
  * Text every regional page must contain as visible copy: SCS operates from
@@ -805,6 +869,20 @@ function scanFabricatedLocation(urlPath, bodyText) {
       if (!isDenied(bodyText, index)) {
         const before = bodyText.slice(Math.max(0, index - 140), index);
         fail('fabricated-location', `${urlPath}: ${label} with no denial in front — "…${before.slice(-60)}${match[0]}"`);
+      }
+    }
+  }
+  for (const [pattern, label] of SAME_SENTENCE_DENIAL_PATTERNS) {
+    const global = new RegExp(pattern.source, 'gi');
+    for (const match of bodyText.matchAll(global)) {
+      const index = match.index ?? 0;
+      if (sentenceAround(bodyText, index).endsWith('?')) continue;
+      const prefix = sentencePrefix(bodyText, index);
+      if (!DENIAL_WORDS.test(prefix)) {
+        fail(
+          'fabricated-location',
+          `${urlPath}: ${label} with no denial in the same sentence — "${prefix.slice(-80)}${match[0]}"`,
+        );
       }
     }
   }
@@ -862,6 +940,9 @@ async function checkLocationPages(sitemapLocs) {
             '/locations/canada': 'Canada',
             '/locations/australia': 'Australia',
             '/locations/singapore': 'Singapore',
+            '/locations/germany': 'Germany',
+            '/locations/netherlands': 'Netherlands',
+            '/locations/turkey': 'Turkey',
           }[urlPath];
           if (serviceNode.areaServed?.name !== expectedCountry) {
             fail('structured-data', `${urlPath}: areaServed.name is "${serviceNode.areaServed?.name}", expected "${expectedCountry}"`);
@@ -957,15 +1038,13 @@ async function checkLocationPages(sitemapLocs) {
     }
 
     // --- nothing in the whole build links to a market page we never wrote ---
+    // One derived check rather than a hard-coded list of absent countries: any
+    // /locations URL that is neither the hub nor a live market fails the build,
+    // whether it is a market with no page, a stale slug or a city page.
     const htmlFiles = await walk(DIST, (file) => file.endsWith('.html'));
     for (const file of htmlFiles) {
       const html = await fs.readFile(file, 'utf8');
       const name = rel(file).replace(/\\/g, '/');
-      for (const slug of UNWRITTEN_MARKET_SLUGS) {
-        if (html.includes(`href="/locations/${slug}"`)) {
-          fail('location-links', `${name}: links to /locations/${slug}, which does not exist`);
-        }
-      }
       for (const match of html.matchAll(/href="(\/locations[^"]*)"/g)) {
         const target = match[1];
         if (target !== LOCATIONS_HUB_PATH && !LOCATION_PATHS.includes(target)) {
@@ -990,7 +1069,7 @@ async function checkLocationPages(sitemapLocs) {
       }
     }
 
-    // --- duplicate-content scan across all six market pages ----------------
+    // --- duplicate-content scan across all nine market pages ---------------
     // Two passes, as required: the rendered body as-is, and again with every
     // country name, region name and time-zone label replaced by a placeholder.
     // The second pass is what a find-and-replace clone fails: its raw texts
@@ -999,14 +1078,17 @@ async function checkLocationPages(sitemapLocs) {
     const neutralise = (text) =>
       text
         .replace(
-          /United Arab Emirates|United States|United Kingdom|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Canada|Australia|Singapore|USA|UAE|UK|US\b/g,
+          /United Arab Emirates|United States|United Kingdom|the Netherlands|Netherlands|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Germany|German|Dutch|Turkey|Turkish|Canada|Australia|Singapore|USA|UAE|UK|US\b|EU\b|DACH|Benelux|Austria|Switzerland|Belgium/g,
           'COUNTRY',
         )
         .replace(
-          /Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia/g,
+          /Central European Summer Time|Central European Time|Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia|CEST|CET|UTC/g,
           'ZONE',
         )
-        .replace(/Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth/g, 'CITY');
+        .replace(
+          /Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Berlin|Munich|Hamburg|Frankfurt|Cologne|Amsterdam|Rotterdam|The Hague|Utrecht|Eindhoven|Istanbul|Ankara|Izmir/g,
+          'CITY',
+        );
 
     // The rendered bodies include the shared header, footer, CTA labels and
     // layout copy, so these ceilings are looser than the content-object test in
@@ -1199,6 +1281,31 @@ async function checkPrerenderCompleteness() {
  * (Before the split the main bundle was 1,789,870 raw / 512,680 gzip, with the
  * service and regional copy inside it.)
  *
+ * Re-measured on the Phase 3C build, which added Germany, the Netherlands and
+ * Turkey:
+ *
+ *   main bundle   1,433,376 bytes raw / 414,192 bytes gzip
+ *   all JavaScript 3,077,771 bytes raw / 909,016 bytes gzip
+ *
+ * The main bundle moved by 2,937 raw / 620 gzip — three manifest entries and
+ * three lines in the split table, which is all a new market is allowed to cost
+ * the first paint. Its ceilings are therefore unchanged and still have ~40 KB of
+ * headroom.
+ *
+ * The total moved by 84,897 raw / 29,857 gzip, and the three unavoidable route
+ * chunks account for nearly all of it:
+ *
+ *   Germany      25,907 raw /  9,120 gzip
+ *   Netherlands  25,166 raw /  9,303 gzip
+ *   Turkey       26,159 raw /  9,461 gzip
+ *   ------------------------------------
+ *   subtotal     77,232 raw / 27,884 gzip
+ *
+ * The remainder is the main-bundle delta above plus the shared `LocationPage`
+ * chunk growing by one optional section and the six earlier country chunks each
+ * gaining three cross-market cards. The total gzip ceiling had to move because
+ * of this; the raw one is raised in step so the two stay proportionate.
+ *
  * The ceilings below add a 3% tolerance for deterministic build variation —
  * a dependency patch release, a minifier version, a slightly different hash
  * length. It is deliberately small: 3% of the main bundle is ~43 KB raw, far
@@ -1211,10 +1318,10 @@ async function checkPrerenderCompleteness() {
 const BUNDLE_BUDGET = {
   mainRaw: 1_473_000,
   mainGzip: 426_000,
-  totalRaw: 3_082_000,
-  totalGzip: 905_000,
+  totalRaw: 3_170_000,
+  totalGzip: 936_000,
   /** Route chunks the split must actually produce (services + locations + hubs). */
-  minimumContentChunks: 23,
+  minimumContentChunks: 26,
 };
 
 /** Chunk names the /services and /locations routes are split into. */
@@ -1224,6 +1331,7 @@ const CONTENT_CHUNK_NAMES = [
   'AiVoiceAgentDevelopment', 'AiVideoConsultationAgents', 'ConversationalAiDevelopment',
   'AiAutomationIntegration', 'UiUxDesign', 'CloudSolutions', 'DevOpsEngineering', 'DigitalMarketing',
   'LocationsHub', 'UnitedStates', 'UnitedKingdom', 'UnitedArabEmirates', 'Canada', 'Australia', 'Singapore',
+  'Germany', 'Netherlands', 'Turkey',
 ];
 
 async function checkBundleBudget() {

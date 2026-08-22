@@ -25,6 +25,7 @@ export type {
   CollaborationStep,
   DeliveryDisclosure,
   EngagementOption,
+  LocalizationSection,
   LocationBody,
   LocationContent,
   LocationFaq,

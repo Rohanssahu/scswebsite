@@ -8,6 +8,7 @@ import {
   Globe2,
   HelpCircle,
   Info,
+  Languages,
   Mail,
   PhoneCall,
   ShieldCheck,
@@ -27,9 +28,12 @@ import type { LocationContent, LocationSectionHeader } from '@/content/locations
  * Shared shell for every regional landing page.
  *
  * Layout, gradients and cards are the site's existing design system. Every word
- * comes from that country's own content module, so the three pages share a
+ * comes from that country's own content module, so the nine pages share a
  * structure without sharing copy — and `locationPages.test.tsx` fails if they
  * start to.
+ *
+ * One section is optional: the language and localization block, which only the
+ * markets where English is not the working language carry.
  *
  * Two deliberate design decisions:
  *
@@ -346,6 +350,43 @@ const LocationPage = ({ content }: { content: LocationContent }) => {
           </div>
         </section>
 
+        {/* ===== Language and localization =====
+            Rendered only for the markets that carry the block. It is ordinary
+            visible copy in its own section — not a footnote, not inside the
+            FAQ fold-outs — because "this engagement is in English and your
+            language is separately scoped work" is exactly the kind of thing a
+            buyer should not have to dig for. */}
+        {content.localization && (
+          <section className="py-20">
+            <div className="container mx-auto px-4">
+              <div className="mx-auto max-w-4xl">
+                <Reveal>
+                  <div className="rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
+                    <div className="flex items-start gap-3">
+                      <Languages className="mt-0.5 h-6 w-6 shrink-0 text-purple-600" aria-hidden="true" />
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">{content.localization.title}</h2>
+                        <p className="mt-3 text-base leading-relaxed text-gray-700">{content.localization.body}</p>
+                      </div>
+                    </div>
+                    <ul className="mt-6 grid gap-3 border-t border-gray-200 pt-6 sm:grid-cols-2">
+                      {content.localization.points.map((point) => (
+                        <li key={point.slice(0, 40)} className="flex items-start gap-2 text-sm leading-relaxed text-gray-700">
+                          <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-6 border-t border-gray-200 pt-5 text-sm leading-relaxed text-gray-600">
+                      {content.localization.note}
+                    </p>
+                  </div>
+                </Reveal>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ===== Engagement options ===== */}
         <section className="py-20">
           <div className="container mx-auto px-4">
@@ -412,7 +453,7 @@ const LocationPage = ({ content }: { content: LocationContent }) => {
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">Other markets</span>
               <h2 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">Where else we work remotely</h2>
             </div>
-            <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
+            <div className="mx-auto grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {content.otherMarkets.map((market, index) => (
                 <Reveal key={market.path} delay={index * 0.05}>
                   <Link

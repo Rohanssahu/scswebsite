@@ -8,10 +8,18 @@
 //      three conversion CTAs and links to the real global service pages;
 //   2. honesty: SCS is in Indore, delivery is remote, no local office/entity/
 //      staff/phone/certification/guarantee is claimed anywhere, in any of the
-//      six markets;
-//   3. uniqueness: the six country pages share a React layout but no copy. A
-//      page produced by find-and-replacing the country name fails here, both on
-//      its raw text and on a country-name-neutralised version of it.
+//      nine markets;
+//   3. uniqueness: the nine country pages share a React layout but no copy. A
+//      page produced by find-and-replacing the country name fails here, on four
+//      measures: the raw content objects, a country-name-neutralised version of
+//      them, the rendered page body, and a neutralised version of that.
+//
+// Phase 3C completed the market list with Germany, the Netherlands and Turkey.
+// All three are non-English-speaking, which is why they also carry a language
+// and localization section — and why the honesty patterns now cover German,
+// Dutch and Turkish offices, staff, registrations, certifications and
+// "-speaking team" claims, plus the European/EU-office phrasing that would be
+// the natural thing to overstate on a page about two EU markets.
 
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -114,12 +122,38 @@ function similarity(a: string, b: string): number {
   return shared / (left.size + right.size - shared);
 }
 
+/**
+ * Replace every country, nationality, region, time-zone and city name with a
+ * placeholder.
+ *
+ * This is the measure that catches a find-and-replace clone: two pages whose
+ * raw texts differ only by the country name become identical once neutralised.
+ * Phase 3C added the German, Dutch and Turkish vocabulary — including CET and
+ * CEST, which Germany and the Netherlands share and which would otherwise let
+ * two pages look more different than they are.
+ */
+function neutraliseText(text: string): string {
+  return text
+    .replace(
+      /United Arab Emirates|United States|United Kingdom|the Netherlands|Netherlands|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Germany|German|Dutch|Turkey|Turkish|Canada|Australia|Singapore|USA|UAE|UK|US\b|EU\b|DACH|Benelux|Austria|Switzerland|Belgium/g,
+      'COUNTRY',
+    )
+    .replace(
+      /Central European Summer Time|Central European Time|Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia|the ACT|CEST|CET|UTC/g,
+      'ZONE',
+    )
+    .replace(
+      /Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Berlin|Munich|Hamburg|Frankfurt|Cologne|Amsterdam|Rotterdam|The Hague|Utrecht|Eindhoven|Istanbul|Ankara|Izmir|Indore/g,
+      'CITY',
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 1. Structure
 // ---------------------------------------------------------------------------
 
 describe('regional page structure', () => {
-  it('covers exactly the six active markets, at flat /locations/ URLs', () => {
+  it('covers exactly the nine active markets, at flat /locations/ URLs', () => {
     expect(LOCATION_CONTENT.map((location) => location.path)).toEqual([
       '/locations/united-states',
       '/locations/united-kingdom',
@@ -127,6 +161,9 @@ describe('regional page structure', () => {
       '/locations/canada',
       '/locations/australia',
       '/locations/singapore',
+      '/locations/germany',
+      '/locations/netherlands',
+      '/locations/turkey',
     ]);
     for (const location of LOCATION_CONTENT) {
       expect(location.path.startsWith(`${LOCATIONS_HUB_PATH}/`), location.path).toBe(true);
@@ -173,6 +210,9 @@ describe('regional page structure', () => {
         content.engagement.heading,
         content.cta.title,
         'Other markets',
+        ...(content.localization
+          ? [content.localization.title, content.localization.body, content.localization.note]
+          : []),
       ];
       for (const fragment of required) {
         expect(text, `${content.path} is missing: ${fragment.slice(0, 50)}`).toContain(fragment.replace(/\s+/g, ' '));
@@ -259,9 +299,17 @@ describe('regional page structure', () => {
         expect(live.has(market.path), `${content.path} links to non-existent market ${market.path}`).toBe(true);
         expect(html, `${content.path} does not render its ${market.path} link`).toContain(`href="${market.path}"`);
       }
-      // No page may link to a market we have not written.
-      for (const absent of ['/locations/germany', '/locations/netherlands', '/locations/turkey']) {
-        expect(html.includes(`href="${absent}"`), `${content.path} links to ${absent}`).toBe(false);
+      // No page may link to a /locations URL that is not the hub or a live
+      // market. Derived rather than hard-coded, so it keeps working as markets
+      // are added: in Phase 3B this list named Germany, the Netherlands and
+      // Turkey explicitly, and Phase 3C would have had to delete the check
+      // instead of keeping it honest.
+      for (const match of html.matchAll(/href="(\/locations[^"]*)"/g)) {
+        const target = match[1];
+        expect(
+          target === LOCATIONS_HUB_PATH || live.has(target),
+          `${content.path} links to the unknown locations URL ${target}`,
+        ).toBe(true);
       }
     }
   });
@@ -283,6 +331,9 @@ describe('regional page structure', () => {
       '🇨🇦',
       '🇦🇺',
       '🇸🇬',
+      '🇩🇪',
+      '🇳🇱',
+      '🇹🇷',
     ];
     for (const [content, html] of RENDERED.concat([[LOCATION_CONTENT[0], HUB_HTML]])) {
       for (const needle of banned) {
@@ -317,15 +368,30 @@ describe('regional page structure', () => {
  * Phrases that are only ever a lie on these pages, in any context.
  */
 const NEVER: [RegExp, string][] = [
-  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean) (?:office|team|staff|branch|headquarters|entity)\b/i, 'a local office or team'],
-  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth)\b/i, 'a foreign office'],
-  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth)\b/i, 'a foreign base'],
+  [/\bour (?:US|USA|U\.S\.|UK|U\.K\.|UAE|American|British|Emirati|Canadian|Australian|Singapore|Singaporean|German|Germany|Dutch|Netherlands|Turkish|Turkey) (?:office|team|staff|branch|headquarters|entity|employees|developers)\b/i, 'a local office or team'],
+  [/\boffices? in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Germany|Netherlands|Turkey|Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Montreal|Sydney|Melbourne|Brisbane|Perth|Berlin|Munich|Hamburg|Frankfurt|Cologne|Amsterdam|Rotterdam|The Hague|Utrecht|Eindhoven|Istanbul|Ankara|Izmir)\b/i, 'a foreign office'],
+  [/\b(?:based|headquartered|located|registered|incorporated) in (?:the )?(?:USA|US|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Singapore|Germany|Netherlands|Turkey|Dubai|Abu Dhabi|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Berlin|Munich|Frankfurt|Amsterdam|Rotterdam|Istanbul|Ankara)\b/i, 'a foreign base'],
   [/\+1[\s-]?\(?\d{3}/, 'a North American telephone number'],
   [/\+44[\s-]?\d{2}/, 'a UK telephone number'],
   [/\+971[\s-]?\d/, 'a UAE telephone number'],
   [/\+61[\s-]?\d/, 'an Australian telephone number'],
   [/\+65[\s-]?\d/, 'a Singapore telephone number'],
+  [/\+49[\s-]?\d/, 'a German telephone number'],
+  [/\+31[\s-]?\d/, 'a Netherlands telephone number'],
+  [/\+90[\s-]?\d/, 'a Turkish telephone number'],
   [/\b(?:PIPEDA|PDPA|Privacy Act|Australian Privacy Principles)[- ]?(?:certified|compliant|accredited|approved)\b/i, 'a named privacy-framework certification'],
+  // Phase 3C. Bare "GDPR compliant" is deliberately absent: it appears inside
+  // buyer questions the pages then answer honestly, and the question exemption
+  // below already covers that. What may never appear is an assertion of it, or
+  // a certification, approval or guarantee under any of these names.
+  [/\bwe are (?:GDPR|KVKK|DSGVO|BDSG|AVG|UAVG) compliant\b/i, 'a data-protection compliance claim'],
+  [/\b(?:GDPR|KVKK|DSGVO|BDSG|AVG|UAVG)[- ]?(?:certified|accredited|approved|registered)\b/i, 'a data-protection certification'],
+  [/\bguaranteed (?:GDPR|KVKK|DSGVO|BDSG|AVG|UAVG)\b/i, 'a guaranteed data-protection outcome'],
+  [/\bT(?:Ü|U)V[- ]?(?:certified|approved|tested|audited)\b/i, 'a TÜV certification'],
+  [/\bour (?:European|EU|DACH|Benelux) (?:office|entity|branch|team|presence|subsidiary)\b/i, 'a European presence'],
+  [/\b(?:German|Dutch|Turkish|Netherlands)[- ]registered\b/i, 'a local company registration'],
+  [/\bhandelsregister|\bkvk[- ]?(?:number|nummer|registered)\b/i, 'a local commercial-register entry'],
+  [/\b\d{4} ?[A-Z]{2}\b(?=[^.]{0,30}\b(?:Netherlands|Amsterdam|Rotterdam|Utrecht)\b)/, 'a Dutch postcode'],
   [/\bguaranteed (?:compliance|coverage|availability|overlap|uptime|timezone|time[- ]zone)\b/i, 'a guaranteed outcome or coverage'],
   [/\bfully (?:compliant|certified|secure|GDPR)\b/i, 'an absolute compliance claim'],
   [/\bwe are (?:GDPR|UK GDPR|HIPAA|SOC ?2) compliant\b/i, 'a compliance claim'],
@@ -352,10 +418,20 @@ const NEVER: [RegExp, string][] = [
  * Words that may appear only inside an explicit denial. A required disclosure
  * has to be able to say "we do not maintain a local office"; a claim may not
  * say "our local office". A negation must sit within 140 characters in front.
+ *
+ * `DENIED_IN_SAME_SENTENCE` below holds the three phrases where that window is
+ * too generous to be safe.
  */
 const ONLY_WHEN_DENIED: [RegExp, string][] = [
   [/\blocal offices?\b/i, 'a local office'],
   [/\blocal team\b/i, 'a local team'],
+  [/\blocal branch\b/i, 'a local branch'],
+  // Phase 3C: two of the three new markets are in the EU, which makes
+  // "European office" and "EU entity" the two phrases most likely to be
+  // written by accident. Both pages have to be able to deny them.
+  [/\b(?:European|EU) (?:office|entity|branch|presence|subsidiary|company)\b/i, 'a European presence'],
+  [/\bT(?:Ü|U)V\b/, 'a TÜV credential'],
+  [/\b(?:Turkish|German|Dutch) (?:bank|banks|payment institution|payment provider) (?:relationship|agreement|partnership|licence|license)\b/i, 'a local banking relationship'],
   [/\blocal (?:employees|staff)\b/i, 'local employees'],
   [/\blocal (?:phone|telephone)\b/i, 'a local phone number'],
   [/\blocal (?:entity|registration|licence|license)\b/i, 'a local entity or registration'],
@@ -370,6 +446,43 @@ const ONLY_WHEN_DENIED: [RegExp, string][] = [
 ];
 
 const DENIAL = /\b(?:no|not|never|cannot|can't|without|nor|neither|nothing|none|do not|does not|will not|hold no|have no|make no|claim no)\b/i;
+
+/**
+ * Phrases whose denial has to sit in the *same sentence*, not merely somewhere
+ * in the preceding 140 characters.
+ *
+ * The 140-character window is right for most of the list above: a disclosure
+ * bullet often denies several things across two sentences, and demanding they
+ * all share one sentence would push the copy towards contortions. But it has a
+ * failure mode, and these three phrases are exactly where it bites. A country
+ * page's FAQ answers sit next to each other in the scanned text, so a denial at
+ * the end of one answer ("…no European office and no EU entity") lands inside
+ * the window of a claim at the start of the next one — and "Our Dutch-speaking
+ * team handles this directly" would pass.
+ *
+ * These are the three claims where that matters most, because each is both easy
+ * to write by accident and impossible to substantiate: a speaker of the local
+ * language, a local client or partner, and a European presence. All three are
+ * denied in the real copy inside a single sentence, so the stricter rule costs
+ * nothing and closes the hole.
+ */
+const DENIED_IN_SAME_SENTENCE: [RegExp, string][] = [
+  [/\b(?:German|Dutch|Turkish)[- ]speaking (?:team|staff|developers?|engineers?|colleagues?|consultants?|support)\b/i, 'staff who speak the local language'],
+  [/\b(?:our|existing|previous|past|several|many|numerous|\d+\+?) (?:German|Dutch|Turkish) (?:clients|customers|references|partners|partnerships|resellers)\b/i, 'local clients or partners'],
+  [/\b(?:European|EU) (?:office|entity|branch|presence|subsidiary|company)\b/i, 'a European presence'],
+];
+
+/** The text from the start of the current sentence up to `index`. */
+function sentencePrefix(text: string, index: number): string {
+  const start = Math.max(
+    text.lastIndexOf('.', index),
+    text.lastIndexOf('?', index),
+    text.lastIndexOf('!', index),
+    text.lastIndexOf('\n', index),
+    text.lastIndexOf(';', index),
+  );
+  return text.slice(start + 1, index);
+}
 
 /** The sentence a match sits inside, so a question can be told from a claim. */
 function sentenceAround(text: string, index: number): string {
@@ -401,6 +514,18 @@ function assertHonest(label: string, text: string): void {
       expect(
         DENIAL.test(context),
         `${label} states ${description} without a denial in front: "…${context.slice(-70)}${match[0]}"`,
+      ).toBe(true);
+    }
+  }
+  for (const [pattern, description] of DENIED_IN_SAME_SENTENCE) {
+    const global = new RegExp(pattern.source, 'gi');
+    for (const match of text.matchAll(global)) {
+      const index = match.index ?? 0;
+      if (sentenceAround(text, index).endsWith('?')) continue;
+      const prefix = sentencePrefix(text, index);
+      expect(
+        DENIAL.test(prefix),
+        `${label} states ${description} with no denial in the same sentence: "${prefix.slice(-90)}${match[0]}"`,
       ).toBe(true);
     }
   }
@@ -500,7 +625,10 @@ describe('regional page copy is honest about location', () => {
 
   it('avoids keyword-stuffed regional phrases', () => {
     const stuffing = [
-      /software development company (?:in (?:the )?)?(?:USA|US|UK|UAE)/gi,
+      /software development company (?:in (?:the )?)?(?:USA|US|UK|UAE|Germany|the Netherlands|Turkey)/gi,
+      /software (?:development )?company (?:Germany|Netherlands|Turkey)/gi,
+      /(?:German|Dutch|Turkish) software (?:development )?company/gi,
+      /local software developers/gi,
       /mobile app development company/gi,
       /AI development company/gi,
       /best software development/gi,
@@ -524,6 +652,9 @@ describe('regional page copy is honest about location', () => {
         '/locations/canada': /\b(?:Canada|Canadian)\b/g,
         '/locations/australia': /\b(?:Australia|Australian)\b/g,
         '/locations/singapore': /\b(?:Singapore|Singaporean)\b/g,
+        '/locations/germany': /\b(?:Germany|German)\b/g,
+        '/locations/netherlands': /\b(?:Netherlands|Dutch)\b/g,
+        '/locations/turkey': /\b(?:Turkey|Turkish)\b/g,
       };
       const hits = (stripTags(html).match(abbreviations[content.path]) ?? []).length;
       // A regional page should name its market often enough to be about it, and
@@ -590,6 +721,9 @@ describe('regional page copy is unique per country', () => {
         location.cta.title,
         location.cta.body,
         ...location.disclosure.points,
+        ...(location.localization
+          ? [location.localization.title, location.localization.body, location.localization.note]
+          : []),
       ];
       for (const value of headings) {
         const previous = seen.get(value);
@@ -635,6 +769,7 @@ describe('regional page copy is unique per country', () => {
         ...location.security.points,
         location.security.note,
         ...location.oversight.points,
+        ...(location.localization?.points ?? []),
         ...location.heroHighlights,
         ...location.engagement.options.flatMap((option) => [option.name, option.body, option.bestFor]),
         ...location.services.items.map((item) => item.blurb),
@@ -650,7 +785,7 @@ describe('regional page copy is unique per country', () => {
 
   it('keeps page-body similarity below the template threshold', () => {
     // Bigram Jaccard over each page's own copy (shared service names and paths
-    // excluded), for all fifteen pairs the six markets produce. Two pages
+    // excluded), for all thirty-six pairs the nine markets produce. Two pages
     // generated by swapping a country name would score near 1.0; independently
     // written pages on the same subject land well under 0.2 — 0.30 leaves
     // headroom without letting a template through.
@@ -664,21 +799,47 @@ describe('regional page copy is unique per country', () => {
     }
   });
 
+  it('keeps rendered-page similarity below the template threshold', () => {
+    // The same measure again, on what a crawler actually receives. The rendered
+    // body carries the shared header, footer, section labels and CTA copy that
+    // `ownCopy` deliberately excludes, so the floor is higher and the ceiling
+    // has to be looser — 0.40, matching `verify-dist.mjs`, which runs this same
+    // pair of scans against the built HTML.
+    for (let i = 0; i < RENDERED.length; i += 1) {
+      for (let j = i + 1; j < RENDERED.length; j += 1) {
+        const [a, htmlA] = RENDERED[i];
+        const [b, htmlB] = RENDERED[j];
+        const score = similarity(stripTags(htmlA), stripTags(htmlB));
+        expect(
+          score,
+          `rendered ${a.path} and ${b.path} are ${(score * 100).toFixed(1)}% similar`,
+        ).toBeLessThan(0.4);
+      }
+    }
+  });
+
+  it('is not a country-name substitution of another rendered page', () => {
+    // The fourth measure, and the one a clone cannot survive: neutralise the
+    // rendered body and compare. A page built by swapping "Germany" for
+    // "Netherlands" scores near 1.0 here even though its raw HTML differs.
+    for (let i = 0; i < RENDERED.length; i += 1) {
+      for (let j = i + 1; j < RENDERED.length; j += 1) {
+        const [a, htmlA] = RENDERED[i];
+        const [b, htmlB] = RENDERED[j];
+        const score = similarity(neutraliseText(stripTags(htmlA)), neutraliseText(stripTags(htmlB)));
+        expect(
+          score,
+          `rendered ${a.path} reads as ${b.path} with the country swapped (${(score * 100).toFixed(1)}%)`,
+        ).toBeLessThan(0.45);
+      }
+    }
+  });
+
   it('is not a country-name substitution of another page', () => {
     // Replace each page's own market names with a placeholder and compare. A
     // find-and-replace template scores ~1.0 here even when the raw texts differ.
     const neutralise = (content: LocationContent): string =>
-      ownCopy(content)
-        .join(' ')
-        .replace(
-          /United Arab Emirates|United States|United Kingdom|Emirates|Emirati|American|British|Canadian|Australian|Singaporean|Canada|Australia|Singapore|USA|UAE|UK|US\b/g,
-          'COUNTRY',
-        )
-        .replace(
-          /Gulf Standard Time|Singapore Standard Time|Indian Standard Time|US Eastern|US Pacific|British Summer Time|New South Wales|Victoria|South Australia|Tasmania|Queensland|Northern Territory|Western Australia|the ACT/g,
-          'ZONE',
-        )
-        .replace(/Dubai|Abu Dhabi|Sharjah|London|New York|Toronto|Vancouver|Sydney|Melbourne|Perth|Indore/g, 'CITY');
+      neutraliseText(ownCopy(content).join(' '));
     for (let i = 0; i < LOCATION_CONTENT.length; i += 1) {
       for (let j = i + 1; j < LOCATION_CONTENT.length; j += 1) {
         const a = LOCATION_CONTENT[i];
@@ -686,6 +847,125 @@ describe('regional page copy is unique per country', () => {
         const score = similarity(neutralise(a), neutralise(b));
         expect(score, `${a.path} reads as ${b.path} with the country swapped (${(score * 100).toFixed(1)}%)`).toBeLessThan(0.35);
       }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b. Language and localization — the Phase 3C markets
+// ---------------------------------------------------------------------------
+
+/**
+ * The three markets added in Phase 3C are non-English-speaking, so each has to
+ * say — as visible copy, not as a footnote — that the engagement is in English,
+ * that localization into the local language is separately scoped professional
+ * work, and that machine translation is not client-facing copy.
+ *
+ * The list is explicit rather than derived. A future market that needs the same
+ * treatment should be added here deliberately, and dropping a page out of the
+ * list should be a decision somebody makes rather than something that happens
+ * because a field was deleted.
+ */
+const LOCALIZED_MARKETS: Record<string, RegExp> = {
+  '/locations/germany': /German/,
+  '/locations/netherlands': /Dutch/,
+  '/locations/turkey': /Turkish/,
+};
+
+describe('language and localization', () => {
+  it('gives every non-English market a localization section', () => {
+    for (const [path, language] of Object.entries(LOCALIZED_MARKETS)) {
+      const content = LOCATION_CONTENT.find((location) => location.path === path);
+      expect(content, `${path} is not a live market`).toBeDefined();
+      const block = content!.localization;
+      expect(block, `${path} has no localization section`).toBeDefined();
+      expect(block!.points.length, path).toBeGreaterThanOrEqual(4);
+      expect(block!.title, path).toMatch(language);
+    }
+  });
+
+  it('states English delivery, scoped localization and no machine translation', () => {
+    for (const [content, html] of RENDERED) {
+      if (!content.localization) continue;
+      const text = stripTags(html);
+      const section = [
+        content.localization.title,
+        content.localization.body,
+        ...content.localization.points,
+        content.localization.note,
+      ].join(' ');
+      // Every claim is in the rendered page, not only in the content object.
+      expect(text, `${content.path} does not render its localization title`).toContain(content.localization.title);
+      for (const point of content.localization.points) {
+        expect(text, `${content.path}: ${point.slice(0, 40)}`).toContain(point);
+      }
+      expect(/English/.test(section), `${content.path} never states the delivery language`).toBe(true);
+      expect(
+        /separately scoped|scoped separately|separate (?:line|item) in the scope/i.test(section),
+        `${content.path} does not scope localization as separate work`,
+      ).toBe(true);
+      expect(
+        /machine[- ]translat|automatic(?:ally)? translat|automatic translation/i.test(section),
+        `${content.path} never addresses machine translation`,
+      ).toBe(true);
+      expect(
+        /human review|reviewed by|qualified (?:human|professional|translator)/i.test(section),
+        `${content.path} does not require a human review of translated copy`,
+      ).toBe(true);
+    }
+  });
+
+  it('claims no speaker of the local language anywhere on the page', () => {
+    for (const [content, html] of RENDERED) {
+      const language = LOCALIZED_MARKETS[content.path];
+      if (!language) continue;
+      const text = stripTags(html);
+      const source = language.source;
+      // A "-speaking team" may appear only inside an explicit denial. The
+      // general scan already enforces that; this pins it per market so the
+      // pattern cannot be loosened without a test naming the country failing.
+      for (const match of text.matchAll(new RegExp(`${source}[- ]speaking`, 'g'))) {
+        const prefix = sentencePrefix(text, match.index ?? 0);
+        expect(
+          DENIAL.test(prefix),
+          `${content.path} claims a ${source}-speaking team: "${prefix.slice(-90)}${match[0]}"`,
+        ).toBe(true);
+      }
+      // And the page must actually say it, rather than leaving it to inference.
+      expect(
+        /do not (?:present|claim|describe)|make no such claim|we do not claim/i.test(text),
+        `${content.path} never states that no local-language team is claimed`,
+      ).toBe(true);
+    }
+  });
+
+  it('puts the localization section in visible body copy, not behind a fold-out', () => {
+    for (const [content, html] of RENDERED) {
+      if (!content.localization) continue;
+      const main = html.split('id="main-content"')[1] ?? '';
+      const index = main.indexOf(content.localization.body);
+      expect(index, `${content.path} does not render its localization body inside <main>`).toBeGreaterThan(-1);
+      // Above the FAQ fold-outs, and with no hiding technique around it.
+      expect(index, `${content.path} hides localization inside the FAQ block`).toBeLessThan(main.indexOf('<details'));
+      const before = main.slice(Math.max(0, index - 300), index);
+      for (const hiding of ['display:none', 'display: none', 'visibility:hidden', 'sr-only', 'height:0', 'font-size:0']) {
+        expect(before.includes(hiding), `${content.path} hides localization with ${hiding}`).toBe(false);
+      }
+    }
+  });
+
+  it('mentions the English page and scoped localization in the top disclosure too', () => {
+    // Requirement 5 of the phase: the language position is stated near the top,
+    // beside the India-delivery disclosure, not only in the section further
+    // down that a visitor may never scroll to.
+    for (const content of LOCATION_CONTENT) {
+      if (!content.localization) continue;
+      const disclosure = [content.disclosure.body, ...content.disclosure.points].join(' ');
+      expect(/English/.test(disclosure), `${content.path}: disclosure never names the page language`).toBe(true);
+      expect(
+        /separately scoped/i.test(disclosure),
+        `${content.path}: disclosure does not scope localization as separate work`,
+      ).toBe(true);
     }
   });
 });
@@ -725,7 +1005,7 @@ describe('locations hub', () => {
     expect(locationsHub.howRemoteWorks.points.length).toBeGreaterThanOrEqual(6);
   });
 
-  it('links to exactly the six active markets and names each of them', () => {
+  it('links to exactly the nine active markets and names each of them', () => {
     for (const location of LOCATION_CONTENT) {
       expect(HUB_HTML, `hub does not link to ${location.path}`).toContain(`href="${location.path}"`);
       expect(HUB_TEXT, `hub does not name ${location.navLabel}`).toContain(location.navLabel);
@@ -734,16 +1014,25 @@ describe('locations hub', () => {
     expect(new Set(marketLinks)).toEqual(new Set(LOCATION_CONTENT.map((location) => location.path)));
   });
 
-  it('mentions the future markets as plain text and links to none of them', () => {
+  it('links every country it names, and carries no future-markets section', () => {
+    // Phase 3C linked the last three named markets, which left the
+    // future-markets block with nothing to list. It was removed rather than
+    // emptied: an "other countries" heading above no content is worse than no
+    // heading, and a hard-coded list of unlinked countries is exactly the thing
+    // that goes stale.
+    expect('futureMarkets' in locationsHub, 'the hub still carries a futureMarkets block').toBe(false);
+    for (const heading of ['Other countries we take enquiries from', 'Other countries', 'Future markets']) {
+      expect(HUB_TEXT.includes(heading), `hub still renders the "${heading}" heading`).toBe(false);
+    }
+    // Every country named anywhere in the hub copy has a page and a link.
     for (const country of ['Germany', 'Netherlands', 'Turkey']) {
       expect(HUB_TEXT, `hub does not mention ${country}`).toContain(country);
+      const slug = country === 'Netherlands' ? 'netherlands' : country.toLowerCase();
+      expect(HUB_HTML, `hub names ${country} without linking to it`).toContain(`href="/locations/${slug}"`);
     }
-    for (const slug of ['germany', 'netherlands', 'turkey']) {
-      expect(HUB_HTML.includes(`href="/locations/${slug}"`), `hub links to /locations/${slug}`).toBe(false);
-    }
-    // Canada, Australia and Singapore graduated to linked markets in Phase 3B,
-    // so they must no longer be described as countries without a page.
-    expect(locationsHub.futureMarkets.body).not.toMatch(/Canada|Australia|Singapore/);
+    // And the hub renders no empty container where the block used to be.
+    expect(HUB_HTML).not.toMatch(/<h2[^>]*>\s*<\/h2>/);
+    expect(HUB_HTML).not.toMatch(/<section[^>]*>\s*<\/section>/);
   });
 
   it('writes its own market blurbs rather than reusing the country pages', () => {

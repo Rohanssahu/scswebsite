@@ -4,7 +4,7 @@
  * Phase 3B split every regional page into two modules:
  *
  *   - this file — path, country name, labels, schema.org names, `<title>`, meta
- *     description and sitemap priority for all six active markets. It is the
+ *     description and sitemap priority for all nine active markets. It is the
  *     only locations module the main JavaScript bundle needs, so the header,
  *     the footer, the homepage, the About page and the SEO registry all read
  *     from here;
@@ -36,9 +36,11 @@ export const LOCATIONS_HUB_PATH = locationsHubMeta.path;
 
 /**
  * The active markets, in the order navigation and the hub list them. Exactly
- * the countries with a written page — Germany, the Netherlands and Turkey are
- * named on the hub as prose and are deliberately absent here, because there is
- * nothing yet to link to.
+ * the countries with a written page.
+ *
+ * Phase 3C completed the list with Germany, the Netherlands and Turkey, which
+ * had until then been named on the hub as unlinked prose. There is no
+ * future-markets list any more: every market we name has a page.
  */
 export const LOCATION_META: LocationMeta[] = [
   {
@@ -112,6 +114,42 @@ export const LOCATION_META: LocationMeta[] = [
     shareTitle: 'Software & AI Development for Singapore Businesses',
     priority: 0.8,
   },
+  {
+    path: '/locations/germany',
+    countryName: 'Germany',
+    navLabel: 'Germany',
+    serviceName: 'Software and AI Development for German Clients',
+    serviceType: 'Remote specification-led software and AI engineering',
+    metaTitle: 'Software & AI Development Partner for Germany | SCS Softwares',
+    metaDescription:
+      'India-based software and AI development for businesses in Germany: written requirements, acceptance criteria agreed before a build, predictable milestones and documented releases.',
+    shareTitle: 'Software & AI Development for German Businesses',
+    priority: 0.8,
+  },
+  {
+    path: '/locations/netherlands',
+    countryName: 'Netherlands',
+    navLabel: 'Netherlands',
+    serviceName: 'Software and AI Development for Netherlands Clients',
+    serviceType: 'Remote integration-led platform and AI development',
+    metaTitle: 'Software Development Partner for Dutch Businesses | SCS',
+    metaDescription:
+      'A remote software and AI development partner for businesses in the Netherlands, delivered from India: connected systems, APIs, dashboards, short written decisions and demo-led approvals.',
+    shareTitle: 'Software & AI Development for Dutch Businesses',
+    priority: 0.8,
+  },
+  {
+    path: '/locations/turkey',
+    countryName: 'Turkey',
+    navLabel: 'Turkey',
+    serviceName: 'Software and AI Development for Turkey Clients',
+    serviceType: 'Remote product, marketplace and AI agent development',
+    metaTitle: 'Software & AI Development Partner for Turkey | SCS Softwares',
+    metaDescription:
+      'India-based software and AI development for businesses in Turkey: mobile and web products, booking and marketplace platforms, AI voice agents, and Turkish localization as scoped work.',
+    shareTitle: 'Software & AI Development for Turkish Businesses',
+    priority: 0.8,
+  },
 ];
 
 export const LOCATION_META_BY_PATH: Record<string, LocationMeta> = Object.fromEntries(
@@ -122,6 +160,12 @@ export const LOCATION_META_BY_PATH: Record<string, LocationMeta> = Object.fromEn
  * Global service pages every country page has to link to. Extended in Phase 3B
  * from six to eight: SaaS development and AI automation are as common an entry
  * point in the newer markets as mobile and web work.
+ *
+ * This is a floor, not a ceiling. Every page may link further — in practice all
+ * nine markets also link `/services/software-modernization`, because replacing
+ * a system that already runs the business is one of the commonest briefs — and
+ * `locationPages.test.tsx` checks each extra link points at a real service page
+ * under its real name.
  */
 export const REQUIRED_SERVICE_LINKS = [
   '/services/custom-software-development',

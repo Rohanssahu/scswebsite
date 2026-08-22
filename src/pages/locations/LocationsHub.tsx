@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Building2, Globe2, Info, Mail, MapPin, PhoneCall, ShieldOff, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Globe2, Mail, MapPin, PhoneCall, ShieldOff, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Reveal from '@/components/Reveal';
@@ -13,9 +13,10 @@ import { locationsHub, type MarketEntry } from '@/content/locations/hub';
  * how a remote international engagement is arranged, and which markets have a
  * page of their own.
  *
- * It links only to markets that exist. The remaining countries appear as plain
- * informational prose with no anchor, because a link to a page we have not
- * written is worse than no link at all.
+ * It links only to markets that exist — which, since Phase 3C, is every market
+ * we name anywhere on the site. The future-markets block that used to sit below
+ * the card grid is gone rather than empty: Germany, the Netherlands and Turkey
+ * were the only countries in it, and all three now have a page of their own.
  *
  * Structured data for this route is a BreadcrumbList and nothing else — the hub
  * describes no single service and claims no location.
@@ -162,22 +163,6 @@ const LocationsHub = () => {
                 </Reveal>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* ===== Future markets: plain text, deliberately unlinked ===== */}
-        <section className="border-t border-gray-200 py-16">
-          <div className="container mx-auto px-4">
-            <Reveal>
-              <div className="mx-auto max-w-3xl rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
-                <h2 className="text-2xl font-bold text-gray-900">{locationsHub.futureMarkets.heading}</h2>
-                <p className="mt-4 text-base leading-relaxed text-gray-700">{locationsHub.futureMarkets.body}</p>
-                <p className="mt-4 flex items-start gap-2 border-t border-gray-200 pt-4 text-sm leading-relaxed text-gray-600">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-pink-600" aria-hidden="true" />
-                  <span>{locationsHub.futureMarkets.note}</span>
-                </p>
-              </div>
-            </Reveal>
           </div>
         </section>
 

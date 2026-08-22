@@ -379,6 +379,24 @@ export const singapore: LocationBody = {
       blurb:
         'Product delivery with scheduled collaboration windows, open test environments and a support scope agreed before launch.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'One market rather than several, approached through a full written specification and documented release evidence.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'One product configured per country it is sold into, rather than one platform holding several entities together.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'The same clock distance in the opposite direction, applied to consumer marketplaces and spoken AI assistance.',
+    },
   ],
   cta: {
     title: 'Tell us which markets the system has to serve',

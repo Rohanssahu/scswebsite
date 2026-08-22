@@ -7,6 +7,12 @@
  * the desktop bar uncrowded; the drawer, the footer and the homepage list the
  * individual markets underneath it.
  *
+ * Nine markets since Phase 3C, which is why those three surfaces stopped being
+ * flat lists: the footer lays them out as a column grid, the mobile drawer
+ * groups them inside a collapsible block, and the desktop bar still shows only
+ * `/locations`. Nothing here needs to change when a tenth market is added —
+ * every list is derived from the manifest.
+ *
  * It reads the metadata manifest, so the navigation is synchronous and free of
  * regional page copy even though those pages are now loaded as route chunks.
  */

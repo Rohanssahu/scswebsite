@@ -5,7 +5,8 @@ import { loadable, type LoadableRoute } from './loadable';
  * `/locations/*`.
  *
  * Before Phase 3B, `App.tsx` imported all twenty-three of these pages
- * statically. Each one pulls in a several-hundred-line content module, so the
+ * statically (twenty-six after Phase 3C added Germany, the Netherlands and
+ * Turkey). Each one pulls in a several-hundred-line content module, so the
  * whole of the service and regional copy — every FAQ, every process step, every
  * paragraph of prose for pages a given visitor will never open — shipped inside
  * the main JavaScript bundle and had to download before the homepage could
@@ -73,6 +74,9 @@ export const LOCATION_ROUTES: Record<string, LoadableRoute> = {
   '/locations/canada': loadable(() => import('@/pages/locations/Canada')),
   '/locations/australia': loadable(() => import('@/pages/locations/Australia')),
   '/locations/singapore': loadable(() => import('@/pages/locations/Singapore')),
+  '/locations/germany': loadable(() => import('@/pages/locations/Germany')),
+  '/locations/netherlands': loadable(() => import('@/pages/locations/Netherlands')),
+  '/locations/turkey': loadable(() => import('@/pages/locations/Turkey')),
 };
 
 /** Every split content route, keyed by its canonical path. */

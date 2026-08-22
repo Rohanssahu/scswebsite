@@ -283,6 +283,9 @@ describe('sitemap route matching', () => {
         '/locations/canada',
         '/locations/australia',
         '/locations/singapore',
+        '/locations/germany',
+        '/locations/netherlands',
+        '/locations/turkey',
       ].sort(),
     );
   });
@@ -444,7 +447,7 @@ describe('structured data', () => {
 describe('regional routes', () => {
   const hub = () => ROUTE_SEO[LOCATIONS_HUB_PATH];
 
-  it('registers the hub and exactly the six active markets', () => {
+  it('registers the hub and exactly the nine active markets', () => {
     expect(LOCATIONS_HUB_PATH).toBe('/locations');
     expect(LOCATION_CONTENT.map((location) => location.path)).toEqual([
       '/locations/united-states',
@@ -453,6 +456,9 @@ describe('regional routes', () => {
       '/locations/canada',
       '/locations/australia',
       '/locations/singapore',
+      '/locations/germany',
+      '/locations/netherlands',
+      '/locations/turkey',
     ]);
     for (const location of LOCATION_CONTENT) expect(ROUTE_SEO[location.path], location.path).toBeDefined();
   });
@@ -461,7 +467,23 @@ describe('regional routes', () => {
     for (const location of LOCATION_CONTENT) {
       expect(location.path).toMatch(/^\/locations\/[a-z-]+$/);
       expect(location.path.split('/')).toHaveLength(3);
-      for (const bad of ['/usa', '/uk', '/uae', '?country=', 'dubai', 'london', 'new-york']) {
+      for (const bad of [
+        '/usa',
+        '/uk',
+        '/uae',
+        '?country=',
+        'dubai',
+        'london',
+        'new-york',
+        'berlin',
+        'munich',
+        'amsterdam',
+        'istanbul',
+        'ankara',
+        'deutschland',
+        'nederland',
+        'turkiye',
+      ]) {
         expect(location.path.includes(bad), `${location.path} contains ${bad}`).toBe(false);
       }
     }
@@ -575,9 +597,19 @@ describe('regional routes', () => {
     // "in the United States" would read as an office; "for US businesses" does not.
     for (const location of LOCATION_CONTENT) {
       const route = ROUTE_SEO[location.path];
-      expect(route.title, location.path).not.toMatch(/\b(?:in|based in|located in) (?:the )?(?:US|USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Dubai|Abu Dhabi|London|New York|Toronto|Sydney)\b/i);
+      expect(route.title, location.path).not.toMatch(/\b(?:in|based in|located in) (?:the )?(?:US|USA|UK|UAE|United States|United Kingdom|United Arab Emirates|Canada|Australia|Germany|Netherlands|Turkey|Dubai|Abu Dhabi|London|New York|Toronto|Sydney|Berlin|Amsterdam|Istanbul)\b/i);
       expect(route.description, location.path).not.toMatch(/\boffices? in\b/i);
-      expect(route.title, location.path).not.toMatch(/\bour (?:US|USA|UK|UAE|Canadian|Australian|Singapore) (?:office|team)\b/i);
+      expect(route.title, location.path).not.toMatch(/\bour (?:US|USA|UK|UAE|Canadian|Australian|Singapore|German|Dutch|Turkish|Netherlands) (?:office|team|developers|staff)\b/i);
+      // Phase 3C wording rules: a market page is "for" a country, never "in"
+      // it, and never a company or a team of that nationality.
+      for (const forbidden of [
+        /\b(?:German|Dutch|Turkish|Singaporean|Emirati) software (?:development )?company\b/i,
+        /\blocal software developers\b/i,
+        /\bour (?:Netherlands|Germany|Turkey) (?:development )?team\b/i,
+      ]) {
+        expect(route.title, location.path).not.toMatch(forbidden);
+        expect(route.description, location.path).not.toMatch(forbidden);
+      }
     }
   });
 

@@ -202,6 +202,9 @@ const RoutesComponent = () => {
       <Route path="/locations/canada" element={<ContentRoute route="/locations/canada" />} />
       <Route path="/locations/australia" element={<ContentRoute route="/locations/australia" />} />
       <Route path="/locations/singapore" element={<ContentRoute route="/locations/singapore" />} />
+      <Route path="/locations/germany" element={<ContentRoute route="/locations/germany" />} />
+      <Route path="/locations/netherlands" element={<ContentRoute route="/locations/netherlands" />} />
+      <Route path="/locations/turkey" element={<ContentRoute route="/locations/turkey" />} />
       <Route path="/products" element={<ProductShowcase />} />
       <Route path="/project-analysis" element={<ProjectAnalysis />} />
       <Route

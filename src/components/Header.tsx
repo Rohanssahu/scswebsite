@@ -373,20 +373,36 @@ const Header = () => {
                     {t('nav.locations')}
                     <ArrowRight className={`ms-auto h-4 w-4 ${rtl ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </Link>
-                  <div className="mt-2 flex flex-col gap-1">
-                    {LOCATION_NAV.map((market) => (
-                      <Link
-                        key={market.path}
-                        to={market.path}
-                        className={`rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
-                          isActive(market.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-600 hover:bg-gray-50 hover:text-pink-600'
-                        }`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        {market.label}
-                      </Link>
-                    ))}
-                  </div>
+                  {/* Nine markets is too many to leave permanently expanded in
+                      a phone drawer that already lists sixteen services, so
+                      they live inside a native <details>. It is collapsed
+                      unless the visitor is already on a market page, needs no
+                      JavaScript, and stays keyboard-reachable for free. The
+                      hub link above it is always visible, because that is the
+                      gateway the site actually navigates through. */}
+                  <details
+                    open={isLocationPath(location.pathname)}
+                    className="mt-2 [&_summary::-webkit-details-marker]:hidden"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400">
+                      {t('nav.markets')}
+                      <ChevronDown className="ms-auto h-4 w-4 transition-transform" aria-hidden="true" />
+                    </summary>
+                    <div className="mt-1 grid grid-cols-2 gap-1">
+                      {LOCATION_NAV.map((market) => (
+                        <Link
+                          key={market.path}
+                          to={market.path}
+                          className={`rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                            isActive(market.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-600 hover:bg-gray-50 hover:text-pink-600'
+                          }`}
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {market.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
                 </div>
               </nav>
             </motion.div>

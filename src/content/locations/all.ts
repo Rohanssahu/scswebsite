@@ -1,7 +1,7 @@
 /**
  * Every regional page, fully composed: metadata joined to body copy.
  *
- * Importing this module pulls all six country bodies (~200 KB of prose) into
+ * Importing this module pulls all nine country bodies (~300 KB of prose) into
  * whatever imports it. That is the right trade for tests and other build-time
  * consumers and the wrong trade for the browser, so **nothing under
  * `src/pages`, `src/components`, `src/data` or `src/seo` may import this
@@ -12,7 +12,10 @@
 
 import { australia } from './australia';
 import { canada } from './canada';
+import { germany } from './germany';
+import { netherlands } from './netherlands';
 import { singapore } from './singapore';
+import { turkey } from './turkey';
 import { unitedArabEmirates } from './unitedArabEmirates';
 import { unitedKingdom } from './unitedKingdom';
 import { unitedStates } from './unitedStates';
@@ -27,6 +30,9 @@ export const LOCATION_BODIES: LocationBody[] = [
   canada,
   australia,
   singapore,
+  germany,
+  netherlands,
+  turkey,
 ];
 
 /** The active markets. Exactly the countries with a written page. */
@@ -36,6 +42,16 @@ export const LOCATION_CONTENT_BY_PATH: Record<string, LocationContent> = Object.
   LOCATION_CONTENT.map((location) => [location.path, location]),
 );
 
-export { australia, canada, singapore, unitedArabEmirates, unitedKingdom, unitedStates };
+export {
+  australia,
+  canada,
+  germany,
+  netherlands,
+  singapore,
+  turkey,
+  unitedArabEmirates,
+  unitedKingdom,
+  unitedStates,
+};
 export { locationsHub } from './hub';
 export type { LocationsHub, MarketEntry } from './hub';

@@ -380,6 +380,24 @@ export const australia: LocationBody = {
       blurb:
         'Integration-heavy regional platforms and AI assistants, run across a two-and-a-half-hour difference and a nearly shared working day.',
     },
+    {
+      path: '/locations/germany',
+      label: 'Germany',
+      blurb:
+        'A wide daily overlap put to different use: specification workshops and milestone acceptance rather than written handovers.',
+    },
+    {
+      path: '/locations/netherlands',
+      label: 'Netherlands',
+      blurb:
+        'Integration-led builds where most of the effort sits in the interfaces between systems nobody wants to replace.',
+    },
+    {
+      path: '/locations/turkey',
+      label: 'Turkey',
+      blurb:
+        'Marketplaces, bookings and AI voice agents for a consumer audience, built for launch-day traffic rather than a quiet rollout.',
+    },
   ],
   cta: {
     title: 'Describe the product and the date it has to be live',
