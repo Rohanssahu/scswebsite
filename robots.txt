@@ -1,24 +1,20 @@
-User-agent: Googlebot
-Allow: /
-Disallow: /admin
-Disallow: /admin/
-
-User-agent: Bingbot
-Allow: /
-Disallow: /admin
-Disallow: /admin/
-
-User-agent: Twitterbot
-Allow: /
-Disallow: /admin
-Disallow: /admin/
-
-User-agent: facebookexternalhit
-Allow: /
-Disallow: /admin
-Disallow: /admin/
+# https://scssoftwares.com/robots.txt
+#
+# Public marketing pages are open to every crawler.
+#
+# Only two areas are blocked from crawling: the staff dashboard and the private
+# AI consultation rooms (whose URLs carry a per-visitor meeting reference that
+# no crawler should ever fetch).
+#
+# The other non-indexable routes — /project-analysis/result and
+# /ApplicationForm — are deliberately left crawlable so search engines can read
+# their `noindex,nofollow` meta tag. A Disallow here would hide that directive
+# and could leave a URL indexed without a snippet instead of removing it.
 
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
+Disallow: /ai-consultation/
+
+Sitemap: https://scssoftwares.com/sitemap.xml
