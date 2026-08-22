@@ -233,7 +233,7 @@ const uploadFile = async (file) => {
               value={formData.cover_note}
               onChange={handleChange}
               className="w-full border border-gray-300 p-2 rounded"
-              rows="4"
+              rows={4}
             ></textarea>
           </div>
 
@@ -265,7 +265,7 @@ const uploadFile = async (file) => {
                   contact: "",
                   gender: "",
                   cover_note: "",
-                  resume: null,
+                  resume1: null,
                 })
               }
             >

@@ -84,7 +84,7 @@ export const locationsHub = {
       path: '/locations/united-states',
       blurb:
         'Remote engineering for US businesses, with an agreed overlap window, a written scope before development and a build you can click every cycle.',
-      distinctive: 'The largest time-zone gap we work across, so the written trail carries more of the weight.',
+      distinctive: 'Nine and a half to thirteen and a half hours of clock difference, so the written trail carries more of the weight.',
     },
     {
       path: '/locations/united-kingdom',
@@ -96,7 +96,7 @@ export const locationsHub = {
       path: '/locations/united-arab-emirates',
       blurb:
         'Mobile-first products, booking and service platforms and AI assistants for UAE businesses, with Arabic interfaces scoped separately.',
-      distinctive: 'Barely any clock difference, so the working days effectively coincide.',
+      distinctive: 'An hour and a half of clock difference, the smallest on this page, so the working days effectively coincide.',
     },
     {
       path: '/locations/canada',
@@ -114,13 +114,13 @@ export const locationsHub = {
       path: '/locations/singapore',
       blurb:
         'Regional operations platforms, API integrations and AI assistants for Singapore businesses, with every decision recorded in writing.',
-      distinctive: 'Two and a half hours apart, which makes a genuinely shared working day the easiest one we have.',
+      distinctive: 'Two and a half hours ahead of us, with no daylight saving on either side, so the shared day never shifts.',
     },
     {
       path: '/locations/germany',
       blurb:
         'Specification-led builds for German businesses: acceptance criteria agreed before implementation, and documentation and test evidence delivered with the release.',
-      distinctive: 'The only market whose first question is almost always about the specification rather than about us.',
+      distinctive: 'A buyer who reads the specification before the pitch, so acceptance criteria are settled first.',
     },
     {
       path: '/locations/netherlands',
@@ -132,7 +132,7 @@ export const locationsHub = {
       path: '/locations/turkey',
       blurb:
         'Consumer products, marketplaces, booking platforms and AI voice agents for Turkish businesses, with each local provider integration scoped separately.',
-      distinctive: 'The one market where the interface language is a costed line in the scope from the first conversation.',
+      distinctive: 'Turkish interface work is a costed line in the scope from the first conversation, not an afterthought.',
     },
   ] satisfies MarketEntry[],
   /** What the hub will not claim, stated where a visitor can read it. */

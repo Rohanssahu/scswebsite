@@ -64,10 +64,13 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-1VQ1H1Y6S1');
+      // Page views are sent by src/components/RouteAnalytics.tsx, once per
+      // route navigation. The tag must not also send one of its own here, or
+      // every landing page would be counted twice.
+      gtag('config', 'G-1VQ1H1Y6S1', { send_page_view: false });
     </script>
-    <script type="module" crossorigin src="/assets/index-BVDs9BOE.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BLn6BM5s.css">
+    <script type="module" crossorigin src="/assets/index-05FmW9Lg.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CYM-J2TH.css">
   </head>
 
 <body>

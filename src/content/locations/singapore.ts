@@ -243,9 +243,9 @@ export const singapore: LocationBody = {
   },
   communication: {
     eyebrow: 'The working day',
-    heading: 'Two and a half hours apart, and what that does and does not mean',
+    heading: 'Two and a half hours ahead of us, and what that does and does not mean',
     intro:
-      'This is the smallest distance we work across, which makes the day comfortable. It is worth being precise about what we are actually offering.',
+      'The gap is short, stable and in your favour by two and a half hours, which makes the day comfortable. It is worth being precise about what we are actually offering.',
     points: [
       'Singapore Standard Time is two and a half hours ahead of Indian Standard Time, and neither country observes daylight saving, so the difference never changes.',
       'The working weeks align, which means most of your day and most of ours overlap and a question raised in your morning is normally answered in it.',

@@ -10,6 +10,7 @@ import { AnalysisDraft, AnalysisResult, EntryMethod, ProjectMode } from '@/types
 import { clearDraft, hasDraftAnswers, loadDraft, saveDraft, saveResult } from '@/lib/analysisStore';
 import { buildDemoAnalysis } from '@/data/demoAnalysis';
 import { generateAiAnalysis, isAiAnalysisReady } from '@/services/aiAnalysis';
+import { trackConversion } from '@/utils/conversionAnalytics';
 
 type Phase = 'select' | 'entry' | 'analyzing';
 
@@ -95,6 +96,8 @@ const ProjectAnalysis = () => {
     const result =
       aiResultRef.current ?? { ...buildDemoAnalysis(draft.mode, draft.answers), source: 'demo' as const };
     saveResult(result);
+    // Which engine produced it is the only detail reported: 'ai' or 'demo'.
+    trackConversion('project_analysis_completed', result.source === 'ai' ? 'ai' : 'demo');
     navigate('/project-analysis/result');
   };
 

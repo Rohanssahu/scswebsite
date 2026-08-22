@@ -378,7 +378,7 @@ export const canada: LocationBody = {
       path: '/locations/singapore',
       label: 'Singapore',
       blurb:
-        'Regional operations platforms and integration-heavy builds, run across the shortest working-day gap of any market we serve.',
+        'Regional operations platforms and integration-heavy builds, run inside a working day that overlaps almost entirely with ours.',
     },
     {
       path: '/locations/germany',

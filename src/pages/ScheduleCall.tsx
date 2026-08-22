@@ -85,7 +85,7 @@ function meetingSlug(value: string): string {
 
 /** Deterministic dummy availability: a couple of slots per day are "taken". */
 function isSlotAvailable(dateIso: string, slotIndex: number): boolean {
-  const daySeed = parseInt(dateIso.replaceAll('-', ''), 10);
+  const daySeed = parseInt(dateIso.replace(/-/g, ''), 10);
   return (daySeed + slotIndex) % 4 !== 0;
 }
 

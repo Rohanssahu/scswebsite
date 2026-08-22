@@ -10,6 +10,7 @@ import TurnstileWidget, { TurnstileWidgetHandle } from '../components/forms/Turn
 import HoneypotField from '../components/forms/HoneypotField';
 import { validateContactForm } from '@/lib/leadValidation';
 import { buildContactRequest, submitLead, LeadSubmissionError } from '@/services/leadService';
+import { trackConversion } from '@/utils/conversionAnalytics';
 import { isLeadCaptureReady } from '@/services/supabaseClient';
 
 const primaryBtn =
@@ -112,6 +113,9 @@ const Contact = () => {
           honeypot,
         );
         const result = await submitLead(request);
+        // The submission is accepted at this point; the email notification below
+        // is a courtesy and its failure does not undo the conversion.
+        trackConversion('contact_submitted');
         const emailSent = await sendNotificationEmail();
         setDialog({
           open: true,

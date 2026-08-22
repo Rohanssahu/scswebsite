@@ -354,7 +354,7 @@ export const australia: LocationBody = {
       path: '/locations/united-states',
       label: 'United States',
       blurb:
-        'The widest clock gap we work across, handled with a written scope, a fixed meeting window and a build demonstrated every cycle.',
+        'A clock gap of nine and a half to thirteen and a half hours, handled with a written scope, a fixed meeting window and a build demonstrated every cycle.',
     },
     {
       path: '/locations/united-kingdom',

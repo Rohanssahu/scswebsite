@@ -63,10 +63,13 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-1VQ1H1Y6S1');
+      // Page views are sent by src/components/RouteAnalytics.tsx, once per
+      // route navigation. The tag must not also send one of its own here, or
+      // every landing page would be counted twice.
+      gtag('config', 'G-1VQ1H1Y6S1', { send_page_view: false });
     </script>
-    <script type="module" crossorigin src="/assets/index-BVDs9BOE.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BLn6BM5s.css">
+    <script type="module" crossorigin src="/assets/index-05FmW9Lg.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CYM-J2TH.css">
   </head>
 
 <body>
@@ -74,14 +77,14 @@
     at Suspense
     at RenderedRoute (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:539:7)
     at Routes (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:1240:7)
-    at RoutesComponent (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:213:41)
+    at RoutesComponent (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:220:41)
     at SiteRoutes
     at Router (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router/dist/umd/react-router.development.js:1174:17)
     at StaticRouter (/Users/rohansahu/Desktop/scs/scswebsite/node_modules/react-router-dom/server.js:35:3)
     at Provider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@radix-ui/react-context/dist/index.mjs:27:15)
     at TooltipProvider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
     at QueryClientProvider (file:///Users/rohansahu/Desktop/scs/scswebsite/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
-    at AppProviders (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:120:29)"></template><div class="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">Loading…</div><!--/$--></div>
+    at AppProviders (/Users/rohansahu/Desktop/scs/scswebsite/src/App.tsx:122:29)"></template><div class="flex min-h-screen items-center justify-center bg-gray-50 text-gray-700">Loading…</div><!--/$--></div>
 
 </body>
 </html>

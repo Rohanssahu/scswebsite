@@ -241,7 +241,7 @@ export const unitedArabEmirates: LocationBody = {
     eyebrow: 'Time zones',
     heading: 'A working day that mostly lines up',
     intro:
-      'Indian Standard Time sits an hour and a half ahead of Gulf Standard Time. In practice that means a shared working day rather than a handover window — but we still commit to specifics per project rather than in general.',
+      'Indian Standard Time sits an hour and a half ahead of Gulf Standard Time, which is the smallest gap between us and any of the nine markets on this site. In practice that means a shared working day rather than a handover window, though we still commit to specifics per project rather than in general.',
     points: [
       'Most of your working hours fall inside ours, so questions are usually answered the same morning or afternoon.',
       'The recurring meeting slot is agreed at kick-off in Gulf time and held for the length of the engagement.',
@@ -373,7 +373,7 @@ export const unitedArabEmirates: LocationBody = {
       path: '/locations/singapore',
       label: 'Singapore',
       blurb:
-        'Multi-entity operations platforms and document automation, run across the smallest clock gap of any market we serve.',
+        'Multi-entity operations platforms and document automation, run across a two-and-a-half-hour gap that never moves.',
     },
     {
       path: '/locations/germany',

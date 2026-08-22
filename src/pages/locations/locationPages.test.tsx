@@ -597,6 +597,106 @@ describe('regional page copy is honest about location', () => {
     }
   });
 
+  // Phase 4. The clock-difference copy was the one place where a comparative
+  // claim had crept in that the market list no longer supported. Indian
+  // Standard Time is UTC+5:30, so against the nine markets on this site the
+  // gaps are:
+  //
+  //   UAE          UTC+4                       1.5h                (unique minimum)
+  //   Singapore    UTC+8                       2.5h, Singapore ahead
+  //   Turkey       UTC+3                       2.5h, India ahead
+  //   Australia    UTC+8 (AWST) – UTC+11       2.5h – 5.5h
+  //   Germany / NL UTC+1 – UTC+2               3.5h – 4.5h
+  //   UK           UTC+0 – UTC+1               4.5h – 5.5h
+  //   Canada       UTC-2:30 (NDT) – UTC-8      8h – 13.5h
+  //   US           UTC-4 (EDT) – UTC-8         9.5h – 13.5h
+  //
+  // Two consequences the copy has to respect. Singapore's gap is not the
+  // smallest and not even uniquely 2.5h — Turkey and Western Australia share
+  // it — so no page may call it the shortest. And the widest gap is a tie
+  // between the US and Canada at 13.5h, so neither may claim it outright.
+  // UAE at 1.5h is the one time-gap superlative that survives, and it is
+  // scoped to the markets on this site rather than stated absolutely.
+  const IST_OFFSET = 5.5;
+  const MARKET_OFFSETS: Record<string, [number, number]> = {
+    '/locations/united-states': [-8, -4],
+    '/locations/united-kingdom': [0, 1],
+    '/locations/united-arab-emirates': [4, 4],
+    '/locations/canada': [-8, -2.5],
+    '/locations/australia': [8, 11],
+    '/locations/singapore': [8, 8],
+    '/locations/germany': [1, 2],
+    '/locations/netherlands': [1, 2],
+    '/locations/turkey': [3, 3],
+  };
+  const gapRange = ([lo, hi]: [number, number]) =>
+    [Math.min(Math.abs(IST_OFFSET - lo), Math.abs(IST_OFFSET - hi)), Math.max(Math.abs(IST_OFFSET - lo), Math.abs(IST_OFFSET - hi))] as const;
+
+  it('has a market list in which only the UAE gap is uniquely the smallest', () => {
+    // The premise the copy rests on, asserted rather than assumed: if a tenth
+    // market ever lands inside 1.5 hours, this fails before the copy misleads.
+    expect(Object.keys(MARKET_OFFSETS).sort()).toEqual(LOCATION_CONTENT.map((c) => c.path).sort());
+    const minima = Object.entries(MARKET_OFFSETS).map(([path, o]) => [path, gapRange(o)[0]] as const);
+    const smallest = Math.min(...minima.map(([, g]) => g));
+    expect(minima.filter(([, g]) => g === smallest).map(([p]) => p)).toEqual(['/locations/united-arab-emirates']);
+    expect(smallest).toBe(1.5);
+    // And the widest is a tie, which is why no page claims it.
+    const maxima = Object.entries(MARKET_OFFSETS).map(([path, o]) => [path, gapRange(o)[1]] as const);
+    const widest = Math.max(...maxima.map(([, g]) => g));
+    expect(maxima.filter(([, g]) => g === widest).map(([p]) => p).sort()).toEqual(['/locations/canada', '/locations/united-states']);
+  });
+
+  it('claims no unverified cross-market superlative', () => {
+    // A superlative about "any market we serve" is only honest when it holds
+    // across all nine. The UAE's hour and a half is the single verified one,
+    // and the exemption is written narrowly enough that a reworded version
+    // would still have to come back through this test.
+    const VERIFIED = /the smallest gap between us and any of the nine markets on this site|the smallest on this page/;
+    const SUPERLATIVE = [
+      // A superlative sitting close to a clock noun: "the shortest working-day
+      // gap", "the widest clock difference". Bounded to one sentence and one
+      // line, so ordinary prose two clauses away cannot trip it.
+      /\b(?:shortest|smallest|narrowest|largest|widest|biggest|closest|nearest|tightest|easiest)\b[^.\n]{0,60}?\b(?:clock|time[- ]?zone|timezone|working[- ]day|gap|difference|distance|overlap)\b/gi,
+      // The mirror image: the noun first, the superlative after it.
+      /\b(?:clock|time[- ]?zone|timezone|working[- ]day|gap|difference|distance|overlap)\b[^.\n]{0,60}?\b(?:shortest|smallest|narrowest|largest|widest|biggest|closest|nearest|tightest|easiest)\b/gi,
+      // Exclusivity across the market list, which is a superlative in prose form.
+      /\bthe (?:only|one|single) market\b[^.\n]{0,90}/gi,
+      // Anything measured against "any market we serve" and its variants.
+      /\bof any market we (?:serve|work with|build for)\b/gi,
+    ];
+    const sources: [string, string][] = [
+      ...LOCATION_CONTENT.map((c) => [c.path, ownCopy(c).join(' \n ')] as [string, string]),
+      [LOCATIONS_HUB_PATH, stringLeaves(locationsHub).join(' \n ')],
+    ];
+    for (const [label, text] of sources) {
+      for (const pattern of SUPERLATIVE) for (const match of text.matchAll(pattern)) {
+        // Judged on the whole sentence, not the fragment the pattern matched:
+        // the exemption names a specific, verifiable phrasing, and a match of
+        // two words could never carry it.
+        const sentence = sentenceAround(text, match.index ?? 0);
+        expect(
+          VERIFIED.test(sentence),
+          `${label} makes an unverified cross-market superlative: "${sentence.slice(0, 160)}"`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('describes the Singapore and Turkey gaps as the opposite directions they are', () => {
+    const singapore = ownCopy(LOCATION_CONTENT.find((c) => c.path === '/locations/singapore')!).join(' ');
+    const turkey = ownCopy(LOCATION_CONTENT.find((c) => c.path === '/locations/turkey')!).join(' ');
+    // Singapore is two and a half hours *ahead* of India.
+    expect(/Singapore Standard Time is two and a half hours ahead of Indian Standard Time/i.test(singapore)).toBe(true);
+    expect(/Singapore[^.]{0,60}\bhours behind Indian Standard Time\b/i.test(singapore)).toBe(false);
+    // Turkey is two and a half hours *behind* India — stated as India ahead.
+    expect(/Indian Standard Time is a constant two and a half hours ahead of Turkish local time/i.test(turkey)).toBe(true);
+    expect(/Turk(?:ey|ish)[^.]{0,60}\bhours ahead of Indian Standard Time\b/i.test(turkey)).toBe(false);
+    // Neither page calls its gap the smallest.
+    for (const [label, text] of [['singapore', singapore], ['turkey', turkey]] as const) {
+      expect(/\b(?:smallest|shortest|narrowest)\b/i.test(text), `${label} claims the smallest gap`).toBe(false);
+    }
+  });
+
   it('cites no market statistic, ranking or demand figure', () => {
     for (const content of LOCATION_CONTENT) {
       const text = ownCopy(content).join(' ');

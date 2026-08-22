@@ -17,6 +17,7 @@ import {
   submitLead,
   LeadSubmissionError,
 } from '@/services/leadService';
+import { trackConversion } from '@/utils/conversionAnalytics';
 import { validateEmail, validateName, validatePhone, validateReviewMessage } from '@/lib/leadValidation';
 import { estimatedWeeks, totalCost, totalHours } from '@/data/demoAnalysis';
 import type { AnalysisResult, AnswerMap } from '@/types/projectAnalysis';
@@ -107,6 +108,7 @@ const SubmitRequirementDialog = ({ variant, open, onClose, result, answers }: Su
         ? buildHumanReviewRequest(input, turnstileToken, context, honeypot)
         : buildRequirementRequest(input, turnstileToken, context, honeypot);
       const res = await submitLead(request);
+      trackConversion(isReview ? 'human_review_requested' : 'requirement_submitted', isReview ? 'review' : 'requirement');
       setSuccess({ referenceCode: res.referenceCode, reviewStatus: res.reviewStatus });
     } catch (err) {
       setSubmitError(
