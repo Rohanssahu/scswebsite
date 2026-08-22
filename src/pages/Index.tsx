@@ -49,9 +49,9 @@ const DEMO_TEAM = [
   { slug: 'qa-tester', rate: 10 },
 ];
 
-// The five canonical software-development pages lead the section; the four
-// services still on their original /gig/ URLs follow. Paths come from the same
-// shared nav list the header and footer use.
+// The five canonical software-development pages lead the section, then the AI
+// pages, then the supporting design, cloud, delivery and growth pages. Paths
+// come from the same shared nav list the header and footer use.
 const CORE_SERVICE_ICONS: Record<string, React.ElementType> = {
   'custom-software-development': Boxes,
   'mobile-app-development': Smartphone,
@@ -84,7 +84,7 @@ const AI_SERVICES = AI_SERVICE_NAV.map((service) => ({
 const OTHER_SERVICE_ICONS: Record<string, React.ElementType> = {
   'ui-ux-design': Palette,
   'cloud-solutions': Cloud,
-  'devops-services': Settings,
+  'devops-engineering': Settings,
   'digital-marketing': TrendingUp,
 };
 

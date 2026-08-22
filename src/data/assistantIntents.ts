@@ -62,7 +62,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     id: 'services',
     keywords: [['service'], ['what', 'do', 'you', 'do'], ['offer'], ['portfolio'], ['work', 'done']],
     response:
-      'SCS Softwares offers custom software, mobile app, web application and SaaS development, software modernization, and AI work — AI development, machine learning, voice agents, AI video consultation agents, conversational AI and AI automation. UI/UX design, cloud, DevOps and digital marketing sit alongside them.',
+      'SCS Softwares offers custom software, mobile app, web application and SaaS development, software modernization, and AI work — AI development, machine learning, voice agents, AI video consultation agents, conversational AI and AI automation. UI/UX design, cloud and DevOps engineering sit alongside them, and SEO and marketing support is a separate supporting service.',
     actions: [
       { label: 'All services', to: '/services' },
       { label: 'AI development', to: '/services/ai-development' },

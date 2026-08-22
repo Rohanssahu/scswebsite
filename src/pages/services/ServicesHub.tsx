@@ -12,10 +12,10 @@ import type { HubEntry } from '@/content/services';
 /**
  * The `/services` hub: one page listing every service and linking to it.
  *
- * Names come from the service content itself for the `/services/*` pages, so a
- * card, a breadcrumb and the Service JSON-LD can never disagree about what a
- * page is called. The four `/gig/*` pages keep their translated names from the
- * shared `services.names` table until they are migrated.
+ * Names come from the service content itself, so a card, a breadcrumb and the
+ * Service JSON-LD can never disagree about what a page is called. Every entry
+ * now points at a `/services/*` page; the translated `services.names` table is
+ * only a fallback for an entry with no content module.
  */
 
 const primaryBtn =
@@ -26,7 +26,8 @@ const secondaryBtn =
 const GROUP_ACCENTS: Record<string, string> = {
   software: 'from-orange-400 to-pink-500',
   ai: 'from-pink-500 to-purple-600',
-  other: 'from-purple-500 to-pink-500',
+  delivery: 'from-purple-500 to-pink-500',
+  growth: 'from-orange-400 to-purple-500',
 };
 
 const ServicesHub = () => {
@@ -36,7 +37,7 @@ const ServicesHub = () => {
   const nameFor = (entry: HubEntry): string => {
     const service = SERVICE_CONTENT_BY_PATH[entry.path];
     if (service) return service.navLabel;
-    return t(`services.names.${entry.path.replace('/gig/', '')}`);
+    return t(`services.names.${entry.path.replace('/services/', '')}`);
   };
 
   return (

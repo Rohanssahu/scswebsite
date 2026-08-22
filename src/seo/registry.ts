@@ -161,67 +161,6 @@ function buildRoute(spec: RouteSpec): RouteSeo {
 }
 
 /**
- * The four remaining `/gig/*` pages under `src/pages/gigs`.
- *
- * Web and mobile development used to live here too. Both moved to the
- * canonical `/services/*` pages below; their old paths stay alive as noindex
- * forwarding stubs (see LEGACY_SERVICE_REDIRECTS). UI/UX, cloud, DevOps and
- * digital marketing are unchanged and are scheduled for a later phase.
- */
-const SERVICE_PAGES: { path: string; name: string; serviceType: string; description: string; title: string }[] = [
-  {
-    path: '/gig/digital-marketing',
-    name: 'Digital Marketing',
-    serviceType: 'Digital Marketing',
-    description:
-      'SEO, paid search, social and content marketing programmes run alongside your product build, so the site we ship is the site that gets found.',
-    title: 'Digital Marketing Services | SCS Softwares',
-  },
-  {
-    path: '/gig/ui-ux-design',
-    name: 'UI/UX Design',
-    serviceType: 'UI/UX Design',
-    description:
-      'User research, wireframes, design systems and accessible interface design for web and mobile products — handed to developers as build-ready specifications.',
-    title: 'UI/UX Design Services | SCS Softwares',
-  },
-  {
-    path: '/gig/cloud-solutions',
-    name: 'Cloud Solutions',
-    serviceType: 'Cloud Consulting and Migration',
-    description:
-      'Cloud migration, infrastructure-as-code, serverless architecture and cost optimisation on AWS, Azure and Google Cloud, delivered remotely from India.',
-    title: 'Cloud Solutions & Migration | SCS Softwares',
-  },
-  {
-    path: '/gig/devops-services',
-    name: 'DevOps Services',
-    serviceType: 'DevOps Engineering',
-    description:
-      'CI/CD pipelines, containerisation, infrastructure automation and monitoring set up so your team can ship changes safely and repeatedly.',
-    title: 'DevOps Services & CI/CD | SCS Softwares',
-  },
-];
-
-const SERVICE_ROUTES: RouteSpec[] = SERVICE_PAGES.map((service) => ({
-  path: service.path,
-  title: service.title,
-  description: service.description,
-  robots: 'index,follow',
-  indexability: 'indexable',
-  prerender: true,
-  priority: 0.8,
-  jsonLd: [
-    serviceJsonLd({
-      name: service.name,
-      serviceType: service.serviceType,
-      description: service.description,
-      path: service.path,
-    }),
-  ],
-}));
-
-/**
  * The `/services` hub. It lists every service and is the middle crumb in every
  * service page's `Home › Services › Service Name` trail, so it carries a
  * BreadcrumbList but no Service node — it describes no single service.
@@ -239,8 +178,8 @@ const SERVICES_HUB_ROUTE: RouteSpec = {
 };
 
 /**
- * Every canonical service page — the software-development group and the AI
- * group.
+ * Every canonical service page: the software-development group, the AI group,
+ * and the supporting design, cloud, delivery and growth pages.
  *
  * Title, description, Service JSON-LD and the BreadcrumbList all come from the
  * same content module the page body renders, so the metadata and the visible
@@ -267,7 +206,8 @@ const CANONICAL_SERVICE_ROUTES: RouteSpec[] = SERVICE_CONTENT.map((service) => (
 }));
 
 /**
- * Old service URLs, kept alive so existing links and bookmarks still resolve.
+ * Every old `/gig/*` service URL, kept alive so existing links and bookmarks
+ * still resolve. Nothing on the site links to them any more.
  *
  * Each one prerenders to the same forwarding stub `/consultation-form` uses: a
  * 200 response carrying `noindex,follow`, a canonical pointing at the
@@ -297,6 +237,50 @@ const LEGACY_SERVICE_REDIRECTS: RouteSpec[] = [
     prerender: true,
     redirectTo: '/services/web-application-development',
     canonical: '/services/web-application-development',
+  },
+  {
+    path: '/gig/ui-ux-design',
+    title: 'UI/UX Design Has Moved | SCS Softwares',
+    description:
+      'Our UI/UX design service now lives at /services/ui-ux-design. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/ui-ux-design',
+    canonical: '/services/ui-ux-design',
+  },
+  {
+    path: '/gig/cloud-solutions',
+    title: 'Cloud Solutions Has Moved | SCS Softwares',
+    description:
+      'Our cloud service now lives at /services/cloud-solutions. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/cloud-solutions',
+    canonical: '/services/cloud-solutions',
+  },
+  {
+    path: '/gig/devops-services',
+    title: 'DevOps Services Has Moved | SCS Softwares',
+    description:
+      'Our DevOps service now lives at /services/devops-engineering. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/devops-engineering',
+    canonical: '/services/devops-engineering',
+  },
+  {
+    path: '/gig/digital-marketing',
+    title: 'Digital Marketing Has Moved | SCS Softwares',
+    description:
+      'Our digital marketing support service now lives at /services/digital-marketing. You are being forwarded to the new page.',
+    robots: 'noindex,follow',
+    indexability: 'redirect',
+    prerender: true,
+    redirectTo: '/services/digital-marketing',
+    canonical: '/services/digital-marketing',
   },
 ];
 
@@ -385,7 +369,6 @@ const ROUTE_SPECS: RouteSpec[] = [
   },
   SERVICES_HUB_ROUTE,
   ...CANONICAL_SERVICE_ROUTES,
-  ...SERVICE_ROUTES,
   {
     path: '/PrivacyPolicy',
     title: 'Privacy Policy | SCS Softwares',

@@ -30,10 +30,21 @@ export type ServiceIconKey =
   | 'voice'
   | 'video-consultation'
   | 'conversational'
-  | 'automation';
+  | 'automation'
+  | 'design'
+  | 'cloud'
+  | 'devops'
+  | 'marketing';
 
-/** Which menu group a service belongs to, in the header, footer and hub. */
-export type ServiceGroup = 'software' | 'ai';
+/**
+ * Which menu group a service belongs to, in the header, footer and hub.
+ *
+ * `software` and `ai` are the two engineering pillars. `design` and `platform`
+ * are the supporting delivery services (UI/UX, cloud, DevOps), and `growth` is
+ * kept separate again so marketing support is never presented as part of the
+ * engineering offer.
+ */
+export type ServiceGroup = 'software' | 'ai' | 'design' | 'platform' | 'growth';
 
 export interface ProblemBlock {
   title: string;
@@ -116,9 +127,10 @@ export interface ServiceContent {
   /** How the service connects to the systems a client already runs. */
   integration?: ServiceSectionHeader & { points: string[] };
   /**
-   * What the technology cannot do, and the human review that compensates.
-   * Required on every AI page: model output is probabilistic, and saying so
-   * plainly is part of selling it honestly.
+   * What the service cannot do, and the review that compensates. Required on
+   * every AI page, because model output is probabilistic, and on the design,
+   * platform and growth pages, where the scope boundary is the honest part of
+   * the offer.
    */
   limitations?: ServiceSectionHeader & {
     points: string[];

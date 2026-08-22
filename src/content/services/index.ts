@@ -11,13 +11,17 @@ import { aiAutomationIntegration } from './aiAutomationIntegration';
 import { aiDevelopment } from './aiDevelopment';
 import { aiVideoConsultationAgents } from './aiVideoConsultationAgents';
 import { aiVoiceAgentDevelopment } from './aiVoiceAgentDevelopment';
+import { cloudSolutions } from './cloudSolutions';
 import { conversationalAiDevelopment } from './conversationalAiDevelopment';
 import { customSoftwareDevelopment } from './customSoftwareDevelopment';
+import { devopsEngineering } from './devopsEngineering';
+import { digitalMarketing } from './digitalMarketing';
 import { machineLearningDevelopment } from './machineLearningDevelopment';
 import { mobileAppDevelopment } from './mobileAppDevelopment';
 import { saasDevelopment } from './saasDevelopment';
 import { servicesHub } from './hub';
 import { softwareModernization } from './softwareModernization';
+import { uiUxDesign } from './uiUxDesign';
 import { webApplicationDevelopment } from './webApplicationDevelopment';
 import type { ServiceContent } from './types';
 
@@ -48,8 +52,33 @@ export const AI_SERVICE_CONTENT: ServiceContent[] = [
   aiAutomationIntegration,
 ];
 
+/**
+ * Design, cloud and delivery service pages (Phase 2C). These support a build
+ * rather than being one of the two engineering pillars.
+ */
+export const DELIVERY_SERVICE_CONTENT: ServiceContent[] = [uiUxDesign, cloudSolutions, devopsEngineering];
+
+/**
+ * Growth services (Phase 2C). Kept in a group of its own so marketing support
+ * is never presented as part of the software or AI engineering offer.
+ */
+export const GROWTH_SERVICE_CONTENT: ServiceContent[] = [digitalMarketing];
+
+/**
+ * The supporting services, in the order the header, footer, homepage and hub
+ * list them after the two engineering groups.
+ */
+export const SUPPORT_SERVICE_CONTENT: ServiceContent[] = [
+  ...DELIVERY_SERVICE_CONTENT,
+  ...GROWTH_SERVICE_CONTENT,
+];
+
 /** Every service page rendered by the shared ServicePage layout. */
-export const SERVICE_CONTENT: ServiceContent[] = [...SOFTWARE_SERVICE_CONTENT, ...AI_SERVICE_CONTENT];
+export const SERVICE_CONTENT: ServiceContent[] = [
+  ...SOFTWARE_SERVICE_CONTENT,
+  ...AI_SERVICE_CONTENT,
+  ...SUPPORT_SERVICE_CONTENT,
+];
 
 export const SERVICE_CONTENT_BY_PATH: Record<string, ServiceContent> = Object.fromEntries(
   SERVICE_CONTENT.map((service) => [service.path, service]),
@@ -87,13 +116,17 @@ export {
   aiDevelopment,
   aiVideoConsultationAgents,
   aiVoiceAgentDevelopment,
+  cloudSolutions,
   conversationalAiDevelopment,
   customSoftwareDevelopment,
+  devopsEngineering,
+  digitalMarketing,
   machineLearningDevelopment,
   mobileAppDevelopment,
   saasDevelopment,
   servicesHub,
   softwareModernization,
+  uiUxDesign,
   webApplicationDevelopment,
 };
 export type { ServiceContent } from './types';

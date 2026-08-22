@@ -120,6 +120,10 @@ describe.skipIf(!built)('prerender output', () => {
     const migrations: [string, string][] = [
       ['/gig/web-development', '/services/web-application-development'],
       ['/gig/mobile-development', '/services/mobile-app-development'],
+      ['/gig/ui-ux-design', '/services/ui-ux-design'],
+      ['/gig/cloud-solutions', '/services/cloud-solutions'],
+      ['/gig/devops-services', '/services/devops-engineering'],
+      ['/gig/digital-marketing', '/services/digital-marketing'],
     ];
     for (const [from, to] of migrations) {
       const html = read(from);
@@ -266,7 +270,7 @@ describe.skipIf(!built)('sitemap', () => {
   });
 
   it('lists no noindex, private, session or redirect URL', () => {
-    for (const excluded of ['/admin', '/ai-consultation', '/project-analysis/result', '/ApplicationForm', '/BlogPage', '/consultation-form']) {
+    for (const excluded of ['/admin', '/ai-consultation', '/project-analysis/result', '/ApplicationForm', '/BlogPage', '/consultation-form', '/gig/']) {
       expect(locs().some((loc) => loc.includes(excluded)), excluded).toBe(false);
     }
   });

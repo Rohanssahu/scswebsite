@@ -13,12 +13,13 @@
  *                                and GET every generated route, asserting the
  *                                status, title, canonical and robots directive
  *   7. service-page check      — the /services hub and every /services/* page:
- *                                physical
- *                                HTML with real copy, unique metadata, correct
- *                                canonical, sitemap membership, a visible
- *                                breadcrumb, matching Service and
- *                                BreadcrumbList JSON-LD, the three CTAs — plus
- *                                the old /gig URLs still forwarding as noindex
+ *                                physical HTML with real copy, unique
+ *                                metadata, correct canonical, sitemap
+ *                                membership, a visible breadcrumb, matching
+ *                                Service and BreadcrumbList JSON-LD, the three
+ *                                CTAs — plus every old /gig URL still
+ *                                forwarding as noindex and absent from the
+ *                                sitemap
  *
  * Usage: node scripts/verify-dist.mjs
  */
@@ -307,6 +308,10 @@ const SERVICE_PATHS = [
   '/services/ai-video-consultation-agents',
   '/services/conversational-ai-development',
   '/services/ai-automation-integration',
+  '/services/ui-ux-design',
+  '/services/cloud-solutions',
+  '/services/devops-engineering',
+  '/services/digital-marketing',
 ];
 
 /** Claims these pages must never make. Checked against the rendered text. */
@@ -319,6 +324,17 @@ const FABRICATION_PATTERNS = [
   [/\b\d+\+ years\b/i, 'a years-in-business claim'],
   [/\boffices? in (?:the )?(?:USA|UK|Canada|Australia|Germany|Netherlands|Singapore|UAE|Turkey)\b/i, 'a foreign office'],
   [/\bbest AI (?:development )?(?:company|agency)\b/i, 'a best-company claim'],
+  // Phase 2C honesty sweep: superlatives and credentials we cannot support.
+  [/\bleading (?:software|AI|IT|digital|design|cloud|DevOps|marketing)\b/i, 'a "leading" claim'],
+  [/\bindustry[- ]leading\b/i, 'an industry-leading claim'],
+  [/\bthe best (?:software|AI|design|cloud|DevOps|marketing|development) (?:company|agency|team|partner)\b/i, 'a best-company claim'],
+  [/\bbest[- ]in[- ]class\b/i, 'a best-in-class claim'],
+  [/\bnumber one\b/i, 'a number-one claim'],
+  [/\bno\.? ?1\b/i, 'a number-one claim'],
+  [/\bcertified partner\b/i, 'a certified-partner claim'],
+  [/\b(?:AWS|Azure|Google Cloud|Google|Meta|Facebook) (?:certified|partner)\b/i, 'a platform partnership claim'],
+  [/\blocal offices?\b/i, 'a local office'],
+  [/\bguaranteed (?:rankings?|results?|leads?|traffic|revenue|conversions?)\b/i, 'a guaranteed outcome'],
 ];
 
 /** Text that appears on a page only if a disclaimer was removed. */
@@ -326,11 +342,24 @@ const REQUIRED_DISCLAIMERS = {
   '/services/ai-voice-agent-development': [/we do not offer telephone calling/i],
   '/services/ai-video-consultation-agents': [/not a human employee/i, /preliminary/i],
   '/services/machine-learning-development': [/bounded by the data available/i],
+  '/services/ui-ux-design': [/do not promise a conversion/i],
+  '/services/cloud-solutions': [/do not guarantee zero downtime/i, /no cloud provider partner status/i],
+  '/services/devops-engineering': [/do not guarantee uninterrupted availability/i],
+  '/services/digital-marketing': [
+    /do not guarantee rankings, traffic, leads or revenue/i,
+    /do not manage advertising accounts/i,
+    /supporting service/i,
+  ],
 };
 
+/** Every retired `/gig/*` URL and the canonical page that replaced it. */
 const LEGACY_SERVICE_FORWARDS = [
   ['/gig/web-development', '/services/web-application-development'],
   ['/gig/mobile-development', '/services/mobile-app-development'],
+  ['/gig/ui-ux-design', '/services/ui-ux-design'],
+  ['/gig/cloud-solutions', '/services/cloud-solutions'],
+  ['/gig/devops-services', '/services/devops-engineering'],
+  ['/gig/digital-marketing', '/services/digital-marketing'],
 ];
 
 function jsonLdBlocks(html) {
@@ -470,7 +499,23 @@ async function checkServicePages(sitemapLocs) {
       const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
       if (canonical !== `${ORIGIN}${to}`) fail('legacy-forwards', `${from}: canonical is "${canonical}"`);
       if (!html.includes(`content="0; url=${to}"`)) fail('legacy-forwards', `${from}: no meta refresh to ${to}`);
+      if (!html.includes('window.location.replace')) fail('legacy-forwards', `${from}: no script redirect`);
       if (sitemapLocs.includes(`${ORIGIN}${from}`)) fail('legacy-forwards', `${from} is still in the sitemap`);
+      // The destination must be a real page, not another stub.
+      const target = resolveDistPath(to);
+      if (!target) fail('legacy-forwards', `${from} forwards to ${to}, which has no file in dist`);
+    }
+
+    // --- nothing anywhere in the build links to a retired /gig/ URL ---------
+    const htmlFiles = await walk(DIST, (file) => file.endsWith('.html'));
+    for (const file of htmlFiles) {
+      const html = await fs.readFile(file, 'utf8');
+      const name = rel(file).replace(/\\/g, '/');
+      // A stub is allowed to live at /gig/… ; it just may not link to one.
+      if (name.startsWith('gig/') || /^gig[^/]*\.html$/.test(name)) continue;
+      for (const match of html.matchAll(/\shref="(\/gig\/[^"]*)"/g)) {
+        fail('legacy-routes', `${name}: active link to retired URL ${match[1]}`);
+      }
     }
 
     notes.push(

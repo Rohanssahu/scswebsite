@@ -10,6 +10,8 @@ import i18n from '@/i18n/config';
 import ServicesHub from './ServicesHub';
 import {
   AI_SERVICE_CONTENT,
+  DELIVERY_SERVICE_CONTENT,
+  GROWTH_SERVICE_CONTENT,
   SERVICE_CONTENT,
   SERVICES_HUB_PATH,
   SOFTWARE_SERVICE_CONTENT,
@@ -61,20 +63,33 @@ describe('services hub', () => {
     }
   });
 
-  it('lists the five software services and the six AI services', () => {
-    const software = servicesHub.groups.find((group) => group.id === 'software');
-    const ai = servicesHub.groups.find((group) => group.id === 'ai');
-    expect(software?.entries.map((entry) => entry.path)).toEqual(
+  it('lists every group in the same order as the content modules', () => {
+    const group = (id: string) => servicesHub.groups.find((entry) => entry.id === id);
+    expect(servicesHub.groups.map((entry) => entry.id)).toEqual(['software', 'ai', 'delivery', 'growth']);
+    expect(group('software')?.entries.map((entry) => entry.path)).toEqual(
       SOFTWARE_SERVICE_CONTENT.map((service) => service.path),
     );
-    expect(ai?.entries.map((entry) => entry.path)).toEqual(AI_SERVICE_CONTENT.map((service) => service.path));
+    expect(group('ai')?.entries.map((entry) => entry.path)).toEqual(AI_SERVICE_CONTENT.map((service) => service.path));
+    expect(group('delivery')?.entries.map((entry) => entry.path)).toEqual(
+      DELIVERY_SERVICE_CONTENT.map((service) => service.path),
+    );
+    expect(group('growth')?.entries.map((entry) => entry.path)).toEqual(
+      GROWTH_SERVICE_CONTENT.map((service) => service.path),
+    );
+  });
+
+  it('keeps marketing support in a group of its own, apart from the engineering pillars', () => {
+    const growth = servicesHub.groups.find((entry) => entry.id === 'growth');
+    expect(growth?.entries).toHaveLength(1);
+    expect(growth?.entries[0].path).toBe('/services/digital-marketing');
+    expect(growth?.intro).toMatch(/supporting service/i);
   });
 
   it('points every hub entry at a real page and writes its own blurb', () => {
     const blurbs = new Set<string>();
     for (const group of servicesHub.groups) {
       for (const entry of group.entries) {
-        expect(entry.path.startsWith('/services/') || entry.path.startsWith('/gig/'), entry.path).toBe(true);
+        expect(entry.path.startsWith('/services/'), entry.path).toBe(true);
         expect(entry.blurb.length, entry.path).toBeGreaterThan(60);
         expect(blurbs.has(entry.blurb), `duplicate hub blurb on ${entry.path}`).toBe(false);
         blurbs.add(entry.blurb);
@@ -83,6 +98,10 @@ describe('services hub', () => {
         if (service) expect(entry.blurb, entry.path).not.toBe(service.valueProp);
       }
     }
+  });
+
+  it('links to no retired /gig/ URL', () => {
+    expect(html).not.toContain('/gig/');
   });
 
   it('carries all three conversion CTAs', () => {

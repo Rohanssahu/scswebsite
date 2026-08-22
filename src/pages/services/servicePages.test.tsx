@@ -15,10 +15,13 @@ import ServicePage from '@/components/services/ServicePage';
 import {
   AI_PILLAR_SERVICE,
   AI_SERVICE_CONTENT,
+  DELIVERY_SERVICE_CONTENT,
+  GROWTH_SERVICE_CONTENT,
   PILLAR_SERVICE,
   SERVICE_CONTENT,
   SERVICES_HUB_PATH,
   SOFTWARE_SERVICE_CONTENT,
+  SUPPORT_SERVICE_CONTENT,
   serviceBreadcrumb,
 } from '@/content/services';
 import type { ServiceContent } from '@/content/services';
@@ -45,7 +48,7 @@ const decodeEntities = (value: string) =>
 const stripTags = (html: string) => decodeEntities(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ');
 
 describe('service page structure', () => {
-  it('covers exactly the software and AI service URLs', () => {
+  it('covers exactly the software, AI and supporting service URLs', () => {
     expect(SOFTWARE_SERVICE_CONTENT.map((service) => service.path)).toEqual([
       '/services/custom-software-development',
       '/services/mobile-app-development',
@@ -61,12 +64,27 @@ describe('service page structure', () => {
       '/services/conversational-ai-development',
       '/services/ai-automation-integration',
     ]);
-    expect(SERVICE_CONTENT).toHaveLength(11);
+    expect(DELIVERY_SERVICE_CONTENT.map((service) => service.path)).toEqual([
+      '/services/ui-ux-design',
+      '/services/cloud-solutions',
+      '/services/devops-engineering',
+    ]);
+    expect(GROWTH_SERVICE_CONTENT.map((service) => service.path)).toEqual(['/services/digital-marketing']);
+    expect(SERVICE_CONTENT).toHaveLength(15);
   });
 
   it('assigns every page to the group its menu and hub listing use', () => {
     for (const service of SOFTWARE_SERVICE_CONTENT) expect(service.group, service.path).toBe('software');
     for (const service of AI_SERVICE_CONTENT) expect(service.group, service.path).toBe('ai');
+    expect(DELIVERY_SERVICE_CONTENT.map((service) => service.group)).toEqual(['design', 'platform', 'platform']);
+    for (const service of GROWTH_SERVICE_CONTENT) expect(service.group, service.path).toBe('growth');
+  });
+
+  it('serves every page from a canonical /services/ URL, never from /gig/', () => {
+    for (const [content, html] of RENDERED) {
+      expect(content.path.startsWith('/services/'), content.path).toBe(true);
+      expect(html.includes('/gig/'), `${content.path} still links to a retired gig URL`).toBe(false);
+    }
   });
 
   it('renders exactly one H1, carrying the page heading', () => {
@@ -286,6 +304,17 @@ describe('service page copy is honest', () => {
     const serialized = JSON.stringify(SERVICE_CONTENT);
     expect(serialized).toContain('India');
     expect(serialized).toContain('Indore');
+  });
+
+  it('carries a scope-boundary section on every supporting service page', () => {
+    // The design, cloud, delivery and growth pages sell work whose honest
+    // shape is defined by what it does NOT include, so the limitations block
+    // is required there as well as on the AI pages.
+    for (const service of SUPPORT_SERVICE_CONTENT) {
+      expect(service.limitations, `${service.path} has no limitations section`).toBeDefined();
+      expect(service.limitations!.points.length, service.path).toBeGreaterThanOrEqual(6);
+      expect(service.limitations!.oversight.points.length, service.path).toBeGreaterThanOrEqual(4);
+    }
   });
 
   it('states the limits of the modernization and SaaS promises', () => {
@@ -577,5 +606,194 @@ describe('automation page describes integrations as custom work', () => {
     expect(serialized).toMatch(/approval checkpoint/i);
     expect(serialized).toMatch(/audit trail/i);
     expect(automation.limitations!.oversight.points.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 2C: the four services migrated off /gig/. Each one sells work whose
+// boundary matters as much as its content, so the claims we have promised not
+// to make are asserted per page.
+// ---------------------------------------------------------------------------
+
+describe('UI/UX design page', () => {
+  const design = SERVICE_CONTENT.find((service) => service.path === '/services/ui-ux-design')!;
+  const serialized = JSON.stringify(design);
+
+  it('covers the design deliverables the page is bought for', () => {
+    for (const topic of [
+      /product discovery/i,
+      /user flows?/i,
+      /wireframes?/i,
+      /responsive/i,
+      /design system/i,
+      /prototype/i,
+      /handover|handoff/i,
+      /accessib/i,
+      /revision/i,
+    ]) {
+      expect(serialized, `design page never mentions ${topic}`).toMatch(topic);
+    }
+  });
+
+  it('promises no conversion, engagement or revenue improvement', () => {
+    expect(serialized).toMatch(/do not promise a conversion/i);
+    for (const sentence of serialized.split(/(?<=[.!?])\s+/)) {
+      if (!/\b(?:increase|improve|boost|lift)[a-z]* (?:your )?(?:conversions?|revenue|sales|engagement)\b/i.test(sentence)) continue;
+      expect(
+        /\b(?:no|not|never|cannot|without|whether|do not|does not)\b/i.test(sentence),
+        `design page may promise an outcome: "${sentence.slice(0, 140)}"`,
+      ).toBe(true);
+    }
+  });
+
+  it('links to the mobile, web, SaaS and custom software pages', () => {
+    const paths = design.related.map((related) => related.path);
+    for (const target of [
+      '/services/mobile-app-development',
+      '/services/web-application-development',
+      '/services/saas-development',
+      '/services/custom-software-development',
+    ]) {
+      expect(paths, `design page does not link to ${target}`).toContain(target);
+    }
+  });
+});
+
+describe('cloud solutions page', () => {
+  const cloud = SERVICE_CONTENT.find((service) => service.path === '/services/cloud-solutions')!;
+  const serialized = JSON.stringify(cloud);
+
+  it('covers readiness, environments, data, recovery, observability and cost', () => {
+    for (const topic of [
+      /readiness/i,
+      /deployment architecture/i,
+      /environments?/i,
+      /managed (?:relational|services|options)/i,
+      /storage/i,
+      /backups?/i,
+      /restore/i,
+      /observability|monitoring/i,
+      /cost/i,
+      /scal(?:e|ing)/i,
+      /migrat/i,
+    ]) {
+      expect(serialized, `cloud page never mentions ${topic}`).toMatch(topic);
+    }
+  });
+
+  it('claims no provider partnership or certification', () => {
+    expect(serialized).toMatch(/no cloud provider partner status/i);
+    expect(serialized).toMatch(/hold no partner status/i);
+    for (const pattern of [/\bcertified partner\b/i, /\b(?:AWS|Azure|Google Cloud) (?:certified|partner)\b/i]) {
+      expect(serialized.match(pattern)?.[0], `cloud page claims ${pattern}`).toBeUndefined();
+    }
+  });
+
+  it('promises neither zero downtime nor limitless capacity', () => {
+    expect(serialized).toMatch(/do not guarantee zero downtime/i);
+    expect(serialized).toMatch(/do not promise limitless capacity/i);
+  });
+});
+
+describe('DevOps engineering page', () => {
+  const devops = SERVICE_CONTENT.find((service) => service.path === '/services/devops-engineering')!;
+  const serialized = JSON.stringify(devops);
+
+  it('covers pipelines, builds, gates, deployment, rollback, monitoring and secrets', () => {
+    for (const topic of [
+      /CI\/CD/i,
+      /reproducible/i,
+      /environments?/i,
+      /automated test|testing gate|required checks/i,
+      /deployment/i,
+      /rollback/i,
+      /infrastructure as code/i,
+      /monitoring/i,
+      /logging|log aggregation/i,
+      /secret/i,
+    ]) {
+      expect(serialized, `DevOps page never mentions ${topic}`).toMatch(topic);
+    }
+  });
+
+  it('guarantees no uninterrupted availability', () => {
+    expect(serialized).toMatch(/do not guarantee uninterrupted availability/i);
+  });
+
+  it('exposes no credential, host or private infrastructure detail', () => {
+    for (const pattern of [
+      /\bsk-[A-Za-z0-9]/,
+      /-----BEGIN /,
+      /\bAIza[0-9A-Za-z_-]{10,}/,
+      /\b\d{1,3}(?:\.\d{1,3}){3}\b/,
+      /[a-z0-9-]+\.(?:internal|local|ec2\.amazonaws\.com)\b/i,
+      /service[_ -]?role/i,
+    ]) {
+      expect(serialized.match(pattern)?.[0], `DevOps page exposes ${pattern}`).toBeUndefined();
+    }
+  });
+
+  it('links to the cloud, modernization, SaaS and custom software pages', () => {
+    const paths = devops.related.map((related) => related.path);
+    for (const target of [
+      '/services/cloud-solutions',
+      '/services/software-modernization',
+      '/services/saas-development',
+      '/services/custom-software-development',
+    ]) {
+      expect(paths, `DevOps page does not link to ${target}`).toContain(target);
+    }
+  });
+});
+
+describe('digital marketing page stays a supporting service', () => {
+  const marketing = SERVICE_CONTENT.find((service) => service.path === '/services/digital-marketing')!;
+  const serialized = JSON.stringify(marketing);
+
+  it('sits in the growth group, outside the software and AI pillars', () => {
+    expect(marketing.group).toBe('growth');
+    expect(serialized).toMatch(/supporting service/i);
+  });
+
+  it('covers only the capabilities we actually deliver', () => {
+    for (const topic of [
+      /SEO/,
+      /technical/i,
+      /content plan/i,
+      /analytics/i,
+      /landing page/i,
+      /campaign/i,
+      /conversion (?:event|tracking)/i,
+      /report/i,
+    ]) {
+      expect(serialized, `marketing page never mentions ${topic}`).toMatch(topic);
+    }
+  });
+
+  it('promises no ranking, traffic, lead or revenue result', () => {
+    expect(serialized).toMatch(/do not guarantee rankings, traffic, leads or revenue/i);
+    for (const sentence of serialized.split(/(?<=[.!?])\s+/)) {
+      if (!/\b(?:first page|top of (?:the )?(?:search|google)|page one|rank(?:ing)? number one|#1)\b/i.test(sentence)) continue;
+      expect(
+        /\b(?:no|not|never|cannot|neither|without|do not|does not)\b/i.test(sentence),
+        `marketing page may promise a ranking: "${sentence.slice(0, 140)}"`,
+      ).toBe(true);
+    }
+  });
+
+  it('claims no advertising platform partnership and manages no ad budget', () => {
+    expect(serialized).toMatch(/do not manage advertising accounts/i);
+    expect(serialized).toMatch(/no (?:advertising )?platform partnership/i);
+  });
+
+  it('publishes no ranking screenshot, keyword volume or traffic figure', () => {
+    expect(serialized).toMatch(/do not publish ranking screenshots/i);
+    for (const pattern of [
+      /\b\d[\d,]{2,} (?:searches|monthly searches|visits|visitors|impressions)\b/i,
+      /\b(?:position|rank) #?\d+\b/i,
+      /\b\d+% (?:more|increase|growth) (?:in )?(?:traffic|leads|revenue)\b/i,
+    ]) {
+      expect(serialized.match(pattern)?.[0], `marketing page cites ${pattern}`).toBeUndefined();
+    }
   });
 });

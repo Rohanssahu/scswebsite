@@ -7,11 +7,14 @@ import {
   BrainCircuit,
   CheckCircle,
   ClipboardList,
+  Cloud,
+  GitBranch,
   Layers,
   LayoutDashboard,
   Mail,
   MessagesSquare,
   Mic,
+  Palette,
   PhoneCall,
   Plug,
   RefreshCw,
@@ -19,6 +22,7 @@ import {
   Smartphone,
   Sparkles,
   Target,
+  TrendingUp,
   UserCheck,
   Video,
   Workflow,
@@ -32,7 +36,7 @@ import { serviceBreadcrumb } from '@/content/services';
 import type { ServiceContent, ServiceIconKey, ServiceSectionHeader } from '@/content/services/types';
 
 /**
- * Shared shell for the five canonical service pages.
+ * Shared shell for every canonical service page.
  *
  * Layout, gradients and cards are the site's existing design system; every
  * word on the page comes from that page's own content module, so the five
@@ -55,6 +59,10 @@ const SERVICE_ICONS: Record<ServiceIconKey, React.ElementType> = {
   'video-consultation': Video,
   conversational: MessagesSquare,
   automation: Workflow,
+  design: Palette,
+  cloud: Cloud,
+  devops: GitBranch,
+  marketing: TrendingUp,
 };
 
 const primaryBtn =

@@ -12,10 +12,6 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ApplicationForm from "./pages/ApplicationForm";
-import DigitalMarketing from "./pages/gigs/DigitalMarketing";
-import UIUXDesign from "./pages/gigs/UIUXDesign";
-import CloudSolutions from "./pages/gigs/CloudSolutions";
-import DevOpsServices from "./pages/gigs/DevOpsServices";
 import NotFound from "./pages/NotFound";
 import CareersPage from "./pages/CareersPage";
 import BlogPage from "./pages/BlogPage";
@@ -37,6 +33,10 @@ import AiVoiceAgentDevelopment from "./pages/services/AiVoiceAgentDevelopment";
 import AiVideoConsultationAgents from "./pages/services/AiVideoConsultationAgents";
 import ConversationalAiDevelopment from "./pages/services/ConversationalAiDevelopment";
 import AiAutomationIntegration from "./pages/services/AiAutomationIntegration";
+import UiUxDesign from "./pages/services/UiUxDesign";
+import CloudSolutions from "./pages/services/CloudSolutions";
+import DevOpsEngineering from "./pages/services/DevOpsEngineering";
+import DigitalMarketing from "./pages/services/DigitalMarketing";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
@@ -158,13 +158,20 @@ const RoutesComponent = () => {
       <Route path="/services/ai-video-consultation-agents" element={<AiVideoConsultationAgents />} />
       <Route path="/services/conversational-ai-development" element={<ConversationalAiDevelopment />} />
       <Route path="/services/ai-automation-integration" element={<AiAutomationIntegration />} />
-      {/* The two migrated gig paths keep working, forwarding to their replacements. */}
+      {/* Design, cloud, delivery and growth service pages. */}
+      <Route path="/services/ui-ux-design" element={<UiUxDesign />} />
+      <Route path="/services/cloud-solutions" element={<CloudSolutions />} />
+      <Route path="/services/devops-engineering" element={<DevOpsEngineering />} />
+      <Route path="/services/digital-marketing" element={<DigitalMarketing />} />
+      {/* Every old gig path now forwards to the canonical service page that
+          replaced it. The build also emits a noindex meta-refresh stub per path,
+          so a direct hit resolves without JavaScript. */}
       <Route path="/gig/web-development" element={<Navigate to="/services/web-application-development" replace />} />
       <Route path="/gig/mobile-development" element={<Navigate to="/services/mobile-app-development" replace />} />
-      <Route path="/gig/digital-marketing" element={<DigitalMarketing />} />
-      <Route path="/gig/ui-ux-design" element={<UIUXDesign />} />
-      <Route path="/gig/cloud-solutions" element={<CloudSolutions />} />
-      <Route path="/gig/devops-services" element={<DevOpsServices />} />
+      <Route path="/gig/ui-ux-design" element={<Navigate to="/services/ui-ux-design" replace />} />
+      <Route path="/gig/cloud-solutions" element={<Navigate to="/services/cloud-solutions" replace />} />
+      <Route path="/gig/devops-services" element={<Navigate to="/services/devops-engineering" replace />} />
+      <Route path="/gig/digital-marketing" element={<Navigate to="/services/digital-marketing" replace />} />
       <Route path="/products" element={<ProductShowcase />} />
       <Route path="/project-analysis" element={<ProjectAnalysis />} />
       <Route

@@ -70,6 +70,7 @@
       "ui-ux-design": "UI/UX Design",
       "cloud-solutions": "Cloud Solutions",
       "devops-services": "DevOps Services",
+      "devops-engineering": "DevOps Engineering",
       "devops": "DevOps",
       "project-rescue-completion": "Project Rescue & Completion",
       "web-mobile-product-development": "Web + Mobile Product Development",
@@ -218,7 +219,7 @@
       "eyebrow": "Our story",
       "title1": "From a small team to a",
       "title2": "trusted partner",
-      "p1": "Founded in 2018, SCS Softwares began as a small team of passionate developers who believed technology could solve complex business challenges. Today, we've grown into a leading software development company serving clients worldwide.",
+      "p1": "Founded in 2018, SCS Softwares began as a small team of passionate developers who believed technology could solve complex business challenges. Today we are an India-based software and AI development company, working remotely with clients in other countries and time zones.",
       "p2": "Our journey has been marked by continuous learning and a commitment to doing the work properly: a written scope before development starts, a named team rather than a rotating pool, and a build you can open and click every week.",
       "p3": "At SCS Softwares, we don't just write code — we craft solutions that make a real difference in people's lives and businesses.",
       "imageAlt": "Inside the SCS Softwares office"
@@ -489,34 +490,6 @@
     "t3": "Turning a requirements conversation into a project estimate",
     "t4": "Making a React site multilingual, including RTL",
     "cta": "Ask us about any of these"
-  },
-  "gig": {
-    "badge": "Our services",
-    "getStarted": "Get Started",
-    "getQuote": "Get Quote",
-    "includedEyebrow": "What's included",
-    "includedTitle": "Why choose our {{service}} services?",
-    "techEyebrow": "Tech stack",
-    "techTitle1": "Technologies we",
-    "techTitle2": "use",
-    "processEyebrow": "How we work",
-    "processTitle1": "Our",
-    "processTitle2": "process",
-    "portfolioEyebrow": "What we build",
-    "portfolioTitle1": "Typical",
-    "portfolioTitle2": "builds",
-    "estimateEyebrow": "Project estimate",
-    "estimateTitle1": "Know your project cost",
-    "estimateTitle2": "before you hire",
-    "estimateSub": "Share your {{service}} idea and get an estimated team, development hours, cost and delivery timeline — free, no signup.",
-    "estimateTeam": "Recommended team",
-    "estimateHours": "Hours per role",
-    "estimateCost": "Cost breakdown",
-    "estimateTimeline": "Delivery timeline",
-    "estimateCta": "Estimate My Project",
-    "ctaTitle": "Ready to get started?",
-    "ctaText": "Let's discuss your {{service}} project and how we can help you achieve your goals.",
-    "ctaStart": "Start Your Project Today"
   },
   "schedule": {
     "title1": "Meet our AI consultant",
@@ -1164,7 +1137,7 @@
       },
       "ui-ux-design": {
         "blurb": "Wireframes, prototypes and pixel-perfect interfaces designed around your users before a line of code is written.",
-        "forWho": "Teams that want their product to look professional and convert visitors into customers.",
+        "forWho": "Teams that want a product people can finish a task in, designed before development starts.",
         "benefits": [
           "Fewer costly changes during development",
           "Consistent design system",
@@ -1172,7 +1145,8 @@
         ],
         "limitations": [
           "Design quality depends on clear requirements",
-          "Brand assets must be supplied or scoped separately"
+          "Brand assets must be supplied or scoped separately",
+          "No conversion or revenue improvement is promised"
         ]
       },
       "cloud-solutions": {
@@ -1180,12 +1154,13 @@
         "forWho": "Products that need reliable hosting, scaling or a move away from legacy servers.",
         "benefits": [
           "Pay-for-what-you-use infrastructure",
-          "Automatic scaling and backups",
-          "Better uptime and security posture"
+          "Scaling rules and automated backups configured",
+          "Least-privilege access, and a restore that has been tested"
         ],
         "limitations": [
-          "Cloud provider fees are billed separately",
-          "Legacy systems may need refactoring before migration"
+          "Cloud provider fees are billed separately, to an account you own",
+          "Legacy systems may need refactoring before migration",
+          "No zero-downtime or limitless-scale promise"
         ]
       },
       "devops-services": {
@@ -1202,16 +1177,17 @@
         ]
       },
       "digital-marketing": {
-        "blurb": "SEO groundwork, content, social campaigns and analytics to bring the right visitors to what we build.",
-        "forWho": "Businesses that have (or are building) a product and need qualified traffic and leads.",
+        "blurb": "Website SEO foundations, technical fixes, content planning, analytics and landing pages for the site we build or maintain.",
+        "forWho": "Businesses whose website needs to be readable to search engines and measurable once visitors arrive.",
         "benefits": [
-          "Measurable campaigns with analytics",
-          "Organic and paid channels covered",
-          "Landing pages optimised to convert"
+          "Technical SEO and site structure fixed first",
+          "Analytics and conversion tracking in accounts you own",
+          "Landing pages built with the tracking already wired in"
         ],
         "limitations": [
-          "Results build over weeks, not days",
-          "Ad budgets are separate from service fees"
+          "We do not manage ad accounts or budgets, and run no social accounts",
+          "No ranking, traffic or lead result is promised",
+          "SEO improvement builds over months, not days"
         ]
       },
       "products": {

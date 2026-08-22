@@ -131,10 +131,14 @@ describe('canonical discipline', () => {
     expect(route.canonical).toBe(`${SITE_ORIGIN}/schedule-call`);
   });
 
-  it('forwards the two migrated gig paths to their canonical service pages', () => {
+  it('forwards every migrated gig path to its canonical service page', () => {
     const migrations: [string, string][] = [
       ['/gig/web-development', '/services/web-application-development'],
       ['/gig/mobile-development', '/services/mobile-app-development'],
+      ['/gig/ui-ux-design', '/services/ui-ux-design'],
+      ['/gig/cloud-solutions', '/services/cloud-solutions'],
+      ['/gig/devops-services', '/services/devops-engineering'],
+      ['/gig/digital-marketing', '/services/digital-marketing'],
     ];
     for (const [from, to] of migrations) {
       const route = ROUTE_SEO[from];
@@ -225,6 +229,10 @@ describe('sitemap route matching', () => {
       '/admin/login',
       '/gig/web-development',
       '/gig/mobile-development',
+      '/gig/ui-ux-design',
+      '/gig/cloud-solutions',
+      '/gig/devops-services',
+      '/gig/digital-marketing',
       '/ai-consultation/:meetingReference',
       '/project-analysis/result',
       '/ApplicationForm',
@@ -246,10 +254,6 @@ describe('sitemap route matching', () => {
         '/about',
         '/careers',
         '/contact',
-        '/gig/cloud-solutions',
-        '/gig/devops-services',
-        '/gig/digital-marketing',
-        '/gig/ui-ux-design',
         '/products',
         '/project-analysis',
         '/schedule-call',
@@ -258,12 +262,16 @@ describe('sitemap route matching', () => {
         '/services/ai-development',
         '/services/ai-video-consultation-agents',
         '/services/ai-voice-agent-development',
+        '/services/cloud-solutions',
         '/services/conversational-ai-development',
         '/services/custom-software-development',
+        '/services/devops-engineering',
+        '/services/digital-marketing',
         '/services/machine-learning-development',
         '/services/mobile-app-development',
         '/services/saas-development',
         '/services/software-modernization',
+        '/services/ui-ux-design',
         '/services/web-application-development',
       ].sort(),
     );
@@ -297,21 +305,20 @@ describe('structured data', () => {
     }
   });
 
-  it('puts a Service node on each of the four remaining gig pages', () => {
-    const gigPages = ALL_ROUTES.filter(
-      (route) => route.canonicalPath.startsWith('/gig/') && route.indexability === 'indexable',
-    );
-    expect(gigPages).toHaveLength(4);
-    for (const route of gigPages) {
-      expect(route.jsonLd.map((node) => node['@type'])).toEqual(['Service']);
-      expect(route.jsonLd[0].url).toBe(route.canonical);
+  it('leaves no indexable page under /gig — they are all forwarding stubs now', () => {
+    const gigRoutes = ALL_ROUTES.filter((route) => route.canonicalPath.startsWith('/gig/'));
+    expect(gigRoutes).toHaveLength(6);
+    for (const route of gigRoutes) {
+      expect(route.indexability, route.canonicalPath).toBe('redirect');
+      expect(route.jsonLd, route.canonicalPath).toHaveLength(0);
+      expect(route.redirectTo?.startsWith('/services/'), route.canonicalPath).toBe(true);
     }
   });
 
   it('puts a Service and a BreadcrumbList node on each canonical service page', () => {
     const servicePages = ALL_ROUTES.filter((route) => route.canonicalPath.startsWith('/services/'));
     expect(servicePages).toHaveLength(SERVICE_CONTENT.length);
-    expect(SERVICE_CONTENT).toHaveLength(11);
+    expect(SERVICE_CONTENT).toHaveLength(15);
     for (const route of servicePages) {
       expect(route.jsonLd.map((node) => node['@type']), route.canonicalPath).toEqual(['Service', 'BreadcrumbList']);
       expect(route.jsonLd[0].url).toBe(route.canonical);

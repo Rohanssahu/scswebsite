@@ -101,24 +101,24 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://scssoftwares.com/gig/digital-marketing</loc>
+    <loc>https://scssoftwares.com/services/ui-ux-design</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://scssoftwares.com/gig/ui-ux-design</loc>
+    <loc>https://scssoftwares.com/services/cloud-solutions</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://scssoftwares.com/gig/cloud-solutions</loc>
+    <loc>https://scssoftwares.com/services/devops-engineering</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://scssoftwares.com/gig/devops-services</loc>
+    <loc>https://scssoftwares.com/services/digital-marketing</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://scssoftwares.com/PrivacyPolicy</loc>

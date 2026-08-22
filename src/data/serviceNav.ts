@@ -3,11 +3,19 @@
  * footer, the homepage and the `/services` hub, so no surface can drift or
  * keep pointing at a retired URL.
  *
- * Three groups: the software-development pages, the AI pages, and the services
- * still living on their original `/gig/*` URLs.
+ * Three groups: the software-development pages, the AI pages, and the
+ * supporting design, cloud, delivery and growth pages. Every entry is a
+ * canonical `/services/*` URL — the old `/gig/*` paths only exist as
+ * forwarding stubs now, and nothing in the navigation points at them.
  */
 
-import { AI_SERVICE_CONTENT, SERVICES_HUB_PATH, SOFTWARE_SERVICE_CONTENT } from '@/content/services';
+import {
+  AI_SERVICE_CONTENT,
+  DELIVERY_SERVICE_CONTENT,
+  GROWTH_SERVICE_CONTENT,
+  SERVICES_HUB_PATH,
+  SOFTWARE_SERVICE_CONTENT,
+} from '@/content/services';
 
 export interface ServiceNavItem {
   /** Key under `services.names` in the translation files. */
@@ -29,16 +37,21 @@ export const CORE_SERVICE_NAV: ServiceNavItem[] = SOFTWARE_SERVICE_CONTENT.map((
 /** AI services. */
 export const AI_SERVICE_NAV: ServiceNavItem[] = AI_SERVICE_CONTENT.map((service) => toNavItem(service.path));
 
-/** Service pages still living under `/gig/*`. */
-export const OTHER_SERVICE_NAV: ServiceNavItem[] = [
-  { nameKey: 'ui-ux-design', path: '/gig/ui-ux-design' },
-  { nameKey: 'cloud-solutions', path: '/gig/cloud-solutions' },
-  { nameKey: 'devops-services', path: '/gig/devops-services' },
-  { nameKey: 'digital-marketing', path: '/gig/digital-marketing' },
-];
+/** Design, cloud and delivery services — the ones that sit inside a build. */
+export const DELIVERY_SERVICE_NAV: ServiceNavItem[] = DELIVERY_SERVICE_CONTENT.map((service) =>
+  toNavItem(service.path),
+);
+
+/** Growth services, kept separate from the engineering offer. */
+export const GROWTH_SERVICE_NAV: ServiceNavItem[] = GROWTH_SERVICE_CONTENT.map((service) =>
+  toNavItem(service.path),
+);
+
+/** Everything under the menu's "more services" heading. */
+export const OTHER_SERVICE_NAV: ServiceNavItem[] = [...DELIVERY_SERVICE_NAV, ...GROWTH_SERVICE_NAV];
 
 export const ALL_SERVICE_NAV: ServiceNavItem[] = [...CORE_SERVICE_NAV, ...AI_SERVICE_NAV, ...OTHER_SERVICE_NAV];
 
 /** True on the hub or any service page, for nav active states. */
 export const isServicePath = (pathname: string): boolean =>
-  pathname === SERVICES_HUB_PATH || pathname.startsWith('/services/') || pathname.startsWith('/gig/');
+  pathname === SERVICES_HUB_PATH || pathname.startsWith('/services/');

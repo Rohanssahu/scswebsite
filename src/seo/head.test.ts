@@ -118,7 +118,8 @@ describe('head tag construction', () => {
 
   it('carries one JSON-LD tag per structured-data node', () => {
     expect(buildHeadTags(ROUTE_SEO['/']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(2);
-    expect(buildHeadTags(ROUTE_SEO['/gig/ui-ux-design']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(1);
+    // A legacy forwarding stub carries no structured data at all.
+    expect(buildHeadTags(ROUTE_SEO['/gig/ui-ux-design']).filter((tag) => tag.kind === 'jsonld')).toHaveLength(0);
     // A canonical service page carries both its Service and its BreadcrumbList.
     expect(
       buildHeadTags(ROUTE_SEO['/services/custom-software-development']).filter((tag) => tag.kind === 'jsonld'),
@@ -207,10 +208,11 @@ describe('duplicate tag prevention', () => {
     applyHeadTags(doc, buildHeadTags(ROUTE_SEO['/careers']));
     expect(doc.querySelectorAll('script[type="application/ld+json"]').length).toBe(0);
 
-    applyHeadTags(doc, buildHeadTags(ROUTE_SEO['/gig/cloud-solutions']));
+    applyHeadTags(doc, buildHeadTags(ROUTE_SEO['/services/cloud-solutions']));
     const nodes = doc.querySelectorAll('script[type="application/ld+json"]');
-    expect(nodes.length).toBe(1);
+    expect(nodes.length).toBe(2);
     expect(JSON.parse(nodes[0].textContent ?? '{}')['@type']).toBe('Service');
+    expect(JSON.parse(nodes[1].textContent ?? '{}')['@type']).toBe('BreadcrumbList');
   });
 
   it('drops the canonical when moving from a public page to an unknown route', () => {

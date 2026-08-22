@@ -65,10 +65,10 @@ export const PAGE_INFO: Record<string, PageInfo> = {
   '/services/mobile-app-development': { nameKey: 'mobile-app-development', pageKey: 'mobile-development' },
   '/services/saas-development': { nameKey: 'saas-development', pageKey: 'saas-development' },
   '/services/software-modernization': { nameKey: 'software-modernization', pageKey: 'software-modernization' },
-  '/gig/ui-ux-design': { nameKey: 'ui-ux-design', pageKey: 'ui-ux-design' },
-  '/gig/cloud-solutions': { nameKey: 'cloud-solutions', pageKey: 'cloud-solutions' },
-  '/gig/devops-services': { nameKey: 'devops-services', pageKey: 'devops-services' },
-  '/gig/digital-marketing': { nameKey: 'digital-marketing', pageKey: 'digital-marketing' },
+  '/services/ui-ux-design': { nameKey: 'ui-ux-design', pageKey: 'ui-ux-design' },
+  '/services/cloud-solutions': { nameKey: 'cloud-solutions', pageKey: 'cloud-solutions' },
+  '/services/devops-engineering': { nameKey: 'devops-engineering', pageKey: 'devops-services' },
+  '/services/digital-marketing': { nameKey: 'digital-marketing', pageKey: 'digital-marketing' },
   '/services': { nameKey: 'all-services', pageKey: 'services-hub' },
   '/products': { nameKey: 'scs-products', pageKey: 'products' },
   '/ProductDetailsPage': { nameKey: 'this-product', pageKey: 'product-details' },
@@ -84,7 +84,7 @@ export function getPageInfo(pathname: string): PageInfo | null {
 /** Route-aware quick actions shown above the chat composer. */
 export function getRouteQuickActions(pathname: string): GuideAction[] {
   const p = pathname.toLowerCase();
-  if (p.startsWith('/services/') || p.startsWith('/gig/')) {
+  if (p.startsWith('/services/')) {
     return [
       { label: 'Explain this service', kind: 'send', message: 'Explain this service' },
       { label: 'Is it right for me?', kind: 'send', message: 'Is this service right for me?' },

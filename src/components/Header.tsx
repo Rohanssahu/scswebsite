@@ -12,9 +12,10 @@ import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB, isSe
 // navbar mirrors correctly in RTL (Arabic/Urdu).
 //
 // The menu is grouped into software development, AI development and the
-// remaining /gig/* services, with a link to the /services hub. Every list
-// comes from src/data/serviceNav.ts, so the header, drawer, footer and hub
-// cannot drift apart.
+// supporting design, cloud, delivery and growth services, with a link to the
+// /services hub. Every list comes from src/data/serviceNav.ts, so the header,
+// drawer, footer and hub cannot drift apart — and nothing points at the
+// retired /gig/* URLs.
 
 // One highest-intent action on the site: an AI meeting that starts immediately.
 // "Book a free call" read like "someone will phone me later", so the label says

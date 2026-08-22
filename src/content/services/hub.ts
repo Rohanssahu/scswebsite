@@ -12,7 +12,7 @@ export interface HubEntry {
 }
 
 export interface HubGroup {
-  id: 'software' | 'ai' | 'other';
+  id: 'software' | 'ai' | 'delivery' | 'growth';
   title: string;
   intro: string;
   entries: HubEntry[];
@@ -23,7 +23,7 @@ export const servicesHub = {
   navLabel: 'Services',
   metaTitle: 'Software & AI Development Services | SCS Softwares',
   metaDescription:
-    'Every service SCS Softwares delivers: custom software, mobile, web and SaaS development, software modernization, and AI, machine learning, voice and automation work.',
+    'Every service SCS Softwares delivers: custom software, mobile, web and SaaS development, modernization, AI and machine learning, plus UI/UX design, cloud, DevOps and SEO support.',
   shareTitle: 'Services — SCS Softwares',
   h1: 'Software and AI Development Services',
   valueProp:
@@ -94,26 +94,34 @@ export const servicesHub = {
       ],
     },
     {
-      id: 'other',
-      title: 'Design, cloud and growth',
+      id: 'delivery',
+      title: 'Design, cloud and delivery',
       intro:
-        'The supporting services that sit alongside a build, on their original pages.',
+        'The services that sit either side of the code: how the product looks and behaves, and how it is hosted and released.',
       entries: [
         {
-          path: '/gig/ui-ux-design',
-          blurb: 'User research, wireframes, design systems and accessible interface design, handed over as build-ready specifications.',
+          path: '/services/ui-ux-design',
+          blurb: 'Product discovery, user flows, wireframes, interface and responsive design, design systems, prototypes and build-ready developer handover.',
         },
         {
-          path: '/gig/cloud-solutions',
-          blurb: 'Cloud migration, infrastructure-as-code, serverless architecture and cost optimisation across the major providers.',
+          path: '/services/cloud-solutions',
+          blurb: 'Readiness assessment, deployment architecture, environments as code, managed databases, backups that are actually restored, monitoring and cost review.',
         },
         {
-          path: '/gig/devops-services',
-          blurb: 'CI/CD pipelines, containerisation, infrastructure automation and monitoring, so releases stop being events.',
+          path: '/services/devops-engineering',
+          blurb: 'CI/CD pipelines, reproducible builds, automated test gates, deployment and rollback workflows, infrastructure automation and secret handling.',
         },
+      ],
+    },
+    {
+      id: 'growth',
+      title: 'Growth and marketing support',
+      intro:
+        'A supporting service, not part of the engineering offer: the marketing work that lives inside the website itself.',
+      entries: [
         {
-          path: '/gig/digital-marketing',
-          blurb: 'SEO, paid search, social and content work run alongside the build rather than bolted on after launch.',
+          path: '/services/digital-marketing',
+          blurb: 'Website SEO foundations, technical fixes, content planning, analytics and conversion tracking, landing pages and reporting you can verify. No ranking promises.',
         },
       ],
     },
