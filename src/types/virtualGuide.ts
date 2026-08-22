@@ -91,7 +91,11 @@ export interface GuideEstimate extends AnalysisResult {
   /** Language-aware requirement summary (labels translate, answers stay as given). */
   summaryItems: LocalizedText[];
   cheaperAlternative: LocalizedText;
-  fasterAlternative: LocalizedText;
+  /** Deferred scope framed as a phase two. Never a boosted weekly capacity —
+   * the standard 40-hour delivery week is the only capacity Buddy quotes. */
+  phasedAlternative: LocalizedText;
+  /** The policy's client-facing budget wording, rendered verbatim. */
+  budgetLines: string[];
   recommendedNextStep: LocalizedText;
   totalHours: number;
   totalCost: number;

@@ -68,7 +68,13 @@ export function parseTokenResponse(data: unknown): VoiceTokenResponse | null {
   return { url, token, roomName, sessionId, expiresInSeconds: expires };
 }
 
+import { STANDARD_HOURLY_RATE_USD } from '@/policy/estimationPolicy';
+
 // --- agent → browser state messages (topic buddy.state) --------------------------
+//
+// The agent is trusted infrastructure, but the LiveKit room is still an external
+// channel, so every figure it publishes is re-validated against the SAME shared
+// commercial policy the report uses before the UI renders it.
 
 export interface BuddyEstimateView {
   totalHoursMin: number;
@@ -78,6 +84,7 @@ export interface BuddyEstimateView {
   durationWeeksMin: number;
   durationWeeksMax: number;
   weeklyCapacityHours: number;
+  hourlyRateUsd: number;
   currency: 'USD';
   confidence: 'low' | 'medium' | 'high';
   modules: Array<{ name: string; hours_min: number; hours_max: number }>;
@@ -85,6 +92,11 @@ export interface BuddyEstimateView {
   assumptions: string[];
   exclusions: string[];
   risks: string[];
+  /** Budget fit, included/deferred scope and the optional tiers. */
+  budgetPlan: BudgetPlanView | null;
+  /** The exact client-facing sentences Buddy is told to speak. */
+  budgetNarrative: string[];
+  estimateVersion: string;
   status: 'preliminary';
 }
 
@@ -94,6 +106,39 @@ export interface BuddyProgressView {
   missingRequired: string[];
   percent: number;
   confidence: string;
+}
+
+export interface BudgetScopeItemView {
+  label: string;
+  tier: string;
+  hours: number;
+}
+
+export interface BudgetTierView {
+  hours: number;
+  costUsd: number;
+  weeks: number;
+  percentAboveBudget: number;
+  includedScope: BudgetScopeItemView[];
+  deferredScope: BudgetScopeItemView[];
+  addedVsBase: BudgetScopeItemView[];
+}
+
+/** The budget-fit plan the agent computed — the source of every figure shown. */
+export interface BudgetPlanView {
+  estimateVersion: string;
+  selectedBudgetUsd: number;
+  budgetProvided: boolean;
+  hourlyRateUsd: number;
+  availableHours: number;
+  budgetFitPercent: number;
+  coverageBand: string;
+  coversEssentialScope: boolean;
+  base: BudgetTierView;
+  recommended: BudgetTierView | null;
+  growth: BudgetTierView | null;
+  unclearScope: BudgetScopeItemView[];
+  humanReviewRequired: true;
 }
 
 /** Consultation-meeting proposal published by the agent (whitelist-parsed). */
@@ -120,8 +165,14 @@ export interface BuddyProposalView {
   durationWeeksMin: number;
   durationWeeksMax: number;
   weeklyCapacityHours: number;
+  hourlyRateUsd: number;
   currency: 'USD';
   confidence: 'low' | 'medium' | 'high';
+  /** Budget fit, included/deferred scope and the optional tiers. */
+  budgetPlan: BudgetPlanView | null;
+  /** The exact client-facing sentences Buddy is told to speak. */
+  budgetNarrative: string[];
+  estimateVersion: string;
 }
 
 export interface BuddyStateView {
@@ -138,6 +189,77 @@ export interface BuddyStateView {
 
 const num = (v: unknown, min: number, max: number): number | null =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : null;
+
+/**
+ * Whitelist-parse the budget-fit snapshot the agent publishes. The commercial
+ * guarantees are re-checked here so the meeting UI can never render a rate
+ * above the standard rate, a base option above the client's own budget, or an
+ * optional tier outside its +20% / +30% band. Anything that fails is dropped.
+ */
+export function parseBudgetPlanView(raw: unknown): BudgetPlanView | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const p = raw as Record<string, unknown>;
+  if (p.currency !== 'USD') return null;
+  if (p.hourly_rate_usd !== STANDARD_HOURLY_RATE_USD) return null;
+  const budget = num(p.selected_budget_usd, 0, 10_000_000);
+  const availableHours = num(p.available_hours, 0, 100_000);
+  const fitPercent = num(p.budget_fit_percent, 0, 100);
+  if (budget === null || availableHours === null || fitPercent === null) return null;
+
+  const scope = (v: unknown): BudgetScopeItemView[] =>
+    Array.isArray(v)
+      ? v
+          .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
+          .slice(0, 60)
+          .map((i) => ({
+            label: typeof i.label === 'string' ? i.label.slice(0, 200) : '',
+            tier: typeof i.tier === 'string' ? i.tier.slice(0, 20) : 'unclear',
+            hours: num(i.hours, 0, 100_000) ?? 0,
+          }))
+          .filter((i) => i.label)
+      : [];
+
+  const tier = (v: unknown, maxPercent: number): BudgetTierView | null => {
+    if (typeof v !== 'object' || v === null) return null;
+    const t = v as Record<string, unknown>;
+    const hours = num(t.hours, 0, 100_000);
+    const cost = num(t.cost_usd, 0, 10_000_000);
+    const weeks = num(t.weeks, 0, 520);
+    const percent = num(t.percent_above_budget, 0, maxPercent);
+    if (hours === null || cost === null || weeks === null || percent === null) return null;
+    // The published guarantee, re-checked: a tier can never cost more than its
+    // own ceiling above the client's stated budget.
+    if (cost > Math.floor((budget * (100 + percent)) / 100)) return null;
+    if (cost !== hours * STANDARD_HOURLY_RATE_USD) return null;
+    return {
+      hours,
+      costUsd: cost,
+      weeks,
+      percentAboveBudget: percent,
+      includedScope: scope(t.included_scope),
+      deferredScope: scope(t.deferred_scope),
+      addedVsBase: scope(t.added_vs_base),
+    };
+  };
+
+  const base = tier(p.base_estimate, 0);
+  if (!base) return null;
+  return {
+    estimateVersion: typeof p.estimate_version === 'string' ? p.estimate_version.slice(0, 40) : '',
+    selectedBudgetUsd: budget,
+    budgetProvided: p.budget_provided === true,
+    hourlyRateUsd: STANDARD_HOURLY_RATE_USD,
+    availableHours,
+    budgetFitPercent: fitPercent,
+    coverageBand: typeof p.coverage_band === 'string' ? p.coverage_band.slice(0, 20) : 'unknown',
+    coversEssentialScope: p.covers_essential_scope === true,
+    base,
+    recommended: tier(p.optional_20_percent_estimate, 20),
+    growth: tier(p.optional_30_percent_estimate, 30),
+    unclearScope: scope(p.unclear_scope),
+    humanReviewRequired: true,
+  };
+}
 
 const strList = (v: unknown, maxItems = 30, maxLen = 300): string[] =>
   Array.isArray(v)
@@ -222,6 +344,10 @@ export function parseBuddyState(raw: string): BuddyStateView | null {
         assumptions: strList(e.assumptions),
         exclusions: strList(e.exclusions),
         risks: strList(e.risks),
+        hourlyRateUsd: num(e.hourlyRateUsd, 0, STANDARD_HOURLY_RATE_USD) ?? STANDARD_HOURLY_RATE_USD,
+        budgetPlan: parseBudgetPlanView(e.budgetPlan),
+        budgetNarrative: strList(e.narrative, 12, 800),
+        estimateVersion: typeof e.estimateVersion === 'string' ? e.estimateVersion.slice(0, 40) : '',
         status: 'preliminary',
       };
     }
@@ -285,8 +411,12 @@ export function parseBuddyState(raw: string): BuddyStateView | null {
         durationWeeksMin: weeksMin,
         durationWeeksMax: weeksMax,
         weeklyCapacityHours: capacity,
+        hourlyRateUsd: num(p.hourlyRateUsd, 0, STANDARD_HOURLY_RATE_USD) ?? STANDARD_HOURLY_RATE_USD,
         currency: 'USD',
         confidence,
+        budgetPlan: parseBudgetPlanView(p.budgetPlan),
+        budgetNarrative: strList(p.budgetNarrative, 12, 800),
+        estimateVersion: typeof p.estimateVersion === 'string' ? p.estimateVersion.slice(0, 40) : '',
       };
     }
   }

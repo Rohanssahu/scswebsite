@@ -29,6 +29,7 @@ const navLinks = [
   { key: 'nav.projectEstimate', path: '/project-analysis' },
   { key: 'nav.about', path: '/about' },
   { key: 'nav.contact', path: '/contact' },
+  { key: 'nav.insights', path: '/insights' },
   { key: 'nav.career', path: '/careers' },
 ];
 
@@ -201,6 +202,9 @@ const Header = () => {
             </Link>
             <Link to="/contact" className={linkCls('/contact')}>
               {t('nav.contact')}
+            </Link>
+            <Link to="/insights" className={linkCls('/insights')}>
+              {t('nav.insights')}
             </Link>
             <Link to="/careers" className={linkCls('/careers')}>
               {t('nav.career')}

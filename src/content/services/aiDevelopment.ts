@@ -347,6 +347,11 @@ export const aiDevelopment: ServiceBody = {
         'Then we say so. The discovery engagement exists partly to produce that conclusion cheaply. Plenty of problems presented to us as AI problems are solved better by a rule, a report or a fixed workflow, and we would rather build you that.',
     },
   ],
+  markets: {
+    title: 'Markets we build AI features for',
+    intro:
+      'AI work raises a question ordinary software does not — where the data goes and who reviews what the model produced — and each market page below states how that is handled for buyers in that country rather than offering a blanket assurance.',
+  },
   related: [
     {
       path: '/services/machine-learning-development',

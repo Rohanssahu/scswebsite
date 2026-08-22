@@ -308,6 +308,11 @@ export const devopsEngineering: ServiceBody = {
         'That is the intended shape of this service. Your developers keep owning the application; we build the path it travels along, review it with them, write the runbooks and run a training session so the pipeline is theirs afterwards. Where you have no in-house platform engineer, ongoing monthly capacity can cover maintenance instead.',
     },
   ],
+  markets: {
+    title: 'Markets we run delivery pipelines for',
+    intro:
+      'Deployment windows and on-call expectations are where a timezone gap actually bites, so each market page below sets out realistic release scheduling and what happens when something breaks outside our working hours.',
+  },
   related: [
     {
       path: '/services/cloud-solutions',

@@ -27,6 +27,7 @@ import ContentRoute from './ContentRoute';
 import RouteFallback from './RouteFallback';
 import {
   CONTENT_ROUTES,
+  INSIGHT_ROUTES,
   LOCATION_ROUTES,
   SERVICE_ROUTES,
   isRouteLoaded,
@@ -36,6 +37,7 @@ import { loadable } from './loadable';
 import { ALL_ROUTES } from '@/seo/registry';
 import { SERVICES_HUB_PATH, SERVICE_META } from '@/content/services';
 import { LOCATIONS_HUB_PATH, LOCATION_META } from '@/content/locations';
+import { INSIGHTS_HUB_PATH, INSIGHT_META } from '@/content/insights';
 
 const APP_SOURCE = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
@@ -51,15 +53,18 @@ const render = (path: string) =>
   );
 
 describe('split content routes', () => {
-  it('splits the services hub, every service page, the locations hub and every market', () => {
+  it('splits all three content sections: services, markets and insights', () => {
     expect(Object.keys(SERVICE_ROUTES).sort()).toEqual(
       [SERVICES_HUB_PATH, ...SERVICE_META.map((service) => service.path)].sort(),
     );
     expect(Object.keys(LOCATION_ROUTES).sort()).toEqual(
       [LOCATIONS_HUB_PATH, ...LOCATION_META.map((location) => location.path)].sort(),
     );
+    expect(Object.keys(INSIGHT_ROUTES).sort()).toEqual(
+      [INSIGHTS_HUB_PATH, ...INSIGHT_META.map((insight) => insight.path)].sort(),
+    );
     expect(Object.keys(CONTENT_ROUTES)).toHaveLength(
-      SERVICE_META.length + LOCATION_META.length + 2,
+      SERVICE_META.length + LOCATION_META.length + INSIGHT_META.length + 3,
     );
   });
 

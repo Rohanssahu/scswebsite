@@ -1,0 +1,1 @@
+const u=["January","February","March","April","May","June","July","August","September","October","November","December"];function n(e){const[r,t,a]=e.split("-").map(Number);return`${a} ${u[t-1]} ${r}`}export{n as f};

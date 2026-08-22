@@ -2,9 +2,10 @@
 // Buddy — SCS Softwares real-time voice IT Manager.
 // LiveKit Agents worker entrypoint.
 //
-// Pipeline: Silero VAD → OpenAI streaming STT (only remaining OpenAI
-// dependency — see src/providers/stt.ts) → Gemini LLM (provider-abstracted,
-// see src/providers/llm.ts) → ElevenLabs multilingual TTS.
+// Pipeline: Silero VAD → LiveKit Inference STT (Deepgram Flux; OpenAI STT is
+// an opt-in alternative — see src/providers/stt.ts) → Gemini LLM (the ONLY
+// reasoning provider, see src/providers/llm.ts) → ElevenLabs TTS.
+// English only, in this flow and in consultation meetings.
 // Turn detection is VAD-based with barge-in (visitor interruptions) enabled
 // by the framework defaults; background-noise tolerance comes from the VAD
 // activation threshold below.
@@ -50,6 +51,7 @@ import {
   buildPreliminaryEstimate,
   describeEstimate,
   estimateInputSchema,
+  estimateNarrative,
   type PreliminaryEstimate,
 } from './estimate.js';
 import {
@@ -76,7 +78,6 @@ import {
 } from './session_lifecycle.js';
 import { CONSENT_REQUIRED_REPLY, submissionToolParameters } from './tool_params.js';
 import {
-  VOICE_LANGUAGES,
   applyUpdate,
   buildSummary,
   computeProgress,
@@ -157,12 +158,18 @@ export default defineAgent({
     const consentAt = new Date().toISOString();
 
     // ---- per-session state (server-side only; never model-writable) ----------
+    //
+    // The browser's `preferredLanguage` is deliberately IGNORED for the
+    // conversation language: this flow is English-only, so the language is
+    // pinned rather than negotiated. It is still recorded on the state so the
+    // stored lead shows which language the visitor arrived in.
     let state: ProjectState = emptyState();
-    if (meta.preferredLanguage && (VOICE_LANGUAGES as readonly string[]).includes(meta.preferredLanguage)) {
-      state.language = meta.preferredLanguage as ProjectState['language'];
-    }
+    state.language = 'en';
     let estimate: PreliminaryEstimate | null = null;
     let estimatePresented = false;
+    /** Bumped on every (re)estimate so a budget or scope change publishes a new
+     * estimate version rather than silently mutating the old one. */
+    let estimateRevision = 0;
     let contact: ContactDetails | null = null;
     let submittedReference: string | null = null;
     let lastSubmitArgs: SubmitLeadArgs | null = null;
@@ -197,7 +204,14 @@ export default defineAgent({
               assumptions: estimate.assumptions,
               exclusions: estimate.exclusions,
               risks: estimate.risks,
+              hourlyRateUsd: estimate.hourly_rate_max,
+              // The one object the spoken figures, this panel and the stored
+              // lead all read from.
+              budgetPlan: estimate.budget_plan,
+              narrative: estimateNarrative(estimate),
+              estimateVersion: estimate.budget_plan.estimate_version,
               status: 'preliminary',
+              requiresHumanReview: true,
             }
           : null,
         confirmed: Boolean(state.confirmedAt),
@@ -211,18 +225,13 @@ export default defineAgent({
     };
 
     // ---- tools (STRICT schemas; server-side authorization inside each) -------
+    //
+    // There is deliberately NO set_language tool: the general voice flow is
+    // English-only, matching the consultation meeting. The commercial wording
+    // the estimate tool returns is generated in English by the shared policy,
+    // and a model paraphrasing those figures into another language is exactly
+    // how a spoken number drifts from the number on screen.
     const tools = {
-      set_language: llm.tool({
-        description: 'Set the conversation language the visitor chose (english, hindi or hinglish).',
-        parameters: z.object({ language: z.enum(VOICE_LANGUAGES) }).strict(),
-        execute: async ({ language }) => {
-          state.language = language;
-          logEvent('language_selected', { language });
-          publishState();
-          return `Language set to ${language}. Continue the conversation strictly in this language.`;
-        },
-      }),
-
       update_requirements: llm.tool({
         description:
           'Record newly learned requirement details after each visitor answer. Only include fields the visitor actually addressed this turn. Returns which required fields are still missing — ask about those next, one at a time.',
@@ -248,11 +257,12 @@ export default defineAgent({
 
       generate_estimate: llm.tool({
         description:
-          'Generate the preliminary estimate once all required requirement fields are collected. You provide only classifications; the server computes every number. Returns the figures to present.',
+          "Generate the preliminary estimate once all required requirement fields are collected. You classify the requirements (tier + effort class) and report the budget the visitor stated; the server computes every hour, price, duration and budget-fit figure. Returns the EXACT sentences to say. Call it again whenever the visitor changes their budget or scope.",
         parameters: estimateInputSchema,
         execute: async (input) => {
+          estimateRevision += 1;
           try {
-            estimate = buildPreliminaryEstimate(state, input);
+            estimate = buildPreliminaryEstimate(state, input, estimateRevision);
           } catch (e) {
             const code = e instanceof EstimateError ? e.code : 'invalid_input';
             logEvent('estimate_rejected', { code });
@@ -260,18 +270,31 @@ export default defineAgent({
               const progress = computeProgress(state);
               return `Cannot estimate yet — missing required fields: ${progress.missingRequired.join(', ')}. Collect those first.`;
             }
-            return 'The estimate input was invalid. Re-check the module list and classifications, then try once more.';
+            if (code === 'out_of_bounds') {
+              // Honest answer, not a token figure: the stated budget funds no
+              // deliverable scope, so ask what the smallest outcome should be.
+              return (
+                'The budget the visitor stated does not fund any deliverable scope yet. Tell them that plainly and kindly, ' +
+                'do NOT invent a lower figure, and ask which single business outcome a smaller Phase 1 should deliver. ' +
+                'Then record their answer and try again.'
+              );
+            }
+            return 'The estimate input was invalid. Re-check the scope classification, then try once more.';
           }
           estimatePresented = true;
           logEvent('estimate_generated', {
+            revision: estimateRevision,
             hours_max: estimate.total_hours_max,
             cost_max: estimate.total_cost_max,
+            budget_fit_percent: estimate.budget_plan.budget_fit_percent,
+            coverage_band: estimate.budget_plan.coverage_band,
             confidence: estimate.confidence,
           });
           publishState();
           return (
-            `PRELIMINARY estimate (present briefly, then ask the visitor to confirm the summary): ${describeEstimate(estimate)}. ` +
-            `Say clearly this is preliminary and a consultant will confirm the final quote. ` +
+            `PRELIMINARY estimate v${estimateRevision}. Say the following figures EXACTLY as written — do not change, round or add to any number: ` +
+            `"${describeEstimate(estimate)}" ` +
+            `Then ask the visitor to confirm the requirement summary. ` +
             `Requirement summary to read back: ${buildSummary(state).slice(0, 1200)}`
           );
         },

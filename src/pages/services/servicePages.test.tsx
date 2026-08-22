@@ -24,6 +24,7 @@ import {
   SOFTWARE_SERVICE_CONTENT,
   SUPPORT_SERVICE_CONTENT,
 } from '@/content/services/all';
+import { LOCATION_META, locationsHubMeta } from '@/content/locations';
 
 const render = (content: ServiceContent) =>
   renderToStaticMarkup(
@@ -793,6 +794,80 @@ describe('digital marketing page stays a supporting service', () => {
       /\b\d+% (?:more|increase|growth) (?:in )?(?:traffic|leads|revenue)\b/i,
     ]) {
       expect(serialized.match(pattern)?.[0], `marketing page cites ${pattern}`).toBeUndefined();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The markets block.
+//
+// Before it existed, every regional page linked out to eight service pages and
+// not one service page linked back — the country cluster was a one-way graph,
+// so a reader who arrived on /services/mobile-app-development had no route to
+// the page that answers "how does this work with a team in India?".
+//
+// Two things have to hold for that block to be an improvement rather than
+// fifteen copies of the same paragraph: the links must come from the manifest
+// (so a market without a page cannot be linked), and the sentence above them
+// must be genuinely per-service.
+// ---------------------------------------------------------------------------
+
+describe('service pages link to the markets', () => {
+  it.each(RENDERED)('$0.path links to every market that has a page', (content, html) => {
+    for (const location of LOCATION_META) {
+      expect(html, `${content.path} does not link to ${location.path}`).toContain(
+        `href="${location.path}"`,
+      );
+    }
+    expect(html).toContain(`href="${locationsHubMeta.path}"`);
+  });
+
+  it.each(RENDERED)('$0.path links to no market without a page', (content, html) => {
+    const known = new Set<string>([locationsHubMeta.path, ...LOCATION_META.map((l) => l.path)]);
+    for (const match of html.matchAll(/href="(\/locations[^"#?]*)"/g)) {
+      expect(known, `${content.path} links to ${match[1]}, which has no page`).toContain(match[1]);
+    }
+  });
+
+  it.each(RENDERED)('$0.path renders its own markets heading and sentence', (content, html) => {
+    const text = stripTags(html);
+    expect(text).toContain(content.markets.title);
+    expect(text).toContain(content.markets.intro);
+  });
+
+  it('gives every service a different markets heading and sentence', () => {
+    // The links are identical by design — they are derived from one manifest.
+    // The prose is what must not repeat, or this is fifteen duplicate blocks.
+    const titles = SERVICE_CONTENT.map((service) => service.markets.title);
+    const intros = SERVICE_CONTENT.map((service) => service.markets.intro);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(new Set(intros).size).toBe(intros.length);
+  });
+
+  it('states the India base and the absence of a local presence next to the links', () => {
+    // The same disclosure the market pages carry. A list of nine country links
+    // on a service page is exactly where a reader could otherwise infer offices.
+    for (const [content, html] of RENDERED) {
+      const text = stripTags(html);
+      expect(text, `${content.path}`).toContain('works from Indore, India');
+      expect(text, `${content.path}`).toMatch(
+        /no office, company registration, telephone number or staff in any of them/i,
+      );
+    }
+  });
+
+  it('claims no local office, entity or team in a markets sentence', () => {
+    const forbidden: [RegExp, string][] = [
+      [/\bour (?:office|team|staff|developers) in\b/i, 'a local office or team'],
+      [/\blocally (?:registered|incorporated|based)\b/i, 'local registration'],
+      [/\blocal (?:office|entity|branch|subsidiary|phone|telephone)\b/i, 'a local presence'],
+      [/\bwe are (?:a )?(?:us|uk|german|dutch|canadian|australian|turkish|singaporean|emirati)\b/i, 'a local identity'],
+    ];
+    for (const service of SERVICE_CONTENT) {
+      const sentence = `${service.markets.title} ${service.markets.intro}`;
+      for (const [pattern, label] of forbidden) {
+        expect(pattern.test(sentence), `${service.path} markets copy implies ${label}`).toBe(false);
+      }
     }
   });
 });

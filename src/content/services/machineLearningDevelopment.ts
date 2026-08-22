@@ -345,6 +345,11 @@ export const machineLearningDevelopment: ServiceBody = {
         'It will, and we plan for it. Monitoring watches for drift in the inputs and for performance against outcomes once they are known, with alerting when either degrades. Retraining runs on the same reproducible pipeline that produced the original model.',
     },
   ],
+  markets: {
+    title: 'Where our machine learning work is deployed',
+    intro:
+      'A machine learning project depends far more on the data a client can actually share than on where either party sits, so the market pages below deal mainly with how sample data is transferred, held and deleted during a remote engagement.',
+  },
   related: [
     {
       path: '/services/ai-development',

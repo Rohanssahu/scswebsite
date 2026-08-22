@@ -559,6 +559,19 @@ const LOCATION_PATHS = [
  * do not.
  */
 
+const INSIGHTS_HUB_PATH = '/insights';
+
+/**
+ * Exactly the articles that are published. Two, and that is deliberate — see
+ * `docs/seo/EDITORIAL_PLAN.md`. An article may only ship when SCS Softwares has
+ * first-hand experience of what it describes, so this list grows slowly on
+ * purpose and a long list here would itself be the warning sign.
+ */
+const INSIGHT_PATHS = [
+  '/insights/how-to-estimate-an-ai-app-project',
+  '/insights/ai-voice-agent-production-checklist',
+];
+
 /** The global service pages every regional page has to link to. */
 const REQUIRED_SERVICE_LINKS = [
   '/services/custom-software-development',
@@ -1193,6 +1206,8 @@ const HONESTY_SCAN_PATHS = [
   ...SERVICE_PATHS,
   LOCATIONS_HUB_PATH,
   ...LOCATION_PATHS,
+  INSIGHTS_HUB_PATH,
+  ...INSIGHT_PATHS,
 ];
 
 async function checkSiteHonesty() {
@@ -1260,7 +1275,15 @@ async function checkPrerenderCompleteness() {
 
   // And every split route must carry a complete page before JavaScript: body
   // copy, one H1, a breadcrumb, JSON-LD, metadata and the three CTAs.
-  for (const urlPath of [SERVICES_HUB_PATH, ...SERVICE_PATHS, LOCATIONS_HUB_PATH, ...LOCATION_PATHS]) {
+  const splitRoutes = [
+    SERVICES_HUB_PATH,
+    ...SERVICE_PATHS,
+    LOCATIONS_HUB_PATH,
+    ...LOCATION_PATHS,
+    INSIGHTS_HUB_PATH,
+    ...INSIGHT_PATHS,
+  ];
+  for (const urlPath of splitRoutes) {
     const file = resolveDistPath(urlPath);
     if (!file) {
       fail('lazy-routes', `${urlPath}: no prerendered file — the route chunk never resolved`);
@@ -1268,8 +1291,12 @@ async function checkPrerenderCompleteness() {
     }
     const html = await fs.readFile(file, 'utf8');
     const { body, words } = prerenderedBody(html);
-    const isHub = urlPath === SERVICES_HUB_PATH || urlPath === LOCATIONS_HUB_PATH;
-    if (words < (isHub ? 400 : 800)) {
+    const isHub =
+      urlPath === SERVICES_HUB_PATH || urlPath === LOCATIONS_HUB_PATH || urlPath === INSIGHTS_HUB_PATH;
+    // The insights hub is a short index page by design — it lists two articles
+    // and states the publishing rule. The articles themselves are long-form.
+    const minimumWords = urlPath === INSIGHTS_HUB_PATH ? 150 : isHub ? 400 : 800;
+    if (words < minimumWords) {
       fail('lazy-routes', `${urlPath}: incomplete lazy route — only ${words} words inside #root`);
     }
     if (!/<h1[\s>]/.test(body)) fail('lazy-routes', `${urlPath}: no <h1> inside the prerendered #root`);
@@ -1283,9 +1310,7 @@ async function checkPrerenderCompleteness() {
       if (!body.includes(`href="${cta}"`)) fail('lazy-routes', `${urlPath}: no ${cta} link inside #root`);
     }
   }
-  notes.push(
-    `lazy-route completeness verified for ${SERVICE_PATHS.length + LOCATION_PATHS.length + 2} code-split routes`,
-  );
+  notes.push(`lazy-route completeness verified for ${splitRoutes.length} code-split routes`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1340,7 +1365,11 @@ const BUNDLE_BUDGET = {
   mainRaw: 1_473_000,
   mainGzip: 426_000,
   totalRaw: 3_170_000,
-  totalGzip: 936_000,
+  // Raised from 936_000 with the shared estimation policy: the budget-aware
+  // scope engine, its client-facing wording and the report/proposal/admin
+  // panels that render it. Measured immediately after that change:
+  // 3_160_447 B raw / 936_899 B gzip across 50 chunks.
+  totalGzip: 940_000,
   /** Route chunks the split must actually produce (services + locations + hubs). */
   minimumContentChunks: 26,
 };
@@ -1449,6 +1478,150 @@ async function checkBundleBudget() {
 }
 
 // ---------------------------------------------------------------------------
+// 12: the insights section — authorship must be a fact, not a signal
+// ---------------------------------------------------------------------------
+
+/**
+ * An `Article.author` is a claim that a named person wrote the thing. Adding a
+ * founder byline to content he did not write is the exact move that makes
+ * "E-E-A-T optimisation" dishonest, and it is invisible in every other check in
+ * this file: the page renders, the markup validates, the tests pass.
+ *
+ * So this section asserts the three halves of that claim agree — the visible
+ * byline names Rohan Sahu, the `Article.author` resolves to the same `Person`
+ * `@id` that `/about` defines, and that `@id` is a real fragment on a real
+ * page — plus the article-specific honesty rules: no invented client, metric,
+ * timeline or budget, and a stated basis for why the piece can be written.
+ */
+
+const FOUNDER_PERSON_ID = `${ORIGIN}/about#founder`;
+
+/** Shapes an article must never contain. Checked against the rendered text. */
+const FABRICATED_EVIDENCE_PATTERNS = [
+  [/\bone of our clients?\b/i, 'an unnamed client anecdote'],
+  [/\ba client (?:of ours )?(?:told|asked|reported|saw|achieved)\b/i, 'a client anecdote'],
+  [/\bwe (?:increased|improved|reduced|cut|grew|boosted) [^.]{0,40}\bby \d/i, 'an unverified result metric'],
+  [/\b\d+(?:\.\d+)?\s?% (?:increase|improvement|uplift|reduction|faster|cheaper)\b/i, 'an unverified percentage claim'],
+  [/\bsaved (?:them|the client|our client)\b/i, 'an unverified saving claim'],
+  [/\bin (?:just )?\d+ weeks? we\b/i, 'an unverified delivery timeline'],
+  [/\bcase stud(?:y|ies) (?:show|shows|showed)\b/i, 'a case study that does not exist'],
+  [/\bour (?:award|awards|certification|certifications)\b/i, 'an award or certification'],
+  [/\bwe guarantee\b/i, 'a guarantee'],
+  [/\bwill rank\b/i, 'a ranking promise'],
+];
+
+async function checkInsightPages(sitemapLocs) {
+  await withServer(async (base) => {
+    // The hub first: it must link to every article and to nothing else.
+    const hubResponse = await fetch(`${base}${INSIGHTS_HUB_PATH}`);
+    const hubHtml = await hubResponse.text();
+    if (hubResponse.status !== 200) {
+      fail('insights', `GET ${INSIGHTS_HUB_PATH} -> ${hubResponse.status}`);
+      return;
+    }
+    for (const articlePath of INSIGHT_PATHS) {
+      if (!hubHtml.includes(`href="${articlePath}"`)) {
+        fail('insights', `${INSIGHTS_HUB_PATH} does not link to ${articlePath}`);
+      }
+    }
+    const known = new Set([INSIGHTS_HUB_PATH, ...INSIGHT_PATHS]);
+    for (const file of await walk(DIST, (f) => f.endsWith('.html'))) {
+      const html = await fs.readFile(file, 'utf8');
+      for (const match of html.matchAll(/href="(\/insights[^"#?]*)"/g)) {
+        if (!known.has(match[1])) {
+          fail('insights', `${rel(file)} links to ${match[1]}, which is not a published article`);
+        }
+      }
+    }
+
+    for (const urlPath of INSIGHT_PATHS) {
+      const response = await fetch(`${base}${urlPath}`);
+      const html = await response.text();
+      if (response.status !== 200) {
+        fail('insights', `GET ${urlPath} -> ${response.status}`);
+        continue;
+      }
+      const { body, text } = prerenderedBody(html);
+      const canonical = `${ORIGIN}${urlPath}`;
+
+      if (!sitemapLocs.includes(canonical)) fail('insights', `${urlPath} is missing from the sitemap`);
+      if (robotsOf(html) !== 'index,follow') fail('insights', `${urlPath}: robots="${robotsOf(html)}"`);
+      if (canonicalOf(html) !== canonical) fail('insights', `${urlPath}: canonical "${canonicalOf(html)}"`);
+      if (metaOf(html, 'og:type') !== 'article' && metaOf(html, 'property:og:type') !== 'article') {
+        // og:type is a property-attribute tag; read it directly.
+        if (!/property="og:type" content="article"/.test(html)) {
+          fail('insights', `${urlPath}: og:type is not "article"`);
+        }
+      }
+
+      // --- the authorship claim, in all three places -----------------------
+      const nodes = jsonLdBlocks(html);
+      const article = nodes.find((node) => node['@type'] === 'Article');
+      if (!article) {
+        fail('insights', `${urlPath}: no Article JSON-LD`);
+      } else {
+        const author = article.author;
+        const authorId = author && typeof author === 'object' ? author['@id'] : null;
+        if (authorId !== FOUNDER_PERSON_ID) {
+          fail('insights', `${urlPath}: Article.author is "${authorId}", not the founder Person node`);
+        }
+        if (!article.datePublished || !article.dateModified) {
+          fail('insights', `${urlPath}: Article is missing datePublished or dateModified`);
+        }
+        for (const forbidden of ['aggregateRating', 'review', 'award', 'speakable']) {
+          if (forbidden in article) fail('insights', `${urlPath}: Article carries a ${forbidden} node`);
+        }
+      }
+      if (!text.includes('Rohan Sahu')) {
+        fail('insights', `${urlPath}: no visible byline naming the author the markup claims`);
+      }
+      if (!body.includes('href="/about#founder"')) {
+        fail('insights', `${urlPath}: the byline does not link to the page that defines the Person node`);
+      }
+      if (!/What this is based on/i.test(text)) {
+        fail('insights', `${urlPath}: does not state what first-hand experience it is written from`);
+      }
+
+      // --- the visible dates must be the ones in the markup ----------------
+      // A dateModified that only exists in JSON-LD is a freshness signal the
+      // reader cannot see, which is the definition of marking up something the
+      // page does not say. Both dates have to appear in a real <time> element.
+      //
+      // The attribute is matched case-insensitively: React SSR emits the JSX
+      // prop name (`dateTime`), and HTML attribute names are case-insensitive,
+      // so that is what a browser and a parser both read as `datetime`.
+      if (article) {
+        const renderedDates = new Set(
+          [...body.matchAll(/<time[^>]*\sdatetime="([^"]+)"/gi)].map((match) => match[1]),
+        );
+        for (const field of ['datePublished', 'dateModified']) {
+          const iso = String(article[field] ?? '');
+          // dateModified is only rendered when it differs from datePublished —
+          // an "Updated" line repeating the publication date is noise.
+          if (field === 'dateModified' && iso === String(article.datePublished)) continue;
+          if (iso && !renderedDates.has(iso)) {
+            fail('insights', `${urlPath}: ${field} ${iso} is not rendered as a visible <time>`);
+          }
+        }
+      }
+
+      // --- no invented evidence -------------------------------------------
+      for (const [pattern, label] of FABRICATED_EVIDENCE_PATTERNS) {
+        const global = new RegExp(pattern.source, 'gi');
+        for (const match of text.matchAll(global)) {
+          const index = match.index ?? 0;
+          if (sentenceAround(text, index).endsWith('?')) continue;
+          if (isDenied(text, index)) continue;
+          fail('insights', `${urlPath}: ${label} — "…${match[0]}"`);
+        }
+      }
+    }
+
+    notes.push(`verified the insights hub, ${INSIGHT_PATHS.length} articles and the authorship claim`);
+  });
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   if (!fss.existsSync(DIST)) {
@@ -1462,6 +1635,7 @@ async function main() {
   await serveAndCheck();
   await checkServicePages(sitemapLocs);
   await checkLocationPages(sitemapLocs);
+  await checkInsightPages(sitemapLocs);
   await checkSiteHonesty();
   await checkPrerenderCompleteness();
   await checkBundleBudget();
@@ -1474,7 +1648,7 @@ async function main() {
     return;
   }
   console.log(
-    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards, regional pages, location honesty, site-wide honesty, lazy-route completeness, bundle budget.',
+    '\n✓ dist verified: links, assets, metadata, secrets, hosts, sitemap, CNAME, live routes, service pages, legacy forwards, regional pages, location honesty, insight articles, authorship, site-wide honesty, lazy-route completeness, bundle budget.',
   );
 }
 

@@ -235,8 +235,12 @@ export function isValidTimezone(value: string): boolean {
  * client_reported flag — they never become validated estimates. */
 export interface AnalysisSnapshot {
   mode: 'new' | 'existing';
-  source: 'ai' | 'demo';
+  /** 'ai' = Gemini-classified; 'basic' = the labelled local engine.
+   * 'demo' is accepted for snapshots created before the labels were renamed. */
+  source: 'ai' | 'basic' | 'demo';
   generatedAt: string | null;
+  /** The budget the client selected on the website, in whole USD, or null. */
+  selectedBudgetUsd: number | null;
   projectType: string | null;
   platforms: string[];
   features: string[];
@@ -267,6 +271,7 @@ const SNAPSHOT_KEYS = new Set([
   'missingFeatures',
   'priorities',
   'reportedEstimate',
+  'selectedBudgetUsd',
 ]);
 
 /**
@@ -281,7 +286,13 @@ export function sanitizeAnalysisSnapshot(raw: unknown): AnalysisSnapshot | null 
   }
   const mode = raw.mode === 'new' || raw.mode === 'existing' ? raw.mode : null;
   if (!mode) return null;
-  const source = raw.source === 'ai' || raw.source === 'demo' ? raw.source : 'demo';
+  const source =
+    raw.source === 'ai' || raw.source === 'basic' || raw.source === 'demo'
+      ? (raw.source as AnalysisSnapshot['source'])
+      : 'basic';
+  // Re-clamped here: a browser-supplied budget is untrusted, and the meeting's
+  // estimate engine re-parses it again before any figure is computed from it.
+  const selectedBudgetUsd = clampInt(raw.selectedBudgetUsd, 0, 10000000);
 
   let generatedAt: string | null = null;
   if (typeof raw.generatedAt === 'string' && !Number.isNaN(Date.parse(raw.generatedAt))) {
@@ -321,6 +332,7 @@ export function sanitizeAnalysisSnapshot(raw: unknown): AnalysisSnapshot | null 
     missingFeatures: strList(raw.missingFeatures, 15, 200),
     priorities: strList(raw.priorities, 10, 200),
     reported,
+    selectedBudgetUsd,
   };
 }
 

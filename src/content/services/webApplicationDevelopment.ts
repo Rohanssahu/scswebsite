@@ -266,6 +266,11 @@ export const webApplicationDevelopment: ServiceBody = {
         'That is usually the better plan. We scope a first release around the workflow with the most pain, get it in front of real users, then extend it with what they actually ask for.',
     },
   ],
+  markets: {
+    title: 'Where these web applications run',
+    intro:
+      'A web application usually replaces a spreadsheet or a manual process that a specific team already runs daily, so the risk in a remote build is not the code but whether we understood that team\'s real workflow before writing any.',
+  },
   related: [
     {
       path: '/services/custom-software-development',

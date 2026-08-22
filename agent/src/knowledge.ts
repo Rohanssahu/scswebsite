@@ -11,6 +11,15 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import {
+  MONTHLY_COST_MAX_USD,
+  MONTHLY_COST_MIN_USD,
+  OPTIONAL_UPGRADE_MAX_PERCENT,
+  OPTIONAL_UPGRADE_MIN_PERCENT,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS,
+  WEEKLY_COST_USD,
+} from './estimationPolicy.js';
 
 const serviceSchema = z.object({
   id: z.string().min(1),
@@ -25,14 +34,27 @@ export const knowledgeSchema = z.object({
   engagementProcess: z.array(z.string().min(1)).min(1),
   supportedTechnologies: z.array(z.string().min(1)).min(1),
   benefits: z.array(z.string().min(1)).min(1),
+  // The commercial figures are pinned to the shared estimation policy with
+  // z.literal, so a hand-edit of the knowledge JSON that raises the rate or the
+  // weekly capacity fails at worker startup instead of being spoken to a client.
   hourlyEngagementModel: z.object({
     description: z.string().min(1),
+    standardHourlyRateUsd: z.literal(STANDARD_HOURLY_RATE_USD),
+    weeklyCostUsd: z.literal(WEEKLY_COST_USD),
+    monthlyCostMinUsd: z.literal(MONTHLY_COST_MIN_USD),
+    monthlyCostMaxUsd: z.literal(MONTHLY_COST_MAX_USD),
     minimumEngagementHours: z.number().int().positive().nullable(),
     minimumEngagementNote: z.string(),
   }),
   weeklyCapacity: z.object({
-    hoursPerWeek: z.number().int().min(1).max(168),
+    hoursPerWeek: z.literal(WEEKLY_CAPACITY_HOURS),
     explanation: z.string().min(1),
+  }),
+  budgetPolicy: z.object({
+    positioning: z.string().min(1),
+    optionalUpgradeMinPercent: z.literal(OPTIONAL_UPGRADE_MIN_PERCENT),
+    optionalUpgradeMaxPercent: z.literal(OPTIONAL_UPGRADE_MAX_PERCENT),
+    rules: z.array(z.string().min(1)).min(1),
   }),
   humanReviewProcess: z.string().min(1),
   contactOptions: z.array(
@@ -81,6 +103,9 @@ export function renderKnowledge(k: ScsKnowledge): string {
       : `Minimum engagement: ${k.hourlyEngagementModel.minimumEngagementHours} hours.`,
     '',
     `CAPACITY: ${k.weeklyCapacity.hoursPerWeek} hours/week. ${k.weeklyCapacity.explanation}`,
+    '',
+    `BUDGET POLICY: ${k.budgetPolicy.positioning}`,
+    ...k.budgetPolicy.rules.map((r) => `- ${r}`),
     '',
     `HUMAN REVIEW: ${k.humanReviewProcess}`,
     '',

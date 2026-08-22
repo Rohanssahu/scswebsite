@@ -307,6 +307,11 @@ export const cloudSolutions: ServiceBody = {
         'Yes, and it is common. We start by documenting what exists, moving credentials into a secret store, checking whether backups restore, and adding monitoring where there is none. That first pass often finds more value than any migration would, and it gives you a written picture of a platform that previously lived in one person head.',
     },
   ],
+  markets: {
+    title: 'Where we host and run these systems',
+    intro:
+      'Hosting region is a commercial decision for most overseas buyers before it is a technical one, so the market pages below deal with where infrastructure is provisioned and who holds the account, rather than claiming certification we do not have.',
+  },
   related: [
     {
       path: '/services/devops-engineering',

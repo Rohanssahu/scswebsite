@@ -1,8 +1,18 @@
 // AI project analysis service — talks to the `ai-estimate` Supabase Edge
-// Function (which holds the OpenAI key server-side). The frontend never sees
-// any AI secret. Every consumer must treat failures as non-fatal: the flow
-// falls back to the local demo engine so the visitor is never blocked.
+// Function, which holds the Gemini key server-side. The frontend never sees any
+// AI secret, and it never computes a price: every figure in the response was
+// produced by the shared estimation policy on the server.
+//
+// Failure handling is deliberate. A provider failure THROWS. Callers then show
+// either the "AI analysis temporarily unavailable" state or the explicitly
+// labelled basic estimate (src/data/basicEstimate.ts) — never a basic result
+// dressed up as a Gemini analysis.
 
+import {
+  STANDARD_HOURLY_RATE_USD,
+  parseSelectedBudgetUsd,
+  type BudgetPlan,
+} from '@/policy/estimationPolicy';
 import { AnalysisResult, AnswerMap, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
@@ -163,17 +173,74 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === 'string' && s.trim());
 }
 
+/** Raised when the AI backend could not produce a usable analysis. */
+export class AiAnalysisUnavailableError extends Error {
+  constructor(message = 'AI analysis is temporarily unavailable.') {
+    super(message);
+    this.name = 'AiAnalysisUnavailableError';
+  }
+}
+
+function isPlanTier(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false;
+  const t = v as Record<string, unknown>;
+  return (
+    typeof t.hours === 'number' &&
+    typeof t.costUsd === 'number' &&
+    typeof t.weeks === 'number' &&
+    typeof t.percentAboveBudget === 'number' &&
+    Array.isArray(t.includedScope) &&
+    Array.isArray(t.deferredScope) &&
+    Array.isArray(t.addedVsBase)
+  );
+}
+
 /**
- * Reject malformed AI output so the caller falls back to the demo engine.
- *
- * This is a shape/type check only — the `ai-estimate` Edge Function already
- * rejects unknown fields and clamps every cost/duration-driving number
- * (hourlyRate, hours, weeklyCapacityHours) to a safe deterministic range
- * server-side (see supabase/functions/ai-estimate/gemini.ts,
- * validateAndClampAnalysis). This client-side check is defense in depth, not
- * the primary safety net.
+ * Validate the server's budget plan. This is defense in depth — the Edge
+ * Function already built it from the shared policy — but it is also the
+ * client-side guarantee that no rendered figure ever breaches the commercial
+ * rules: rate at or below $5/hour, base plan inside the client's own budget,
+ * optional tiers inside +20% / +30%.
  */
-function validateAnalysis(raw: unknown): raw is Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'> {
+export function isValidBudgetPlan(raw: unknown): raw is BudgetPlan {
+  if (typeof raw !== 'object' || raw === null) return false;
+  const p = raw as Record<string, unknown>;
+  if (p.currency !== 'USD') return false;
+  if (typeof p.hourlyRateUsd !== 'number' || p.hourlyRateUsd > STANDARD_HOURLY_RATE_USD || p.hourlyRateUsd <= 0) return false;
+  if (typeof p.weeklyCapacityHours !== 'number' || p.weeklyCapacityHours <= 0) return false;
+  if (typeof p.selectedBudgetUsd !== 'number' || p.selectedBudgetUsd < 0) return false;
+  if (typeof p.budgetProvided !== 'boolean') return false;
+  if (typeof p.availableHours !== 'number' || p.availableHours < 0) return false;
+  if (typeof p.budgetFitPercent !== 'number' || p.budgetFitPercent < 0 || p.budgetFitPercent > 100) return false;
+  if (typeof p.mayUseSeventyToEightyWording !== 'boolean') return false;
+  if (p.humanReviewRequired !== true) return false;
+  if (!Array.isArray(p.scope) || !Array.isArray(p.unclearScope)) return false;
+  if (!isPlanTier(p.base)) return false;
+  const base = p.base as { costUsd: number };
+  // The budget-fit option can never cost more than the client's own budget.
+  if (base.costUsd > (p.selectedBudgetUsd as number)) return false;
+  for (const [tier, maxPercent] of [
+    [p.recommended, 20],
+    [p.growth, 30],
+  ] as const) {
+    if (tier === null || tier === undefined) continue;
+    if (!isPlanTier(tier)) return false;
+    const t = tier as { costUsd: number; percentAboveBudget: number };
+    if (t.percentAboveBudget > maxPercent) return false;
+    if (t.costUsd > (p.selectedBudgetUsd as number) * (1 + maxPercent / 100)) return false;
+  }
+  return true;
+}
+
+/**
+ * Reject malformed AI output so the caller falls back to the LABELLED basic
+ * estimate instead of rendering a half-built result as an AI analysis.
+ *
+ * The `ai-estimate` Edge Function already rebuilds the response from an
+ * allowlist and computes every number with the shared policy (see
+ * supabase/functions/ai-estimate/gemini.ts). This check is the second line.
+ */
+function validateAnalysis(raw: unknown): boolean {
   if (typeof raw !== 'object' || raw === null) return false;
   const r = raw as Record<string, unknown>;
   return (
@@ -190,34 +257,43 @@ function validateAnalysis(raw: unknown): raw is Omit<AnalysisResult, 'mode' | 'g
         typeof p.summary === 'string' &&
         typeof p.detail === 'string',
     ) &&
-    isStringArray(r.missingFeatures) &&
+    Array.isArray(r.missingFeatures) &&
     isStringArray(r.recommendedSolution) &&
+    // The team table may legitimately be empty when the selected budget cannot
+    // fund even the core scope — that state is reported, not padded out.
     Array.isArray(r.team) &&
-    r.team.length > 0 &&
     r.team.every(
       (t: Record<string, unknown>) =>
         t &&
         typeof t.role === 'string' &&
         typeof t.hours === 'number' &&
         t.hours > 0 &&
-        t.hours <= 600 &&
         typeof t.hourlyRate === 'number' &&
         t.hourlyRate > 0 &&
-        t.hourlyRate <= 25,
+        t.hourlyRate <= STANDARD_HOURLY_RATE_USD,
     ) &&
     typeof r.weeklyCapacityHours === 'number' &&
     r.weeklyCapacityHours > 0 &&
-    r.weeklyCapacityHours <= 60 &&
+    r.weeklyCapacityHours <= STANDARD_WEEKLY_CAPACITY_CEILING &&
+    typeof r.hourlyRateUsd === 'number' &&
+    r.hourlyRateUsd <= STANDARD_HOURLY_RATE_USD &&
     isStringArray(r.assumptions) &&
     Array.isArray(r.milestones) &&
     r.milestones.length > 0 &&
     r.milestones.every(
-      (m: Record<string, unknown>) => m && typeof m.title === 'string' && typeof m.week === 'string' && isStringArray(m.deliverables),
+      (m: Record<string, unknown>) => m && typeof m.title === 'string' && typeof m.week === 'string' && Array.isArray(m.deliverables),
     ) &&
     isStringArray(r.benefits) &&
-    isStringArray(r.nextSteps)
+    isStringArray(r.nextSteps) &&
+    isStringArray(r.planNarrative) &&
+    isValidBudgetPlan(r.budgetPlan) &&
+    typeof r.estimateSnapshot === 'object' &&
+    r.estimateSnapshot !== null
   );
 }
+
+/** Nothing client-facing may claim more than a 40-hour delivery week. */
+const STANDARD_WEEKLY_CAPACITY_CEILING = 40;
 
 const KNOWN_ANALYSIS_KEYS = [
   'healthScore',
@@ -229,46 +305,65 @@ const KNOWN_ANALYSIS_KEYS = [
   'recommendedSolution',
   'team',
   'weeklyCapacityHours',
+  'hourlyRateUsd',
   'assumptions',
   'milestones',
   'benefits',
   'nextSteps',
+  'budgetPlan',
+  'planNarrative',
+  'estimateSnapshot',
+  'provider',
+  'model',
 ] as const;
 
 /** Rebuild the AI result from a known-key allowlist so any unexpected field
  * on the raw response is dropped rather than spread through unchecked. */
-function stripUnknownKeys(raw: Record<string, unknown>): Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'> {
-  const out = {} as Record<string, unknown>;
+function stripUnknownKeys(raw: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const key of KNOWN_ANALYSIS_KEYS) out[key] = raw[key];
-  return out as Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'>;
+  return out;
 }
 
 /**
- * Generate the full analysis with AI from the visitor's answers plus any
- * document summaries attached to their uploaded files. Throws on any failure —
- * callers fall back to the local demo engine.
+ * Generate the full analysis with Gemini from the visitor's answers plus any
+ * document summaries attached to their uploaded files.
+ *
+ * Throws {@link AiAnalysisUnavailableError} on ANY failure — a caller must then
+ * show the unavailable state or the labelled basic estimate. It never returns a
+ * partially-trusted result.
  */
 export async function generateAiAnalysis(
   mode: ProjectMode,
   answers: AnswerMap,
   files: UploadedFileMeta[],
+  revision = 1,
 ): Promise<AnalysisResult> {
   const supabase = getSupabaseClient();
-  if (!supabase) throw new Error('AI backend is not configured');
+  if (!supabase) throw new AiAnalysisUnavailableError('AI backend is not configured');
   const docSummary = files
     .map((f) => f.text)
     .filter(Boolean)
     .join('\n\n')
     .slice(0, 8_000);
   const { data, error } = await supabase.functions.invoke('ai-estimate', {
-    body: { task: 'analyze', mode, answers, docSummary: docSummary || undefined },
+    body: {
+      task: 'analyze',
+      mode,
+      answers,
+      docSummary: docSummary || undefined,
+      // Sent as a hint only; the server re-parses the budget from the answers
+      // and clamps it with the shared policy either way.
+      clientBudgetUsd: parseSelectedBudgetUsd(answers.budget) ?? undefined,
+      revision,
+    },
   });
-  if (error || !data?.ok) throw new Error(error?.message ?? 'AI analysis failed');
-  if (!validateAnalysis(data.result)) throw new Error('AI returned an invalid analysis');
-  const safeResult = stripUnknownKeys(data.result);
+  if (error || !data?.ok) throw new AiAnalysisUnavailableError(error?.message ?? 'AI analysis failed');
+  if (!validateAnalysis(data.result)) throw new AiAnalysisUnavailableError('AI returned an invalid analysis');
+  const safe = stripUnknownKeys(data.result as Record<string, unknown>);
   return {
-    ...safeResult,
-    healthScore: Math.max(0, Math.min(100, Math.round(safeResult.healthScore))),
+    ...(safe as unknown as Omit<AnalysisResult, 'mode' | 'generatedAt' | 'source'>),
+    healthScore: Math.max(0, Math.min(100, Math.round(safe.healthScore as number))),
     mode,
     generatedAt: new Date().toISOString(),
     source: 'ai',

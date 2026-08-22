@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Mail,
   MessagesSquare,
+  Globe,
   Mic,
   Palette,
   PhoneCall,
@@ -33,6 +34,7 @@ import Reveal from '../Reveal';
 import VisualPlaceholder from '../VisualPlaceholder';
 import Breadcrumbs from './Breadcrumbs';
 import { serviceBreadcrumb } from '@/content/services';
+import { LOCATION_META, locationsHubMeta } from '@/content/locations';
 import type { ServiceContent, ServiceIconKey, ServiceSectionHeader } from '@/content/services/types';
 
 /**
@@ -432,6 +434,59 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
                   </details>
                 </Reveal>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== Markets ===== */}
+        {/*
+          The other half of the country cluster. Every market page links out to
+          the service pages a buyer there starts from; before this section those
+          links ran one way only, so a reader who landed on a service page had
+          no route into the market page that answers "how does this work with a
+          team in India?".
+
+          The links are derived from LOCATION_META rather than stored per
+          service, so the fifteen service pages can never list a market that has
+          no page. The sentence above them is the page's own — see the
+          ServiceMarkets doc comment for why that split exists.
+        */}
+        <section className="border-t border-gray-200 bg-white py-16">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-4xl">
+              <Reveal>
+                <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6 sm:p-8">
+                  <div className="flex items-start gap-3">
+                    <Globe className="mt-1 h-6 w-6 shrink-0 text-purple-600" aria-hidden="true" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{content.markets.title}</h2>
+                      <p className="mt-3 text-sm leading-relaxed text-gray-700">{content.markets.intro}</p>
+                    </div>
+                  </div>
+                  <p className="mt-6 text-sm leading-relaxed text-gray-600">
+                    SCS Softwares works from Indore, India, and delivers to these markets remotely. We hold no
+                    office, company registration, telephone number or staff in any of them.
+                  </p>
+                  <ul className="mt-5 flex flex-wrap gap-2">
+                    {LOCATION_META.map((location) => (
+                      <li key={location.path}>
+                        <Link
+                          to={location.path}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-pink-400 hover:text-pink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                        >
+                          {location.navLabel}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to={locationsHubMeta.path}
+                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-pink-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                  >
+                    How remote delivery is arranged <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </Reveal>
             </div>
           </div>
         </section>

@@ -6,9 +6,9 @@ const STEPS = [
   'Reading requirements',
   'Identifying project scope',
   'Detecting required skills',
-  'Estimating development hours',
-  'Preparing team recommendation',
-  'Calculating cost and delivery timeline',
+  'Classifying essential and optional scope',
+  'Fitting the scope to your budget',
+  'Calculating hours, cost and delivery timeline',
 ];
 
 interface AnalysisProgressProps {
@@ -50,12 +50,12 @@ const AnalysisProgress = ({ onComplete, ready = true, ai = false }: AnalysisProg
       </div>
 
       <h2 className="text-2xl font-bold text-gray-900">
-        {ai ? 'Preparing your AI analysis…' : 'Preparing your demo analysis…'}
+        {ai ? 'Preparing your AI analysis…' : 'Preparing your estimate…'}
       </h2>
       <p className="mt-2 text-sm text-gray-500">
         {ai
-          ? 'Our AI is reviewing your answers and documents to build a tailored estimate.'
-          : 'Simulated analysis — this preview uses example logic, not real code inspection.'}
+          ? 'Our AI is reviewing your answers and documents, then we calculate the scope that fits your budget.'
+          : 'Calculating a basic estimate from your answers at our standard rate of up to $5 per hour.'}
       </p>
 
       <div className="mt-6 h-2 overflow-hidden rounded-full bg-gray-200" aria-hidden="true">

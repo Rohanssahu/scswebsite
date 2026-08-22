@@ -5,6 +5,7 @@ import {
   buildExtractSchema,
   categorizeError,
   DEFAULT_GEMINI_MODEL,
+  attachMilestoneWeeks,
   handleAnalyze,
   handleExtract,
   isOriginAllowed,
@@ -15,6 +16,12 @@ import {
   validateAndClampAnalysis,
   type GenerateArgs,
 } from './gemini';
+import {
+  STANDARD_HOURLY_RATE_USD,
+  totalCostOfRoles,
+  totalHoursOfRoles,
+  WEEKLY_CAPACITY_HOURS,
+} from '../_shared/estimationPolicy.ts';
 
 // --- origin allowlist (unchanged behavior, now covered) -----------------------
 
@@ -479,6 +486,10 @@ describe('extract request property contract', () => {
 });
 
 // --- analyze task ------------------------------------------------------------------
+//
+// The contract changed deliberately: Gemini no longer emits a single number on
+// this path. It classifies scope and names roles; the shared estimation policy
+// turns that into hours, price, duration and the three budget options.
 
 function validAnalysis(overrides: Record<string, unknown> = {}) {
   return {
@@ -489,10 +500,15 @@ function validAnalysis(overrides: Record<string, unknown> = {}) {
     problemsDetected: [{ title: 'Tight timeline', severity: 'medium', summary: 'Short deadline', detail: 'Needs parallel work' }],
     missingFeatures: ['Payments'],
     recommendedSolution: ['Start with an MVP'],
-    team: [{ role: 'Backend Developer', hours: 80, hourlyRate: 15 }],
-    weeklyCapacityHours: 40,
+    scopeItems: [
+      { label: 'User accounts', tier: 'essential', complexity: 'standard' },
+      { label: 'Booking flow', tier: 'essential', complexity: 'complex' },
+      { label: 'Admin panel', tier: 'important', complexity: 'standard' },
+      { label: 'Mobile app', tier: 'optional', complexity: 'complex' },
+    ],
+    teamRoles: ['Requirement Analyst', 'UI/UX Designer', 'Frontend Developer', 'Backend Developer', 'QA Tester'],
     assumptions: ['Client provides content'],
-    milestones: [{ title: 'Phase 1', week: 'Week 1-2', deliverables: ['Auth'] }],
+    milestones: [{ title: 'Phase 1', deliverables: ['Auth'] }],
     benefits: ['Transparent pricing'],
     nextSteps: ['Book a call'],
     ...overrides,
@@ -521,7 +537,90 @@ describe('handleAnalyze', () => {
     const { fn } = fakeGenerate(JSON.stringify(validAnalysis()));
     const result = await handleAnalyze('new', {}, undefined, deps(fn));
     expect(result.ok).toBe(true);
-    expect((result.result as Record<string, unknown>).riskLevel).toBe('Low');
+    expect(result.result.riskLevel).toBe('Low');
+    expect(result.result.provider).toBe('gemini');
+    expect(result.result.model).toBe('gemini-test');
+  });
+
+  it('computes every number from the shared policy at $5/hour and 40 h/week', async () => {
+    const { fn } = fakeGenerate(JSON.stringify(validAnalysis()));
+    const { result } = await handleAnalyze('new', { budget: '$1,000 – $5,000' }, undefined, deps(fn));
+    expect(result.hourlyRateUsd).toBe(STANDARD_HOURLY_RATE_USD);
+    expect(result.weeklyCapacityHours).toBe(WEEKLY_CAPACITY_HOURS);
+    expect(result.budgetPlan.selectedBudgetUsd).toBe(1000);
+    expect(result.budgetPlan.availableHours).toBe(200);
+    // 16 + 40 + 16 + 40 = 112 h of classified scope, all of it inside $1,000.
+    expect(result.budgetPlan.totalRequestedHours).toBe(112);
+    expect(result.budgetPlan.base.hours).toBe(112);
+    expect(result.budgetPlan.base.costUsd).toBe(560);
+    expect(result.budgetPlan.base.weeks).toBe(3);
+    for (const row of result.team) expect(row.hourlyRate).toBe(STANDARD_HOURLY_RATE_USD);
+    expect(totalHoursOfRoles(result.team)).toBe(result.budgetPlan.base.hours);
+    expect(totalCostOfRoles(result.team)).toBe(result.budgetPlan.base.costUsd);
+  });
+
+  it('fits the plan inside a small budget and reports the deferred scope', async () => {
+    const { fn } = fakeGenerate(JSON.stringify(validAnalysis()));
+    const { result } = await handleAnalyze('new', { budget: 'Under $1,000' }, undefined, deps(fn));
+    const plan = result.budgetPlan;
+    expect(plan.base.costUsd).toBeLessThanOrEqual(1000);
+    expect(plan.base.includedScope.length + plan.base.deferredScope.length).toBe(plan.scope.length);
+    expect(plan.humanReviewRequired).toBe(true);
+  });
+
+  it('treats "Not sure yet" as no budget instead of guessing one', async () => {
+    const { fn } = fakeGenerate(JSON.stringify(validAnalysis()));
+    const { result } = await handleAnalyze('new', { budget: 'Not sure yet' }, undefined, deps(fn));
+    expect(result.budgetPlan.budgetProvided).toBe(false);
+    expect(result.budgetPlan.base.hours).toBe(result.budgetPlan.totalRequestedHours);
+  });
+
+  it('never lets model-supplied hours, rates or costs reach the result', async () => {
+    const hostile = validAnalysis({
+      scopeItems: [{ label: 'Everything', tier: 'essential', complexity: 'simple', hours: 9999, costUsd: 500000 }],
+      team: [{ role: 'Dev', hours: 9999, hourlyRate: 250 }],
+      totalCost: 999999,
+      weeklyCapacityHours: 168,
+      hourlyRateUsd: 250,
+    });
+    const { fn } = fakeGenerate(JSON.stringify(hostile));
+    const { result } = await handleAnalyze('new', { budget: '$1,000 – $5,000' }, undefined, deps(fn));
+    expect(result.hourlyRateUsd).toBe(5);
+    expect(result.weeklyCapacityHours).toBe(40);
+    expect(result.budgetPlan.base.hours).toBe(6); // 'simple' -> 6 h, not 9999
+    expect(result.budgetPlan.base.costUsd).toBe(30);
+    expect(result).not.toHaveProperty('totalCost');
+    expect(JSON.stringify(result)).not.toContain('9999');
+    expect(JSON.stringify(result)).not.toContain('250');
+  });
+
+  it('emits a narrative and a storable snapshot that agree with the plan', async () => {
+    const { fn } = fakeGenerate(JSON.stringify(validAnalysis()));
+    const { result } = await handleAnalyze('new', { budget: 'Under $1,000' }, undefined, deps(fn));
+    expect(result.planNarrative.join(' ')).toContain('human technical review');
+    expect(result.estimateSnapshot.hourly_rate_usd).toBe(5);
+    expect(result.estimateSnapshot.provider).toBe('gemini');
+    expect(result.estimateSnapshot.model).toBe('gemini-test');
+    expect(result.estimateSnapshot.base_estimate.cost_usd).toBe(result.budgetPlan.base.costUsd);
+    expect(result.estimateSnapshot.estimate_version).toBe(result.budgetPlan.estimateVersion);
+  });
+
+  it('attaches week ranges to the model milestones instead of trusting model weeks', async () => {
+    const { fn } = fakeGenerate(
+      JSON.stringify(
+        validAnalysis({
+          milestones: [
+            { title: 'Discovery', deliverables: ['Spec'], week: 'Week 900' },
+            { title: 'Build', deliverables: ['Features'] },
+            { title: 'Launch', deliverables: ['Go live'] },
+          ],
+        }),
+      ),
+    );
+    const { result } = await handleAnalyze('new', { budget: '$1,000 – $5,000' }, undefined, deps(fn));
+    expect(result.milestones).toHaveLength(3);
+    for (const milestone of result.milestones) expect(milestone.week).toMatch(/^Weeks? \d/);
+    expect(JSON.stringify(result.milestones)).not.toContain('900');
   });
 
   it('throws invalid_json_response on unparsable model output', async () => {
@@ -529,7 +628,7 @@ describe('handleAnalyze', () => {
     await expect(handleAnalyze('new', {}, undefined, deps(fn))).rejects.toThrow('invalid_json_response');
   });
 
-  it('propagates provider errors untouched', async () => {
+  it('propagates provider errors untouched so the caller can label the failure', async () => {
     const providerError = Object.assign(new Error('rate limited'), { status: 429 });
     const { fn } = fakeGenerate(providerError);
     await expect(handleAnalyze('new', {}, undefined, deps(fn))).rejects.toBe(providerError);
@@ -539,33 +638,33 @@ describe('handleAnalyze', () => {
 // --- validateAndClampAnalysis: the deterministic-bounds safety net -----------------
 
 describe('validateAndClampAnalysis', () => {
-  it('accepts a well-formed analysis unchanged (within bounds)', () => {
+  it('accepts a well-formed analysis unchanged', () => {
     const result = validateAndClampAnalysis(validAnalysis());
     expect(result.riskLevel).toBe('Low');
-    expect((result.team as Array<Record<string, unknown>>)[0].hourlyRate).toBe(15);
+    expect(result.scopeItems).toHaveLength(4);
+    expect(result.teamRoles).toContain('Backend Developer');
   });
 
   it('rejects unknown top-level fields by rebuilding from an allowlist', () => {
-    const result = validateAndClampAnalysis(validAnalysis({ totalCost: 999999, __proto__: 'x', extraField: 'nope' }));
+    const result = validateAndClampAnalysis(
+      validAnalysis({ totalCost: 999999, team: [{ role: 'x', hours: 1, hourlyRate: 900 }], extraField: 'nope' }),
+    );
     expect(result).not.toHaveProperty('totalCost');
     expect(result).not.toHaveProperty('extraField');
+    expect(result).not.toHaveProperty('team');
   });
 
-  it('clamps hourlyRate to [5, 25] regardless of what the model returns', () => {
-    const cheap = validateAndClampAnalysis(validAnalysis({ team: [{ role: 'Dev', hours: 40, hourlyRate: 0.01 }] }));
-    const expensive = validateAndClampAnalysis(validAnalysis({ team: [{ role: 'Dev', hours: 40, hourlyRate: 9999 }] }));
-    expect((cheap.team as Array<Record<string, unknown>>)[0].hourlyRate).toBe(5);
-    expect((expensive.team as Array<Record<string, unknown>>)[0].hourlyRate).toBe(25);
+  it('keeps no numeric field the model can use to influence money', () => {
+    const result = validateAndClampAnalysis(validAnalysis()) as unknown as Record<string, unknown>;
+    const numericKeys = Object.keys(result).filter((k) => typeof result[k] === 'number');
+    expect(numericKeys).toEqual(['healthScore']);
   });
 
-  it('clamps team hours to [1, 600]', () => {
-    const result = validateAndClampAnalysis(validAnalysis({ team: [{ role: 'Dev', hours: 1_000_000, hourlyRate: 10 }] }));
-    expect((result.team as Array<Record<string, unknown>>)[0].hours).toBe(600);
-  });
-
-  it('clamps weeklyCapacityHours to [20, 60]', () => {
-    const result = validateAndClampAnalysis(validAnalysis({ weeklyCapacityHours: 400 }));
-    expect(result.weeklyCapacityHours).toBe(60);
+  it('routes an unrecognised tier to unclear rather than pricing it', () => {
+    const result = validateAndClampAnalysis(
+      validAnalysis({ scopeItems: [{ label: 'Free stuff', tier: 'free', complexity: 'simple' }] }),
+    );
+    expect(result.scopeItems[0].tier).toBe('unclear');
   });
 
   it('clamps healthScore to [0, 100]', () => {
@@ -579,15 +678,16 @@ describe('validateAndClampAnalysis', () => {
         requirementSummary: Array.from({ length: 50 }, (_, i) => `line-${i}-${'x'.repeat(1000)}`),
       }),
     );
-    const arr = result.requirementSummary as string[];
-    expect(arr.length).toBeLessThanOrEqual(20);
-    expect(arr[0].length).toBeLessThanOrEqual(400);
+    expect(result.requirementSummary.length).toBeLessThanOrEqual(20);
+    expect(result.requirementSummary[0].length).toBeLessThanOrEqual(400);
   });
 
   it('throws on a missing required field', () => {
-    const bad = validAnalysis() as Record<string, unknown>;
-    delete bad.team;
-    expect(() => validateAndClampAnalysis(bad)).toThrow('invalid_analysis_shape');
+    for (const field of ['scopeItems', 'teamRoles', 'milestones', 'assumptions']) {
+      const bad = validAnalysis() as Record<string, unknown>;
+      delete bad[field];
+      expect(() => validateAndClampAnalysis(bad)).toThrow('invalid_analysis_shape');
+    }
   });
 
   it('throws on an invalid riskLevel enum value', () => {
@@ -599,10 +699,33 @@ describe('validateAndClampAnalysis', () => {
     expect(() => validateAndClampAnalysis(null)).toThrow('invalid_analysis_shape');
   });
 
-  it('throws when team is empty after filtering invalid entries', () => {
-    expect(() => validateAndClampAnalysis(validAnalysis({ team: [{ role: '', hours: 10, hourlyRate: 10 }] }))).toThrow(
+  it('throws when every scope item or role is filtered out as invalid', () => {
+    expect(() => validateAndClampAnalysis(validAnalysis({ scopeItems: [{ label: '', tier: 'essential', complexity: 'simple' }] }))).toThrow(
       'invalid_analysis_shape',
     );
+    expect(() => validateAndClampAnalysis(validAnalysis({ teamRoles: ['', '  '] }))).toThrow('invalid_analysis_shape');
+  });
+});
+
+// --- attachMilestoneWeeks ----------------------------------------------------------
+
+describe('attachMilestoneWeeks', () => {
+  it('covers the plan duration without running past it', () => {
+    const phases = [
+      { title: 'A', deliverables: [] },
+      { title: 'B', deliverables: [] },
+      { title: 'C', deliverables: [] },
+    ];
+    const out = attachMilestoneWeeks(phases, 6);
+    expect(out).toHaveLength(3);
+    expect(out[0].week).toMatch(/^Weeks? 1/);
+    expect(out[2].week).toContain('6');
+    expect(out.every((m) => !/\b(0|[7-9]\d*)\b/.test(m.week.replace('Weeks ', '').replace('Week ', '')))).toBe(true);
+  });
+
+  it('says "to be scheduled" rather than inventing weeks with no hours', () => {
+    const out = attachMilestoneWeeks([{ title: 'A', deliverables: [] }], 0);
+    expect(out[0].week).toBe('To be scheduled');
   });
 });
 

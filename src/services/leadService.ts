@@ -6,9 +6,14 @@
 import { getSupabaseClient, isSupabaseConfigured } from '@/services/supabaseClient';
 import { normalizePhone } from '@/lib/leadValidation';
 import type { AnalysisResult, AnswerMap } from '@/types/projectAnalysis';
-import { estimatedWeeks, totalCost, totalHours } from '@/data/demoAnalysis';
+import { estimatedWeeks, totalCost, totalHours } from '@/data/basicEstimate';
+import {
+  buildEstimateSnapshot,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS,
+} from '@/policy/estimationPolicy';
 import type {
-  DemoEstimatePayload,
+  PreliminaryEstimatePayload,
   LeadProjectMode,
   PreferredContactMethod,
   RequirementPayload,
@@ -16,7 +21,8 @@ import type {
   SubmitLeadSuccess,
 } from '@/types/leads';
 
-export const ESTIMATE_VERSION = 'demo-v1';
+/** Fallback only: a result always carries its own policy estimate version. */
+export const ESTIMATE_VERSION = 'estimation-policy-v1';
 
 /** Error safe to show to a visitor. `code` is machine-readable. */
 export class LeadSubmissionError extends Error {
@@ -115,33 +121,38 @@ export function buildConsultationRequest(
 }
 
 /**
- * Map the browser-side demo AnalysisResult onto the whitelisted wire shape.
- * Only expected numeric fields are copied; totals are recomputed from the
- * role table (not trusted from stored state). Always marked demo/USD.
+ * Map the browser-side AnalysisResult onto the whitelisted wire shape.
+ *
+ * Only expected fields are copied, totals are recomputed from the role table
+ * (never trusted from stored state), and the hourly rate is capped at the
+ * standard rate here as well as server-side — a stale localStorage result from
+ * before the policy landed can therefore never resubmit an old rate.
  */
-export function buildDemoEstimatePayload(result: AnalysisResult): DemoEstimatePayload {
-  const team = result.team
-    .slice(0, 20)
-    .map((r) => ({
-      role: String(r.role).slice(0, 100),
-      hours: clampNumber(r.hours, 0, 100000),
-      hourly_rate: clampNumber(r.hourlyRate, 0, 2000),
-    }));
-  const safeResult: AnalysisResult = {
-    ...result,
-    team: team.map((t) => ({ role: t.role, hours: t.hours, hourlyRate: t.hourly_rate })),
-  };
-  const capacity = clampNumber(result.weeklyCapacityHours, 1, 168);
+export function buildPreliminaryEstimatePayload(result: AnalysisResult): PreliminaryEstimatePayload {
+  const team = result.team.slice(0, 20).map((r) => ({
+    role: String(r.role).slice(0, 100),
+    hours: clampNumber(r.hours, 0, 100000),
+    hourly_rate: clampNumber(r.hourlyRate, 0, STANDARD_HOURLY_RATE_USD),
+  }));
+  const safeTeam = team.map((t) => ({ role: t.role, hours: t.hours, hourlyRate: t.hourly_rate }));
+  const capacity = clampNumber(result.weeklyCapacityHours, 1, WEEKLY_CAPACITY_HOURS);
+  const snapshot =
+    result.estimateSnapshot ??
+    buildEstimateSnapshot(result.budgetPlan, { provider: result.provider ?? null, model: result.model ?? null });
   return {
-    status: 'demo',
+    status: 'preliminary',
     currency: 'USD',
-    total_hours: clampNumber(totalHours(safeResult.team), 0, 100000),
-    total_cost: clampNumber(totalCost(safeResult.team), 0, 10000000),
+    total_hours: clampNumber(totalHours(safeTeam), 0, 100000),
+    total_cost: clampNumber(totalCost(safeTeam), 0, 10000000),
+    hourly_rate_usd: STANDARD_HOURLY_RATE_USD,
     weekly_capacity_hours: capacity,
-    estimated_weeks: clampNumber(estimatedWeeks(safeResult.team, capacity), 0, 520),
+    estimated_weeks: clampNumber(estimatedWeeks(safeTeam, capacity), 0, 520),
     health_score: clampNumber(result.healthScore, 0, 100),
     risk_level: ['Low', 'Medium', 'High'].includes(result.riskLevel) ? result.riskLevel : undefined,
     team,
+    budget_plan: snapshot,
+    client_selected_option: snapshot.client_selected_option,
+    human_review_required: true,
   };
 }
 
@@ -188,8 +199,9 @@ export function buildRequirementPayload(input: RequirementInput, context: { rout
     mode: input.mode,
     answers,
     requirement_summary: input.result.requirementSummary.join('\n').slice(0, 10000),
-    demo_estimate: buildDemoEstimatePayload(input.result),
-    estimate_version: ESTIMATE_VERSION,
+    demo_estimate: buildPreliminaryEstimatePayload(input.result),
+    // The result carries the exact policy version its figures came from.
+    estimate_version: (input.result.budgetPlan?.estimateVersion ?? ESTIMATE_VERSION).slice(0, 40),
     selected_language: context.language,
     current_route: context.route,
   };

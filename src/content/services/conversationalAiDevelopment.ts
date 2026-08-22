@@ -346,6 +346,11 @@ export const conversationalAiDevelopment: ServiceBody = {
         'An evaluation set of real questions with expected outcomes, re-run before every release, plus live metrics for completion, escalation rate and unanswered questions. The unanswered queue is the most useful output: it tells you exactly which content to write next.',
     },
   ],
+  markets: {
+    title: 'Markets our assistants answer in',
+    intro:
+      'A support assistant is judged on the questions it declines to guess at, and what counts as a safe decline differs by market, so the pages below cover escalation to a human and the review loop behind each deployment.',
+  },
   related: [
     {
       path: '/services/ai-development',

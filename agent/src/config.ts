@@ -1,20 +1,42 @@
 // =============================================================================
 // Buddy agent — server-controlled configuration.
 //
-// Everything that influences money, time or usage lives here (or in env
-// overrides parsed here) — never in model output and never in the browser.
+// Everything that influences time or usage lives here (or in env overrides
+// parsed here) — never in model output and never in the browser.
+//
+// Everything that influences MONEY lives in ./estimationPolicy.ts, the shared
+// commercial policy mirrored byte-for-byte into the frontend and the Supabase
+// Edge Functions. This file only re-exports from it, so the voice agent, the
+// consultation meeting, the website report and the stored lead can never quote
+// different rates.
 // =============================================================================
 
-/** Bump when rates/limits change; stored with every estimate. */
-export const ESTIMATE_CONFIG_VERSION = 'v1';
+import {
+  ESTIMATION_POLICY_VERSION,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS as POLICY_WEEKLY_CAPACITY_HOURS,
+} from './estimationPolicy.js';
 
-/** Hourly-rate band (USD). Matches the published example rates ($10–$20/hr
- * across roles); the blended band is what preliminary estimates use. */
-export const HOURLY_RATE_MIN = 10;
-export const HOURLY_RATE_MAX = 20;
+/**
+ * Stored with every estimate. It is the SHARED policy version, not a number
+ * this file owns: the commercial constants live in ./estimationPolicy.ts, which
+ * is mirrored byte-for-byte into the frontend and the Edge Functions.
+ */
+export const ESTIMATE_CONFIG_VERSION = ESTIMATION_POLICY_VERSION;
 
-/** Standard delivery capacity used to project duration. */
-export const WEEKLY_CAPACITY_HOURS = 40;
+/**
+ * Client-facing rate band. There is exactly ONE rate now — the shared policy's
+ * standard rate — so min and max are equal. The wire keeps both fields because
+ * voice-lead and consultation-agent re-validate them independently.
+ *
+ * This used to be a $10–$20 band, which no longer matches the published
+ * commercial policy of up to $5/hour.
+ */
+export const HOURLY_RATE_MIN = STANDARD_HOURLY_RATE_USD;
+export const HOURLY_RATE_MAX = STANDARD_HOURLY_RATE_USD;
+
+/** Standard delivery capacity used to project duration (from the policy). */
+export const WEEKLY_CAPACITY_HOURS = POLICY_WEEKLY_CAPACITY_HOURS;
 
 /** Per-role hour caps — hostile/absurd classifications can never exceed these. */
 export const MAX_ROLE_HOURS = 2000;
@@ -32,42 +54,17 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   pm: 'Project Manager',
 };
 
-/** Base hours per role by overall complexity class (min side of the range). */
-export const COMPLEXITY_BASE_HOURS: Record<'small' | 'medium' | 'large', Record<RoleKey, number>> = {
-  small: { frontend: 20, backend: 15, uiux: 8, qa: 5, devops: 3, pm: 4 },
-  medium: { frontend: 45, backend: 40, uiux: 16, qa: 12, devops: 8, pm: 10 },
-  large: { frontend: 90, backend: 85, uiux: 30, qa: 25, devops: 16, pm: 20 },
-};
-
-/** Range spread applied on top of the base to get the max side. */
-export const RANGE_SPREAD = 0.4;
-
-/** Per-feature-module hour weights by module complexity. */
-export const MODULE_HOURS: Record<'simple' | 'standard' | 'complex', { min: number; max: number }> = {
-  simple: { min: 4, max: 8 },
-  standard: { min: 10, max: 20 },
-  complex: { min: 24, max: 48 },
-};
-
-/** How module hours are distributed across roles. */
-export const MODULE_ROLE_SPLIT: Record<RoleKey, number> = {
-  frontend: 0.4,
-  backend: 0.35,
-  uiux: 0.08,
-  qa: 0.1,
-  devops: 0.03,
-  pm: 0.04,
-};
-
-/** Flat extra backend/qa hours for known heavy concerns. */
-export const CONCERN_EXTRAS: Record<string, Partial<Record<RoleKey, number>>> = {
-  payments: { backend: 10, qa: 4 },
-  admin_panel: { frontend: 8, backend: 6 },
-  mobile: { frontend: 20, qa: 6 },
-  audit: { backend: 8, pm: 2 },
-};
-
-export const MAX_MODULES = 20;
+/**
+ * Maximum scope items one estimate may carry.
+ *
+ * NOTE — the old COMPLEXITY_BASE_HOURS / MODULE_HOURS / CONCERN_EXTRAS /
+ * RANGE_SPREAD tables that used to live here are GONE. They were a second,
+ * divergent hour model: the voice agent quoted figures from them while the
+ * website report quoted figures from its own table, so the same client could
+ * hear one number and read another. All hour arithmetic now comes from the
+ * shared policy (SCOPE_COMPLEXITY_HOURS) via src/estimate.ts.
+ */
+export const MAX_MODULES = 40;
 
 // --- voice pipeline tuning -----------------------------------------------------
 

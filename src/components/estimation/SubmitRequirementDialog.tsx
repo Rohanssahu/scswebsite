@@ -19,7 +19,7 @@ import {
 } from '@/services/leadService';
 import { trackConversion } from '@/utils/conversionAnalytics';
 import { validateEmail, validateName, validatePhone, validateReviewMessage } from '@/lib/leadValidation';
-import { estimatedWeeks, totalCost, totalHours } from '@/data/demoAnalysis';
+import { estimatedWeeks, totalCost, totalHours } from '@/data/basicEstimate';
 import type { AnalysisResult, AnswerMap } from '@/types/projectAnalysis';
 
 export type SubmitVariant = 'project_requirement' | 'human_review';

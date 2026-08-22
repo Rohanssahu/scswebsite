@@ -171,6 +171,21 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://scssoftwares.com/insights</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://scssoftwares.com/insights/how-to-estimate-an-ai-app-project</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://scssoftwares.com/insights/ai-voice-agent-production-checklist</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://scssoftwares.com/PrivacyPolicy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>

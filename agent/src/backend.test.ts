@@ -12,11 +12,11 @@ function confirmedState(transcriptConsent = false): ProjectState {
       platforms: ['Web'],
       core_features: ['Profiles', 'Booking'],
       deadline: '3 months',
-      budget_range: '$1k-$5k',
+      budget_range: '$1,000',
     },
     assumptions: ['Client provides content'],
   });
-  state.language = 'hinglish';
+  state.language = 'en';
   state.confirmedAt = '2026-08-21T10:00:00.000Z';
   state.transcriptConsent = transcriptConsent;
   return state;
@@ -28,9 +28,7 @@ function args(overrides: Partial<SubmitLeadArgs> = {}): SubmitLeadArgs {
     sessionId: '3f6c2f5e-8a3d-4f9a-9a3f-1b2c3d4e5f60',
     state,
     estimate: buildPreliminaryEstimate(state, {
-      overall_complexity: 'small',
-      modules: [{ name: 'Core', complexity: 'standard' }],
-      concerns: [],
+      scope_items: [{ label: 'Core application', tier: 'essential', complexity: 'standard' }],
       architecture: [],
       assumptions: [],
       exclusions: [],
@@ -78,7 +76,7 @@ describe('submit_lead payload mapping', () => {
     expect(payload.user_confirmed).toBe(true);
     expect(payload.confirmed_at).toBe('2026-08-21T10:00:00.000Z');
     expect(payload.consent).toBe(true);
-    expect(payload.selected_language).toBe('hinglish');
+    expect(payload.selected_language).toBe('en'); // English-only voice flow
     const requirement = payload.requirement as { mode: string; intent: string; fields: Record<string, unknown> };
     expect(requirement.mode).toBe('new');
     expect(requirement.intent).toBe('new_project');

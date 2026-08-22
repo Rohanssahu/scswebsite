@@ -8,7 +8,7 @@ import ManualFlow from '../components/project-analysis/ManualFlow';
 import AnalysisProgress from '../components/project-analysis/AnalysisProgress';
 import { AnalysisDraft, AnalysisResult, EntryMethod, ProjectMode } from '@/types/projectAnalysis';
 import { clearDraft, hasDraftAnswers, loadDraft, saveDraft, saveResult } from '@/lib/analysisStore';
-import { buildDemoAnalysis } from '@/data/demoAnalysis';
+import { buildBasicEstimate } from '@/data/basicEstimate';
 import { generateAiAnalysis, isAiAnalysisReady } from '@/services/aiAnalysis';
 import { trackConversion } from '@/utils/conversionAnalytics';
 
@@ -69,15 +69,21 @@ const ProjectAnalysis = () => {
     setPhase('select');
   };
 
-  // Real AI analysis runs alongside the progress animation. `aiPending` keeps
-  // the animation holding on its last step until the AI responds; the result
-  // ref avoids stale closures when finishAnalysis fires.
+  // The Gemini analysis runs alongside the progress animation. `aiPending`
+  // keeps the animation holding on its last step until it resolves; the refs
+  // avoid stale closures when finishAnalysis fires.
+  //
+  // A provider failure is never hidden: `aiFailedRef` is carried onto the
+  // result as `aiUnavailable`, and the result is labelled `source: 'basic'` so
+  // no page can present the local engine's output as a Gemini analysis.
   const aiResultRef = useRef<AnalysisResult | null>(null);
+  const aiFailedRef = useRef(false);
   const [aiPending, setAiPending] = useState(false);
 
   const generate = () => {
     setPhase('analyzing');
     aiResultRef.current = null;
+    aiFailedRef.current = false;
     if (draft.mode && isAiAnalysisReady) {
       setAiPending(true);
       generateAiAnalysis(draft.mode, draft.answers, draft.files)
@@ -85,7 +91,7 @@ const ProjectAnalysis = () => {
           aiResultRef.current = result;
         })
         .catch(() => {
-          aiResultRef.current = null; // fall back to the local engine below
+          aiFailedRef.current = true;
         })
         .finally(() => setAiPending(false));
     }
@@ -94,9 +100,10 @@ const ProjectAnalysis = () => {
   const finishAnalysis = () => {
     if (!draft.mode) return;
     const result =
-      aiResultRef.current ?? { ...buildDemoAnalysis(draft.mode, draft.answers), source: 'demo' as const };
+      aiResultRef.current ??
+      ({ ...buildBasicEstimate(draft.mode, draft.answers), aiUnavailable: aiFailedRef.current });
     saveResult(result);
-    // Which engine produced it is the only detail reported: 'ai' or 'demo'.
+    // Which engine produced it is the only detail reported: 'ai' or 'basic'.
     trackConversion('project_analysis_completed', result.source === 'ai' ? 'ai' : 'demo');
     navigate('/project-analysis/result');
   };

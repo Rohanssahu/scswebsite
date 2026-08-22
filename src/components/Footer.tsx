@@ -17,6 +17,7 @@ const quickLinks = [
   { key: 'nav.products', path: '/products' },
   { key: 'nav.projectEstimate', path: '/project-analysis' },
   { key: 'nav.career', path: '/careers' },
+  { key: 'nav.insights', path: '/insights' },
   { key: 'nav.contact', path: '/contact' },
   { key: 'nav.privacyPolicy', path: '/PrivacyPolicy' },
   { key: 'nav.termsOfService', path: '/TermsAndConditions' },

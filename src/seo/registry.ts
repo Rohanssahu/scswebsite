@@ -27,8 +27,10 @@ import {
   normalizeCanonicalPath,
 } from './site';
 import {
+  articleJsonLd,
   breadcrumbJsonLd,
   contactPageJsonLd,
+  insightsHubJsonLd,
   organizationJsonLd,
   personJsonLd,
   regionalServiceJsonLd,
@@ -43,6 +45,12 @@ import {
   locationsHubMeta,
   locationsHubBreadcrumb,
 } from '@/content/locations';
+import {
+  INSIGHT_META,
+  insightBreadcrumb,
+  insightsHubBreadcrumb,
+  insightsHubMeta,
+} from '@/content/insights';
 
 export type RobotsDirective = 'index,follow' | 'noindex,follow' | 'noindex,nofollow';
 
@@ -348,6 +356,63 @@ const LOCATION_ROUTES: RouteSpec[] = LOCATION_META.map((location) => ({
   ],
 }));
 
+/**
+ * The `/insights` hub. A `CollectionPage` and its breadcrumb — it describes no
+ * single service and publishes no article of its own.
+ */
+const INSIGHTS_HUB_ROUTE: RouteSpec = {
+  path: insightsHubMeta.path,
+  title: insightsHubMeta.metaTitle,
+  description: insightsHubMeta.metaDescription,
+  shareTitle: insightsHubMeta.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: 0.6,
+  jsonLd: [
+    insightsHubJsonLd({
+      path: insightsHubMeta.path,
+      name: insightsHubMeta.navLabel,
+      description: insightsHubMeta.metaDescription,
+    }),
+    breadcrumbJsonLd(insightsHubBreadcrumb()),
+  ],
+};
+
+/**
+ * Every published article.
+ *
+ * `ogType` is `article` here rather than `website` — these are the only pages
+ * on the site for which that is true.
+ *
+ * The `Article` node's `author` is a reference to the founder `Person` defined
+ * on `/about`, and the page renders that same person's name, title and
+ * photograph in a visible byline. Both halves of that claim have to stay true
+ * together: never add an article whose `author` is someone who did not write
+ * it, and never emit this markup for a page with no visible byline.
+ */
+const INSIGHT_ROUTES: RouteSpec[] = INSIGHT_META.map((insight) => ({
+  path: insight.path,
+  title: insight.metaTitle,
+  description: insight.metaDescription,
+  shareTitle: insight.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: insight.priority,
+  ogType: 'article',
+  jsonLd: [
+    articleJsonLd({
+      headline: insight.navLabel,
+      description: insight.metaDescription,
+      path: insight.path,
+      datePublished: insight.datePublished,
+      dateModified: insight.dateModified,
+    }),
+    breadcrumbJsonLd(insightBreadcrumb(insight)),
+  ],
+}));
+
 const ROUTE_SPECS: RouteSpec[] = [
   {
     path: '/',
@@ -442,6 +507,8 @@ const ROUTE_SPECS: RouteSpec[] = [
   ...CANONICAL_SERVICE_ROUTES,
   LOCATIONS_HUB_ROUTE,
   ...LOCATION_ROUTES,
+  INSIGHTS_HUB_ROUTE,
+  ...INSIGHT_ROUTES,
   {
     path: '/PrivacyPolicy',
     title: 'Privacy Policy | SCS Softwares',
@@ -465,15 +532,19 @@ const ROUTE_SPECS: RouteSpec[] = [
 
   // ---- Public, prerendered, but deliberately kept out of the index ----
   {
+    // Was an empty placeholder kept out of the index so it could not be crawled
+    // as thin content. The real section now exists at `/insights`, so this
+    // forwards there instead — the same 200 + noindex + canonical-to-the-target
+    // stub the old `/gig/*` paths use, because GitHub Pages cannot emit a 301.
     path: '/BlogPage',
-    title: 'Insights | SCS Softwares',
-    // Placeholder until real articles ship — see Phase 2. Kept out of the index
-    // so an empty section cannot be crawled as thin content.
+    title: 'Insights Have Moved | SCS Softwares',
     description:
-      'SCS Softwares insights on AI, mobile and web engineering. We are preparing our first published articles — talk to the team in the meantime.',
+      'The SCS Softwares insights section now lives at /insights. You are being forwarded to the new page.',
     robots: 'noindex,follow',
-    indexability: 'noindex-utility',
+    indexability: 'redirect',
     prerender: true,
+    redirectTo: '/insights',
+    canonical: '/insights',
   },
   {
     path: '/ApplicationForm',

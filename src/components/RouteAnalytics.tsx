@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { logPageView } from '@/utils/analytics';
+import { trackAcquisition } from '@/utils/acquisitionAnalytics';
 
 /**
  * One GA4 page view per real route navigation, and never more than one.
@@ -18,6 +19,11 @@ import { logPageView } from '@/utils/analytics';
  *   - a hash or query change is not a navigation, so the effect keys on
  *     `pathname` alone and an in-page anchor reports nothing.
  *
+ * Since the AI-visibility work it also asks `trackAcquisition` to report where
+ * the session came from. That is one extra *event*, not a second page view, and
+ * it fires at most once per session — see `utils/acquisitionAnalytics.ts` for
+ * why that distinction matters and what the numbers can and cannot show.
+ *
  * One owner action backs this up: GA4 Admin → Data Streams → Enhanced
  * measurement → Page views → "Page changes based on browser history events"
  * must be OFF, or the tag will add a second page view of its own on each
@@ -29,8 +35,11 @@ const RouteAnalytics = () => {
 
   useEffect(() => {
     if (lastReported.current === pathname) return;
+    const first = lastReported.current === null;
     lastReported.current = pathname;
     logPageView(pathname);
+    // After the page view, so the session's first hit is still the page view.
+    if (first) trackAcquisition(pathname);
   }, [pathname]);
 
   return null;

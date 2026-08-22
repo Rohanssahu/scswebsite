@@ -514,7 +514,12 @@ export function buildAnalysisSnapshot(result: AnalysisResult, answers: AnswerMap
 
   return {
     mode: result.mode,
-    source: result.source ?? 'demo',
+    // 'basic' is the honest label for the local engine — it must never reach
+    // the meeting as 'ai', because Buddy tells the client what produced it.
+    source: result.source === 'ai' ? 'ai' : 'basic',
+    // The client's OWN budget, carried into the meeting so Buddy starts from it
+    // instead of asking again. null when they never stated one.
+    selectedBudgetUsd: result.budgetPlan?.budgetProvided ? result.budgetPlan.selectedBudgetUsd : null,
     generatedAt: result.generatedAt,
     projectType: answerStr(answers, 'projectType', 200) ?? answerStr(answers, 'idea', 200),
     platforms: answerList(answers, 'platform', 10, 120),

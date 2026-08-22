@@ -326,7 +326,24 @@ describe('buildConsultationPrompt', () => {
     const text = prompt();
     expect(text).toMatch(/You are clearly an AI consultant, not a human employee/);
     expect(text).toMatch(/Every proposal is PRELIMINARY/);
-    expect(text).toMatch(/You never do pricing arithmetic/);
+    expect(text).toMatch(/You NEVER do pricing arithmetic and you NEVER invent a figure/);
+  });
+
+  it('carries the commercial budget policy Buddy must talk within', () => {
+    const text = prompt();
+    // Honest framing
+    expect(text).toMatch(/start with what CAN be delivered inside it/);
+    expect(text).toMatch(/Always say what is DEFERRED as well as what is included/);
+    expect(text).toMatch(/Never say or imply that any percentage of the project is already complete/);
+    // The published commercial figures, from the shared policy
+    expect(text).toContain('up to $5 per hour');
+    expect(text).toContain('maximum of 40 development hours per week');
+    expect(text).toContain('about 20% and 30% above');
+    // No pressure, and a fresh estimate whenever the picture changes
+    expect(text).toMatch(/never push them, never preselect one/);
+    expect(text).toMatch(/call the estimate tool again before quoting anything/);
+    expect(text).toMatch(/smaller Phase 1/);
+    expect(text).toMatch(/Never use urgency, scarcity, fake discounts/);
   });
 
   it('still tells the model not to re-ask what the analysis already answered', () => {

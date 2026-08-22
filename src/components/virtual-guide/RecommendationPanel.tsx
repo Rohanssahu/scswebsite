@@ -2,7 +2,7 @@ import React from 'react';
 import { CalendarClock, DollarSign, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ESTIMATE_DISCLAIMER_KEY } from '@/data/demoEstimate';
+import { ESTIMATE_DISCLAIMER_KEY } from '@/data/guideEstimate';
 import { formatNumber, formatUsd, valueKey } from '@/i18n/languageConfig';
 import { VirtualGuideApi } from '@/hooks/useVirtualGuide';
 import QuickReplies from './QuickReplies';
@@ -69,6 +69,15 @@ const RecommendationPanel = ({ guide }: RecommendationPanelProps) => {
               </div>
             </div>
 
+            <SectionTitle>{t('guide.estimate.budgetFit')}</SectionTitle>
+            <div className="mt-1.5 space-y-1.5 rounded-xl border border-pink-200 bg-pink-50/60 p-3">
+              {e.budgetLines.map((line) => (
+                <p key={line} className="text-sm leading-relaxed text-gray-800">
+                  {line}
+                </p>
+              ))}
+            </div>
+
             <SectionTitle>{t('guide.estimate.requirementSummary')}</SectionTitle>
             <List items={e.summaryItems.map((it) => t(it.key, it.params))} />
 
@@ -126,7 +135,7 @@ const RecommendationPanel = ({ guide }: RecommendationPanelProps) => {
             <List
               items={[
                 `${t('guide.estimate.cheaperPrefix')} ${t(e.cheaperAlternative.key, e.cheaperAlternative.params)}`,
-                `${t('guide.estimate.fasterPrefix')} ${t(e.fasterAlternative.key, e.fasterAlternative.params)}`,
+                `${t('guide.estimate.phasedPrefix')} ${t(e.phasedAlternative.key, e.phasedAlternative.params)}`,
               ]}
             />
 

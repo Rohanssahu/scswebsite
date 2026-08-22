@@ -36,10 +36,17 @@ Secret placement (never violate):
 | `VOICE_AGENT_SECRET` | Supabase function secrets **and** agent worker env (same value) | browser |
 | `RESEND_API_KEY`, `LEAD_ADMIN_EMAIL`, `EMAIL_FROM_ADDRESS`, `PUBLIC_SITE_URL` | Supabase function secrets | browser |
 | `GOOGLE_API_KEY` (LLM reasoning) | Agent worker env / LiveKit Cloud agent secrets **and** the `ai-estimate` Supabase function secret | browser |
-| `OPENAI_API_KEY` (optional — only if `BUDDY_STT_PROVIDER=openai` or `BUDDY_LLM_PROVIDER=openai`; see §1b) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
+| `OPENAI_API_KEY` (optional — **speech-to-text only**, if `BUDDY_STT_PROVIDER=openai`; see §1b) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
 | `ELEVENLABS_API_KEY` (+ voice id, model, limits) | Agent worker env / LiveKit Cloud agent secrets | browser / Supabase |
 
 ## 1a. Google Gemini API key (LLM reasoning — Buddy + Project Analysis)
+
+> **Gemini is the only reasoning provider.** `BUDDY_LLM_PROVIDER` accepts
+> `gemini` and nothing else; `openai` (or any typo) fails loudly at worker
+> startup. Requirement extraction, scope classification, proposal wording and
+> every budget sentence go through this provider, and clients are told the
+> analysis is Gemini-powered — an environment variable must not be able to make
+> that untrue. OpenAI remains available for **speech-to-text only** (§1b).
 
 1. Create a key at <https://aistudio.google.com/apikey> (Google AI Studio, Gemini Developer API).
 2. Review Google's data-handling terms before use — see "Gemini free-tier vs paid-tier" below.

@@ -1,11 +1,24 @@
 // =============================================================================
 // submit-lead — pure validation / normalization layer.
 //
-// This module is dependency-free and runtime-agnostic (no Deno / DOM / Node
-// APIs) so the exact code the Edge Function runs is also unit-tested by
-// vitest from the repo root. All browser input passes through here before it
-// can reach the database.
+// Runtime-agnostic (no Deno / DOM / Node APIs) so the exact code the Edge
+// Function runs is also unit-tested by vitest from the repo root. All browser
+// input passes through here before it can reach the database.
+//
+// The only dependency is the shared commercial estimation policy, so the
+// server enforces the same rate ceiling and budget rules the UI renders — a
+// browser (or a stale localStorage result from before the policy landed) can
+// never persist a rate above $5/hour or a plan that breaches its own budget.
 // =============================================================================
+
+import {
+  SCOPE_COMPLEXITY_HOURS,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS,
+  type PlanTierId,
+  type ScopeComplexity,
+  type ScopeTier,
+} from '../_shared/estimationPolicy.ts';
 
 export type LeadAction = 'contact' | 'consultation' | 'project_requirement' | 'human_review';
 
@@ -44,10 +57,16 @@ export const LIMITS = {
     maxTeamRoles: 20,
     maxRoleLength: 100,
     maxHours: 100000,
-    maxHourlyRate: 2000,
+    // The shared commercial policy is the ceiling, not a generous sanity bound:
+    // no client-facing rate may exceed $5/hour, so nothing above it is stored.
+    maxHourlyRate: STANDARD_HOURLY_RATE_USD,
     maxCost: 10000000,
     maxWeeks: 520,
-    maxWeeklyCapacity: 168,
+    maxWeeklyCapacity: WEEKLY_CAPACITY_HOURS,
+    maxScopeItems: 60,
+    maxScopeLabel: 200,
+    maxAssumptions: 25,
+    maxAssumptionLength: 300,
   },
 } as const;
 
@@ -156,29 +175,199 @@ export function sanitizeAnswers(raw: unknown): { answers?: AnswersPayload; error
   return { answers: out };
 }
 
-// --- demo estimate -----------------------------------------------------------
+// --- preliminary estimate ----------------------------------------------------
 
-export interface DemoEstimatePayload {
-  status: 'demo';
+export interface PreliminaryEstimatePayload {
+  status: 'preliminary';
   currency: 'USD';
   total_hours: number;
   total_cost: number;
+  hourly_rate_usd: number;
   weekly_capacity_hours: number;
   estimated_weeks: number;
   health_score?: number;
   risk_level?: (typeof RISK_LEVELS)[number];
   team: Array<{ role: string; hours: number; hourly_rate: number }>;
+  budget_plan: SanitizedBudgetPlan | null;
+  client_selected_option: PlanTierId | null;
+  human_review_required: true;
+}
+
+export interface SanitizedScopeItem {
+  label: string;
+  tier: ScopeTier;
+  complexity: ScopeComplexity;
+  hours: number;
+}
+
+export interface SanitizedPlanTier {
+  hours: number;
+  cost_usd: number;
+  weeks: number;
+  budget_ceiling_usd: number;
+  percent_above_budget: number;
+  included_scope: SanitizedScopeItem[];
+  deferred_scope: SanitizedScopeItem[];
+  added_vs_base: SanitizedScopeItem[];
+}
+
+/** Exactly the budget-fit fields the admin dashboard is allowed to show. */
+export interface SanitizedBudgetPlan {
+  policy_version: string;
+  estimate_version: string;
+  revision: number;
+  currency: 'USD';
+  selected_budget_usd: number;
+  budget_provided: boolean;
+  hourly_rate_usd: number;
+  weekly_capacity_hours: number;
+  available_hours: number;
+  budget_fit_percent: number;
+  coverage_band: string;
+  covers_essential_scope: boolean;
+  total_requested_hours: number;
+  total_requested_cost_usd: number;
+  included_scope: SanitizedScopeItem[];
+  deferred_scope: SanitizedScopeItem[];
+  unclear_scope: SanitizedScopeItem[];
+  base_estimate: SanitizedPlanTier;
+  optional_20_percent_estimate: SanitizedPlanTier | null;
+  optional_30_percent_estimate: SanitizedPlanTier | null;
+  client_selected_option: PlanTierId | null;
+  assumptions: string[];
+  provider: string | null;
+  model: string | null;
+  human_review_required: true;
+}
+
+const COVERAGE_BANDS = ['full', 'high-partial', 'low-partial', 'below-mvp', 'unknown'] as const;
+const PLAN_TIER_IDS = ['base', 'recommended', 'growth'] as const;
+const SCOPE_TIERS = ['essential', 'important', 'optional', 'unclear'] as const;
+const SCOPE_COMPLEXITIES = ['simple', 'standard', 'complex'] as const;
+
+function sanitizeScopeList(raw: unknown): SanitizedScopeItem[] {
+  if (!Array.isArray(raw)) return [];
+  const e = LIMITS.estimate;
+  const out: SanitizedScopeItem[] = [];
+  for (const entry of raw) {
+    if (out.length >= e.maxScopeItems) break;
+    if (!isDict(entry)) continue;
+    const label = asTrimmed(entry.label)?.slice(0, e.maxScopeLabel);
+    if (!label) continue;
+    const tier = SCOPE_TIERS.includes(entry.tier as ScopeTier) ? (entry.tier as ScopeTier) : 'unclear';
+    const complexity = SCOPE_COMPLEXITIES.includes(entry.complexity as ScopeComplexity)
+      ? (entry.complexity as ScopeComplexity)
+      : 'standard';
+    // Hours are re-derived from the policy table — a client-sent hour count for
+    // a scope item is never stored.
+    out.push({ label, tier, complexity, hours: SCOPE_COMPLEXITY_HOURS[complexity] });
+  }
+  return out;
+}
+
+function sanitizePlanTier(raw: unknown, budgetUsd: number, maxPercent: number): SanitizedPlanTier | null {
+  if (!isDict(raw)) return null;
+  const e = LIMITS.estimate;
+  if (!inRange(raw.hours, 0, e.maxHours)) return null;
+  if (!inRange(raw.weeks, 0, e.maxWeeks)) return null;
+  if (!inRange(raw.percent_above_budget, 0, maxPercent)) return null;
+  const hours = raw.hours as number;
+  // The cost is RECOMPUTED, never copied: a tampered total cannot be stored.
+  const cost = hours * STANDARD_HOURLY_RATE_USD;
+  const ceiling = Math.floor((budgetUsd * (100 + (raw.percent_above_budget as number))) / 100);
+  if (cost > ceiling) return null;
+  return {
+    hours,
+    cost_usd: cost,
+    weeks: raw.weeks as number,
+    budget_ceiling_usd: ceiling,
+    percent_above_budget: raw.percent_above_budget as number,
+    included_scope: sanitizeScopeList(raw.included_scope),
+    deferred_scope: sanitizeScopeList(raw.deferred_scope),
+    added_vs_base: sanitizeScopeList(raw.added_vs_base),
+  };
+}
+
+/**
+ * Whitelist-copy the budget-fit snapshot. Every commercial guarantee is
+ * re-checked here rather than trusted from the browser: the rate is pinned to
+ * the standard rate, tier costs are recomputed from hours, the base plan must
+ * fit the client's stated budget, and the optional tiers must stay inside
+ * +20% / +30%. A snapshot that fails any check is dropped (null) — the lead is
+ * still stored, just without an unverifiable plan.
+ */
+export function sanitizeBudgetPlan(raw: unknown): SanitizedBudgetPlan | null {
+  if (!isDict(raw)) return null;
+  const e = LIMITS.estimate;
+  if (raw.currency !== 'USD') return null;
+  if (raw.hourly_rate_usd !== STANDARD_HOURLY_RATE_USD) return null;
+  if (!inRange(raw.selected_budget_usd, 0, e.maxCost)) return null;
+  if (!inRange(raw.available_hours, 0, e.maxHours)) return null;
+  if (!inRange(raw.budget_fit_percent, 0, 100)) return null;
+  if (!inRange(raw.total_requested_hours, 0, e.maxHours)) return null;
+  if (!inRange(raw.weekly_capacity_hours, 1, e.maxWeeklyCapacity)) return null;
+  if (!inRange(raw.revision, 1, 100000)) return null;
+  if (typeof raw.budget_provided !== 'boolean' || typeof raw.covers_essential_scope !== 'boolean') return null;
+  if (!COVERAGE_BANDS.includes(raw.coverage_band as (typeof COVERAGE_BANDS)[number])) return null;
+
+  const budget = raw.selected_budget_usd as number;
+  const base = sanitizePlanTier(raw.base_estimate, budget, 0);
+  if (!base) return null;
+  const recommended = raw.optional_20_percent_estimate == null ? null : sanitizePlanTier(raw.optional_20_percent_estimate, budget, 20);
+  const growth = raw.optional_30_percent_estimate == null ? null : sanitizePlanTier(raw.optional_30_percent_estimate, budget, 30);
+  if (raw.optional_20_percent_estimate != null && !recommended) return null;
+  if (raw.optional_30_percent_estimate != null && !growth) return null;
+
+  const selectedOption = PLAN_TIER_IDS.includes(raw.client_selected_option as PlanTierId)
+    ? (raw.client_selected_option as PlanTierId)
+    : null;
+
+  const assumptions = Array.isArray(raw.assumptions)
+    ? raw.assumptions
+        .map((a) => asTrimmed(a)?.slice(0, e.maxAssumptionLength))
+        .filter((a): a is string => Boolean(a))
+        .slice(0, e.maxAssumptions)
+    : [];
+
+  return {
+    policy_version: asTrimmed(raw.policy_version)?.slice(0, 40) ?? 'unknown',
+    estimate_version: asTrimmed(raw.estimate_version)?.slice(0, 40) ?? 'unknown',
+    revision: raw.revision as number,
+    currency: 'USD',
+    selected_budget_usd: budget,
+    budget_provided: raw.budget_provided as boolean,
+    hourly_rate_usd: STANDARD_HOURLY_RATE_USD,
+    weekly_capacity_hours: raw.weekly_capacity_hours as number,
+    available_hours: raw.available_hours as number,
+    budget_fit_percent: raw.budget_fit_percent as number,
+    coverage_band: raw.coverage_band as string,
+    covers_essential_scope: raw.covers_essential_scope as boolean,
+    total_requested_hours: raw.total_requested_hours as number,
+    total_requested_cost_usd: (raw.total_requested_hours as number) * STANDARD_HOURLY_RATE_USD,
+    included_scope: sanitizeScopeList(raw.included_scope),
+    deferred_scope: sanitizeScopeList(raw.deferred_scope),
+    unclear_scope: sanitizeScopeList(raw.unclear_scope),
+    base_estimate: base,
+    optional_20_percent_estimate: recommended,
+    optional_30_percent_estimate: growth,
+    client_selected_option: selectedOption,
+    assumptions,
+    provider: asTrimmed(raw.provider)?.slice(0, 60) ?? null,
+    model: asTrimmed(raw.model)?.slice(0, 60) ?? null,
+    human_review_required: true,
+  };
 }
 
 const inRange = (v: unknown, min: number, max: number): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
 
 /**
- * Whitelist-copy the demo estimate: only expected fields, only sane numeric
- * ranges. Anything else is rejected — the estimate is demo output, never a
- * quotation, so there is no reason to accept surprising shapes.
+ * Whitelist-copy the preliminary estimate: only expected fields, only sane
+ * numeric ranges, and never an hourly rate above the standard rate. The
+ * estimate is preliminary output requiring human review, never a quotation, so
+ * there is no reason to accept surprising shapes.
  */
-export function sanitizeDemoEstimate(raw: unknown): { estimate?: DemoEstimatePayload; error?: FieldError } {
+export function sanitizeDemoEstimate(raw: unknown): { estimate?: PreliminaryEstimatePayload; error?: FieldError } {
   if (!isDict(raw)) return { error: err('requirement.demo_estimate', 'demo_estimate must be an object') };
   const e = LIMITS.estimate;
   if (!inRange(raw.total_hours, 0, e.maxHours)) {
@@ -208,14 +397,21 @@ export function sanitizeDemoEstimate(raw: unknown): { estimate?: DemoEstimatePay
     }
     team.push({ role, hours: member.hours, hourly_rate: member.hourly_rate });
   }
-  const estimate: DemoEstimatePayload = {
-    status: 'demo',
+  const budgetPlan = sanitizeBudgetPlan(raw.budget_plan);
+  const estimate: PreliminaryEstimatePayload = {
+    status: 'preliminary',
     currency: 'USD',
     total_hours: raw.total_hours as number,
-    total_cost: raw.total_cost as number,
+    // Recomputed from the accepted role table so a tampered total is never
+    // stored, and never at a rate above the standard rate.
+    total_cost: team.reduce((sum, member) => sum + member.hours * member.hourly_rate, 0),
+    hourly_rate_usd: STANDARD_HOURLY_RATE_USD,
     weekly_capacity_hours: raw.weekly_capacity_hours as number,
     estimated_weeks: raw.estimated_weeks as number,
     team,
+    budget_plan: budgetPlan,
+    client_selected_option: budgetPlan?.client_selected_option ?? null,
+    human_review_required: true,
   };
   if (raw.health_score !== undefined) {
     if (!inRange(raw.health_score, 0, 100)) {
@@ -257,7 +453,7 @@ export interface ValidatedRequirement {
   mode: (typeof PROJECT_MODES)[number];
   answers: AnswersPayload;
   requirement_summary: string | null;
-  demo_estimate: DemoEstimatePayload;
+  demo_estimate: PreliminaryEstimatePayload;
   estimate_version: string;
   selected_language: string | null;
   current_route: string | null;
@@ -469,7 +665,7 @@ export function validateSubmission(body: unknown): ValidationResult {
       mode: mode as (typeof PROJECT_MODES)[number],
       answers: answersResult.answers as AnswersPayload,
       requirement_summary: summary || null,
-      demo_estimate: estimateResult.estimate as DemoEstimatePayload,
+      demo_estimate: estimateResult.estimate as PreliminaryEstimatePayload,
       estimate_version: version.value ?? 'demo-v1',
       selected_language: selectedLanguage.value,
       current_route: currentRoute.value,

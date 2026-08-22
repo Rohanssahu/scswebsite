@@ -350,6 +350,11 @@ export const aiVoiceAgentDevelopment: ServiceBody = {
         'Cost scales with conversation minutes rather than traffic, because speech recognition, model reasoning and speech synthesis are all metered. We build in session limits, concurrency caps and per-session cost visibility, and estimate a range during discovery once the expected conversation length and volume are known.',
     },
   ],
+  markets: {
+    title: 'Markets we deploy voice agents into',
+    intro:
+      'A voice agent talks to your callers in your market\'s accents, phrasing and business hours, so the market pages below cover call-hour coverage and consent expectations rather than pretending an Indian team answers the phone locally.',
+  },
   related: [
     {
       path: '/services/ai-development',

@@ -200,9 +200,17 @@ describe('noindex routes', () => {
     }
   });
 
-  it('marks the empty insights index noindex until real articles exist', () => {
-    expect(ROUTE_SEO['/BlogPage'].robots).toBe('noindex,follow');
-    expect(ROUTE_SEO['/BlogPage'].indexability).toBe('noindex-utility');
+  it('forwards the old /BlogPage placeholder to the real /insights section', () => {
+    // It used to be an empty page held out of the index. Now that /insights
+    // exists it must forward there — noindex so the stub itself is dropped,
+    // follow so the link is passed on, and canonical pointing at the
+    // destination rather than back at itself.
+    const blog = ROUTE_SEO['/BlogPage'];
+    expect(blog.robots).toBe('noindex,follow');
+    expect(blog.indexability).toBe('redirect');
+    expect(blog.redirectTo).toBe('/insights');
+    expect(blog.canonical).toBe('https://scssoftwares.com/insights');
+    expect(ROUTE_SEO['/insights'].indexability).toBe('indexable');
   });
 
   it('leaves the analysis start page indexable, unlike its result page', () => {
@@ -258,6 +266,9 @@ describe('sitemap route matching', () => {
         '/about',
         '/careers',
         '/contact',
+        '/insights',
+        '/insights/ai-voice-agent-production-checklist',
+        '/insights/how-to-estimate-an-ai-app-project',
         '/products',
         '/project-analysis',
         '/schedule-call',
@@ -371,14 +382,18 @@ describe('structured data', () => {
   });
 
   it('emits a BreadcrumbList only where a visible breadcrumb trail is rendered', () => {
-    // The two hubs and every page under them render a trail; nothing else does.
+    // The three hubs and every page under them render a trail; nothing else
+    // does. Google requires the markup to describe a trail the reader can see,
+    // so this list and the components that render `<Breadcrumbs>` must agree.
     for (const route of ALL_ROUTES) {
       const hasBreadcrumb = route.jsonLd.some((node) => node['@type'] === 'BreadcrumbList');
       const rendersTrail =
         route.canonicalPath === '/services' ||
         route.canonicalPath.startsWith('/services/') ||
         route.canonicalPath === '/locations' ||
-        route.canonicalPath.startsWith('/locations/');
+        route.canonicalPath.startsWith('/locations/') ||
+        route.canonicalPath === '/insights' ||
+        route.canonicalPath.startsWith('/insights/');
       expect(hasBreadcrumb, route.routePattern).toBe(rendersTrail);
     }
   });

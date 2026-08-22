@@ -26,7 +26,16 @@ import MilestoneTimeline from '../components/estimation/MilestoneTimeline';
 import IssueCards from '../components/estimation/IssueCards';
 import SubmitRequirementDialog, { SubmitVariant } from '../components/estimation/SubmitRequirementDialog';
 import { loadDraft, loadResult } from '@/lib/analysisStore';
-import { DISCLAIMER, estimatedWeeks, sampleAnalysis, totalCost, totalHours } from '@/data/demoAnalysis';
+import BudgetPlanPanel from '../components/estimation/BudgetPlanPanel';
+import {
+  AI_UNAVAILABLE_NOTICE,
+  BASIC_ESTIMATE_DISCLAIMER,
+  estimatedWeeks,
+  sampleAnalysis,
+  totalCost,
+  totalHours,
+} from '@/data/basicEstimate';
+import { formatUsd, STANDARD_HOURLY_RATE_USD } from '@/policy/estimationPolicy';
 import { openAssistant } from '@/components/ai-assistant/assistantBus';
 import { useToast } from '@/hooks/use-toast';
 
@@ -88,8 +97,8 @@ const ProjectAnalysisResult = () => {
 
   const stats = [
     { icon: Clock, label: 'Total estimated hours', value: `${hours} h` },
-    { icon: DollarSign, label: 'Total estimated cost', value: `$${cost.toLocaleString()}` },
-    { icon: Gauge, label: 'Weekly capacity', value: `${result.weeklyCapacityHours} h/week` },
+    { icon: DollarSign, label: 'Preliminary total cost', value: formatUsd(cost) },
+    { icon: Gauge, label: 'Standard rate', value: `up to ${formatUsd(STANDARD_HOURLY_RATE_USD)}/h` },
     { icon: CalendarRange, label: 'Estimated duration', value: `≈ ${weeks} week${weeks > 1 ? 's' : ''}` },
   ];
 
@@ -102,9 +111,22 @@ const ProjectAnalysisResult = () => {
         {/* Title + actions */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <span className="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-              Demo analysis — simulated result
+            <span
+              className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${
+                result.source === 'ai'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-amber-300 bg-amber-50 text-amber-700'
+              }`}
+            >
+              {result.source === 'ai'
+                ? 'AI analysis — preliminary, requires human review'
+                : 'Basic estimate — calculated from your answers, not an AI analysis'}
             </span>
+            {result.aiUnavailable && (
+              <p className="mt-2 max-w-2xl rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {AI_UNAVAILABLE_NOTICE}
+              </p>
+            )}
             <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
               Your project <span className="text-gradient-ai">analysis dashboard</span>
             </h1>
@@ -160,6 +182,15 @@ const ProjectAnalysisResult = () => {
           {/* Left column */}
           <div className="space-y-6 lg:col-span-2">
             <Reveal>
+              <SectionCard
+                title="Your budget and what it covers"
+                icon={<DollarSign className="h-5 w-5 text-pink-600" aria-hidden="true" />}
+              >
+                <BudgetPlanPanel plan={result.budgetPlan} narrative={result.planNarrative} />
+              </SectionCard>
+            </Reveal>
+
+            <Reveal>
               <SectionCard title="Project health" icon={<Gauge className="h-5 w-5 text-pink-600" aria-hidden="true" />}>
                 <HealthScore score={result.healthScore} riskLevel={result.riskLevel} mode={result.mode} />
               </SectionCard>
@@ -187,8 +218,9 @@ const ProjectAnalysisResult = () => {
               >
                 <TeamBreakdown team={result.team} />
                 <p className="mt-3 text-xs text-gray-500">
-                  Totals are calculated from the role table above · {result.weeklyCapacityHours}h weekly capacity → ≈{' '}
-                  {weeks} week{weeks > 1 ? 's' : ''} delivery.
+                  Every role is billed at our standard rate of up to {formatUsd(STANDARD_HOURLY_RATE_USD)} per hour, and
+                  these hours add up to exactly the {formatUsd(cost)} budget-fit total above ·{' '}
+                  {result.weeklyCapacityHours}h maximum weekly capacity → ≈ {weeks} week{weeks > 1 ? 's' : ''} delivery.
                 </p>
               </SectionCard>
             </Reveal>
@@ -212,11 +244,17 @@ const ProjectAnalysisResult = () => {
             </Reveal>
 
             <Reveal>
-              <SectionCard title="Missing features">
+              <SectionCard title="Requested requirements">
                 <Bullets
                   items={result.missingFeatures}
                   icon={<ArrowRight className="h-4 w-4 text-purple-500" />}
                 />
+                {result.budgetPlan.base.deferredScope.length > 0 && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    {result.budgetPlan.base.deferredScope.length} of these fall outside the selected budget and are
+                    listed as deferred above. They are not included in the preliminary total.
+                  </p>
+                )}
               </SectionCard>
             </Reveal>
 
@@ -291,7 +329,7 @@ const ProjectAnalysisResult = () => {
         </div>
 
         <p className="mt-10 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-center text-sm text-amber-800">
-          {DISCLAIMER}
+          {BASIC_ESTIMATE_DISCLAIMER}
         </p>
 
         {submitDialog && !isSample && (

@@ -350,6 +350,11 @@ export const aiAutomationIntegration: ServiceBody = {
         'In our experience it replaces the transcription, not the judgement. The realistic outcome is the same team handling more volume and spending its attention on exceptions. We measure the manual baseline so you can judge the actual effect rather than take a claim on trust.',
     },
   ],
+  markets: {
+    title: 'Markets we automate workflows for',
+    intro:
+      'Automation touches whichever tools a business already pays for, so the useful question is not where we sit but whether we can reach your CRM, helpdesk and finance systems safely — which the market pages below address in terms of access and credential handling.',
+  },
   related: [
     {
       path: '/services/ai-development',

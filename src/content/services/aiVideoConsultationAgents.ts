@@ -352,6 +352,11 @@ export const aiVideoConsultationAgents: ServiceBody = {
         'They say so and the system takes them there: an escalation path, a callback request or a booked follow-up, depending on how you configure it. That option is offered rather than hidden, and the conversation so far is passed on so nothing has to be repeated.',
     },
   ],
+  markets: {
+    title: 'Markets our consultation agents meet clients in',
+    intro:
+      'A consultation agent is often the first thing an overseas prospect interacts with, which makes availability outside our own working day the deciding factor — each market page below states the overlap you can actually expect.',
+  },
   related: [
     {
       path: '/services/ai-voice-agent-development',

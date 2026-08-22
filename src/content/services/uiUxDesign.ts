@@ -305,6 +305,11 @@ export const uiUxDesign: ServiceBody = {
         'The editable source design files, the component library, every screen at the agreed breakpoints with its states, the clickable prototype, exported assets and a handover document. All of it is yours. Nothing is held back to keep you on a retainer.',
     },
   ],
+  markets: {
+    title: 'Markets we design for',
+    intro:
+      'Design decisions that look neutral from India — date formats, address fields, currency placement, how much text a translated label needs — are the ones overseas users notice first, so each market page below covers how those are checked with you before build.',
+  },
   related: [
     {
       path: '/services/mobile-app-development',

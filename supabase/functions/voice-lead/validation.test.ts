@@ -25,8 +25,8 @@ const hoursMax = 165;
 const validEstimate = () => ({
   config_version: 'v1',
   currency: 'USD',
-  hourly_rate_min: 10,
-  hourly_rate_max: 20,
+  hourly_rate_min: 5,
+  hourly_rate_max: 5,
   weekly_capacity_hours: 40,
   role_hours: structuredClone(roleHours),
   modules: [{ name: 'Core app', hours_min: 60, hours_max: 100 }],
@@ -37,8 +37,8 @@ const validEstimate = () => ({
   risks: ['Budget not confirmed'],
   total_hours_min: hoursMin,
   total_hours_max: hoursMax,
-  total_cost_min: hoursMin * 10,
-  total_cost_max: hoursMax * 20,
+  total_cost_min: hoursMin * 5,
+  total_cost_max: hoursMax * 5,
   duration_weeks_min: Math.ceil(hoursMin / 40),
   duration_weeks_max: Math.ceil(hoursMax / 40),
   confidence: 'medium',
@@ -129,8 +129,8 @@ describe('estimate calculations and hostile values', () => {
     const res = sanitizeVoiceEstimate(validEstimate());
     expect(res.ok).toBe(true);
     if (res.ok) {
-      expect(res.data.total_cost_min).toBe(1000);
-      expect(res.data.total_cost_max).toBe(3300);
+      expect(res.data.total_cost_min).toBe(hoursMin * 5);
+      expect(res.data.total_cost_max).toBe(hoursMax * 5);
       expect(res.data.duration_weeks_min).toBe(3);
     }
   });
@@ -150,9 +150,15 @@ describe('estimate calculations and hostile values', () => {
   it('rejects hostile numeric values', () => {
     const hostile = [
       { hourly_rate_max: 100000 },
+      // Anything above the $5 standard rate is refused, not merely clamped.
+      { hourly_rate_min: 6, hourly_rate_max: 6 },
+      { hourly_rate_max: 20 },
       { hourly_rate_min: -5 },
-      { hourly_rate_min: 10.5 },
+      { hourly_rate_min: 4.5 },
       { weekly_capacity_hours: 0 },
+      // A weekly capacity above the standard 40 hours is refused too — it would
+      // shorten a quoted timeline beyond the published delivery capacity.
+      { weekly_capacity_hours: 60 },
       { weekly_capacity_hours: 168 },
       { role_hours: { ...structuredClone(roleHours), backend: { min: -1, max: 10 } } },
       { role_hours: { ...structuredClone(roleHours), backend: { min: 999999, max: 999999 } } },
@@ -368,7 +374,8 @@ describe('email notification mapping and recipient restrictions', () => {
     expect(email.to).toEqual(['asha@example.com']);
     expect(email.text).toContain('SCS-ABC23456');
     expect(email.text).toContain('preliminary estimate, not a final quotation');
-    expect(email.text).toContain('$1,000');
+    // The quoted figure is the deterministic total at the standard $5 rate.
+    expect(email.text).toContain(`$${(hoursMin * 5).toLocaleString('en-US')}`);
     expect(email.text).toContain('schedule-call');
   });
 
@@ -394,5 +401,73 @@ describe('email notification mapping and recipient restrictions', () => {
   it('every payload has exactly one recipient', () => {
     expect(buildClientEmail(notificationInput()).to).toHaveLength(1);
     expect(buildAdminEmail(notificationInput()).to).toHaveLength(1);
+  });
+});
+
+// --- budget-fit snapshot -------------------------------------------------------
+
+describe('budget plan re-validation', () => {
+  const tier = (hours: number, percent = 0, budget = 1000) => ({
+    hours,
+    cost_usd: hours * 5,
+    weeks: Math.max(1, Math.ceil(hours / 40)),
+    budget_ceiling_usd: Math.floor((budget * (100 + percent)) / 100),
+    percent_above_budget: percent,
+    included_scope: [{ label: 'Accounts', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [],
+    added_vs_base: [],
+  });
+
+  const plan = (overrides: Record<string, unknown> = {}) => ({
+    policy_version: 'estimation-policy-v1',
+    estimate_version: 'estimation-policy-v1#r1',
+    revision: 1,
+    currency: 'USD',
+    selected_budget_usd: 1000,
+    budget_provided: true,
+    hourly_rate_usd: 5,
+    weekly_capacity_hours: 40,
+    available_hours: 200,
+    budget_fit_percent: 80,
+    coverage_band: 'high-partial',
+    covers_essential_scope: true,
+    total_requested_hours: 200,
+    total_requested_cost_usd: 1000,
+    included_scope: [{ label: 'Accounts', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [{ label: 'Mobile app', tier: 'optional', complexity: 'complex', hours: 40 }],
+    unclear_scope: [],
+    base_estimate: tier(160),
+    optional_20_percent_estimate: tier(200, 20),
+    optional_30_percent_estimate: tier(240, 30),
+    client_selected_option: null,
+    assumptions: ['Client provides content'],
+    provider: 'gemini',
+    model: 'gemini-3.6-flash',
+    human_review_required: true,
+    ...overrides,
+  });
+
+  it('carries a valid plan onto the validated estimate', () => {
+    const res = sanitizeVoiceEstimate({ ...validEstimate(), budget_plan: plan() });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.budget_plan?.hourly_rate_usd).toBe(5);
+    expect(res.data.budget_plan?.base_estimate.cost_usd).toBe(800);
+    expect(res.data.budget_plan?.deferred_scope[0].label).toBe('Mobile app');
+  });
+
+  it('drops an unverifiable plan without rejecting the whole submission', () => {
+    for (const bad of [
+      plan({ hourly_rate_usd: 20 }),
+      plan({ base_estimate: tier(400) }), // $2,000 against a $1,000 budget
+      plan({ optional_30_percent_estimate: tier(400, 30) }),
+      plan({ weekly_capacity_hours: 60 }),
+      undefined,
+    ]) {
+      const res = sanitizeVoiceEstimate({ ...validEstimate(), budget_plan: bad });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.data.budget_plan).toBeNull();
+    }
   });
 });

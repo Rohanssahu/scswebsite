@@ -39,6 +39,7 @@ import {
   buildPreliminaryEstimate,
   describeEstimate,
   estimateInputSchema,
+  estimateNarrative,
   type EstimateInput,
   type PreliminaryEstimate,
 } from './estimate.js';
@@ -111,6 +112,8 @@ export interface StoredAnalysisSnapshot {
   missingFeatures?: unknown;
   priorities?: unknown;
   reported?: unknown;
+  /** The budget the client selected on the website, in whole USD, or null. */
+  selectedBudgetUsd?: unknown;
 }
 
 const asStr = (v: unknown, max = 500): string | null =>
@@ -170,6 +173,17 @@ export function seedStateFromSnapshot(
     ].slice(0, 25);
   }
 
+  // The budget the client already chose on the website. Seeding it means Buddy
+  // starts from their figure instead of asking for it again — and the estimate
+  // engine re-parses it from here, so the meeting quotes the same budget the
+  // report did.
+  const snapshotBudget = typeof snapshot.selectedBudgetUsd === 'number' && Number.isFinite(snapshot.selectedBudgetUsd)
+    ? Math.max(0, Math.floor(snapshot.selectedBudgetUsd))
+    : null;
+  if (snapshotBudget && snapshotBudget > 0) {
+    setIfEmpty('budget_range', `$${snapshotBudget.toLocaleString('en-US')}`);
+  }
+
   const knownFields = Object.keys(next.fields).filter((k) => {
     const v = next.fields[k as keyof RequirementFields];
     return Array.isArray(v) ? v.length > 0 : Boolean(v);
@@ -225,10 +239,24 @@ export function renderSnapshotSummary(snapshot: StoredAnalysisSnapshot): string 
   if (missing.length) lines.push(`- Missing features: ${missing.join(', ')}`);
   const priorities = asList(snapshot.priorities, 10, 200);
   if (priorities.length) lines.push(`- Client priorities: ${priorities.join(', ')}`);
+  const snapshotBudget = typeof snapshot.selectedBudgetUsd === 'number' && snapshot.selectedBudgetUsd > 0
+    ? Math.floor(snapshot.selectedBudgetUsd)
+    : null;
+  if (snapshotBudget) {
+    lines.push(
+      `- Selected budget: $${snapshotBudget.toLocaleString('en-US')} (already recorded — do NOT ask for it again; ` +
+        'confirm it once if anything suggests it changed, and report it to update_proposal as client_budget_usd).',
+    );
+  }
+  if (snapshot.source === 'basic' || snapshot.source === 'demo') {
+    lines.push(
+      '- That analysis was produced by the basic (non-AI) estimator, not by an AI analysis. Do not describe it as an AI analysis.',
+    );
+  }
   const reported = snapshot.reported;
   if (typeof reported === 'object' && reported !== null) {
     lines.push(
-      '- The client saw a rough browser-side demo estimate. Treat it as UNVERIFIED — your proposal numbers come only from the update_proposal tool.',
+      '- The client already saw a preliminary estimate on the website. Treat its figures as UNVERIFIED here — your proposal numbers come only from the update_proposal tool.',
     );
   }
   return lines.join('\n').slice(0, 4000);
@@ -307,6 +335,9 @@ export function buildProposalWire(estimate: PreliminaryEstimate, content: Propos
     duration_weeks_max: estimate.duration_weeks_max,
     confidence: estimate.confidence,
     modules: estimate.modules,
+    // The budget-fit snapshot: what the client's budget covers, what is
+    // deferred, and the two optional tiers. consultation-agent re-validates it.
+    budget_plan: estimate.budget_plan,
     summary: content.summary,
     recommended_solution: content.recommended_solution,
     architecture: estimate.architecture,
@@ -351,8 +382,14 @@ export function buildProposalView(
     durationWeeksMin: estimate.duration_weeks_min,
     durationWeeksMax: estimate.duration_weeks_max,
     weeklyCapacityHours: estimate.weekly_capacity_hours,
+    hourlyRateUsd: estimate.hourly_rate_max,
     currency: estimate.currency,
     confidence: estimate.confidence,
+    // Rendered by the client's Live Proposal panel. Buddy is told to speak
+    // these same sentences, so the spoken and on-screen figures cannot differ.
+    budgetPlan: estimate.budget_plan,
+    budgetNarrative: estimateNarrative(estimate),
+    estimateVersion: estimate.budget_plan.estimate_version,
   };
 }
 
@@ -456,6 +493,9 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
   let estimate: PreliminaryEstimate | null = null;
   let proposalContent: ProposalContent | null = null;
   let proposalVersion = 0;
+  /** Bumped on every (re)estimate so a budget or scope change publishes a new
+   * estimate version rather than silently mutating the old one. */
+  let estimateRevision = 0;
   let proposalWire: Record<string, unknown> | null = null;
   let contact: ContactDetails | null = null;
   let submittedReference: string | null = null;
@@ -485,6 +525,10 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
             assumptions: estimate.assumptions,
             exclusions: estimate.exclusions,
             risks: estimate.risks,
+            hourlyRateUsd: estimate.hourly_rate_max,
+            budgetPlan: estimate.budget_plan,
+            budgetNarrative: estimateNarrative(estimate),
+            estimateVersion: estimate.budget_plan.estimate_version,
             status: 'preliminary',
           }
         : null,
@@ -586,12 +630,13 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
 
     update_proposal: llm.tool({
       description:
-        'Generate or refresh the preliminary proposal once the required requirement fields are collected. You provide only classifications and narrative (solution, scope, roles, milestones); the server computes every number. Returns the figures to present.',
+        "Generate or refresh the preliminary proposal once the required requirement fields are collected. You provide only classifications (requirement tier + effort class), the budget the client stated, and narrative (solution, scope, roles, milestones); the server computes every hour, price, duration and budget-fit figure. Returns the EXACT sentences to say. Call it again whenever the client changes their budget or scope.",
       parameters: updateProposalSchema,
       execute: async (input) => {
         const { estimate: estimateInput, content } = splitProposalInput(input);
+        estimateRevision += 1;
         try {
-          estimate = buildPreliminaryEstimate(state, estimateInput);
+          estimate = buildPreliminaryEstimate(state, estimateInput, estimateRevision);
         } catch (e) {
           const code = e instanceof EstimateError ? e.code : 'invalid_input';
           logEvent('proposal_rejected', { code });
@@ -599,7 +644,14 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
             const progress = computeProgress(state);
             return `Cannot build the proposal yet — missing required fields: ${progress.missingRequired.join(', ')}. Collect those first.`;
           }
-          return 'The proposal input was invalid. Re-check the module list and classifications, then try once more.';
+          if (code === 'out_of_bounds') {
+            return (
+              'The budget the client stated does not fund any deliverable scope yet. Tell them that plainly and kindly, ' +
+              'do NOT invent a lower figure, and ask which single business outcome a smaller Phase 1 should deliver. ' +
+              'Then record their answer and try again.'
+            );
+          }
+          return 'The proposal input was invalid. Re-check the scope classification, then try once more.';
         }
         proposalContent = content;
         proposalWire = buildProposalWire(estimate, content);
@@ -612,14 +664,19 @@ export async function runConsultationMeeting(ctx: JobContext, meta: Consultation
         }
         logEvent('proposal_generated', {
           version: proposalVersion,
+          revision: estimateRevision,
           hours_max: estimate.total_hours_max,
           cost_max: estimate.total_cost_max,
+          budget_fit_percent: estimate.budget_plan.budget_fit_percent,
+          coverage_band: estimate.budget_plan.coverage_band,
           confidence: estimate.confidence,
         });
         publishState();
         return (
-          `PRELIMINARY proposal v${proposalVersion} (present briefly, then ask the client to confirm the summary): ${describeEstimate(estimate)}. ` +
-          `The full proposal is visible in the client's Live Proposal panel. Say clearly it is preliminary and requires human review by SCS before any final quotation. ` +
+          `PRELIMINARY proposal v${proposalVersion}. Say the following figures EXACTLY as written — do not change, round or add to any number: ` +
+          `"${describeEstimate(estimate)}" ` +
+          `The same figures are visible in the client's Live Proposal panel, so any difference will be noticed. ` +
+          `Then ask the client to confirm the requirement summary. ` +
           `Requirement summary to read back: ${buildSummary(state).slice(0, 1200)}`
         );
       },

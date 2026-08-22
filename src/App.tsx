@@ -14,7 +14,6 @@ import Contact from "./pages/Contact";
 import ApplicationForm from "./pages/ApplicationForm";
 import NotFound from "./pages/NotFound";
 import CareersPage from "./pages/CareersPage";
-import BlogPage from "./pages/BlogPage";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ProductDetailsPage from "./pages/ProductDetailsPage";
@@ -134,7 +133,10 @@ const RoutesComponent = () => {
       <Route path="/ProductDetailsPage" element={<ProductDetailsPage />} />
       {/* Consultation and call booking are one page now — old links keep working. */}
       <Route path="/consultation-form" element={<Navigate to="/schedule-call" replace />} />
-      <Route path="/BlogPage" element={<BlogPage />} />
+      {/* The empty insights placeholder was replaced by the real /insights
+          section. It forwards rather than 404s, and the build emits a noindex
+          stub for it the same way it does for the old /gig paths. */}
+      <Route path="/BlogPage" element={<Navigate to="/insights" replace />} />
       <Route path="/ApplicationForm" element={<ApplicationForm />} />
       {/* The services hub, then the canonical service pages it lists. */}
       <Route path="/services" element={<ContentRoute route="/services" />} />
@@ -182,6 +184,18 @@ const RoutesComponent = () => {
       <Route path="/services/cloud-solutions" element={<ContentRoute route="/services/cloud-solutions" />} />
       <Route path="/services/devops-engineering" element={<ContentRoute route="/services/devops-engineering" />} />
       <Route path="/services/digital-marketing" element={<ContentRoute route="/services/digital-marketing" />} />
+      {/* The insights hub and the published articles. Same code-split treatment
+          as the service and market pages: an article's prose is a route chunk,
+          not part of the app shell. `/BlogPage` forwards here. */}
+      <Route path="/insights" element={<ContentRoute route="/insights" />} />
+      <Route
+        path="/insights/how-to-estimate-an-ai-app-project"
+        element={<ContentRoute route="/insights/how-to-estimate-an-ai-app-project" />}
+      />
+      <Route
+        path="/insights/ai-voice-agent-production-checklist"
+        element={<ContentRoute route="/insights/ai-voice-agent-production-checklist" />}
+      />
       {/* Every old gig path now forwards to the canonical service page that
           replaced it. The build also emits a noindex meta-refresh stub per path,
           so a direct hit resolves without JavaScript. */}

@@ -271,6 +271,11 @@ export const softwareModernization: ServiceBody = {
         'That is common and workable, as long as you have the source code and access to the running environment. If parts of the source are genuinely lost, we say so early — some components may then need to be replaced rather than migrated.',
     },
   ],
+  markets: {
+    title: 'Where the systems we modernize are running',
+    intro:
+      'Modernization work almost always begins with an application that is live and earning money right now, so the market pages below concentrate on how a change is staged, demonstrated and rolled back without a maintenance window that lands in the middle of your working day.',
+  },
   related: [
     {
       path: '/services/custom-software-development',

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnalysisResult } from '@/types/projectAnalysis';
+import { buildBudgetPlan, buildEstimateSnapshot, STANDARD_HOURLY_RATE_USD } from '@/policy/estimationPolicy';
 
 // Mock the Supabase client module so submitLead never makes network calls.
 const invokeMock = vi.fn();
@@ -14,12 +15,21 @@ import {
   buildAnswersPayload,
   buildConsultationRequest,
   buildContactRequest,
-  buildDemoEstimatePayload,
+  buildPreliminaryEstimatePayload,
   buildHumanReviewRequest,
   buildRequirementRequest,
   LeadSubmissionError,
   submitLead,
 } from '@/services/leadService';
+
+const samplePlan = buildBudgetPlan({
+  selectedBudgetUsd: 1100,
+  scopeItems: [
+    { label: 'Storefront', tier: 'essential', complexity: 'complex' },
+    { label: 'Online payments', tier: 'essential', complexity: 'complex' },
+    { label: 'Analytics', tier: 'optional', complexity: 'complex' },
+  ],
+});
 
 const sampleResult: AnalysisResult = {
   mode: 'new',
@@ -31,15 +41,20 @@ const sampleResult: AnalysisResult = {
   missingFeatures: [],
   recommendedSolution: [],
   team: [
-    { role: 'Frontend Developer', hours: 120, hourlyRate: 30 },
-    { role: 'Backend Developer', hours: 100, hourlyRate: 35 },
+    { role: 'Frontend Developer', hours: 120, hourlyRate: STANDARD_HOURLY_RATE_USD },
+    { role: 'Backend Developer', hours: 100, hourlyRate: STANDARD_HOURLY_RATE_USD },
   ],
   weeklyCapacityHours: 40,
+  hourlyRateUsd: STANDARD_HOURLY_RATE_USD,
   assumptions: [],
   milestones: [],
   benefits: [],
   nextSteps: [],
+  budgetPlan: samplePlan,
+  planNarrative: ['Preliminary estimate.'],
+  estimateSnapshot: buildEstimateSnapshot(samplePlan, { provider: 'gemini', model: 'gemini-3.6-flash' }),
   generatedAt: '2026-08-20T00:00:00.000Z',
+  source: 'ai',
 };
 
 const context = { route: '/contact', language: 'en' };
@@ -120,30 +135,43 @@ describe('buildConsultationRequest', () => {
   });
 });
 
-describe('buildDemoEstimatePayload', () => {
-  it('recomputes totals from the role table and marks the estimate demo/USD', () => {
-    const estimate = buildDemoEstimatePayload(sampleResult);
-    expect(estimate.status).toBe('demo');
+describe('buildPreliminaryEstimatePayload', () => {
+  it('recomputes totals from the role table at the standard rate', () => {
+    const estimate = buildPreliminaryEstimatePayload(sampleResult);
+    expect(estimate.status).toBe('preliminary');
     expect(estimate.currency).toBe('USD');
+    expect(estimate.hourly_rate_usd).toBe(STANDARD_HOURLY_RATE_USD);
     expect(estimate.total_hours).toBe(220);
-    expect(estimate.total_cost).toBe(120 * 30 + 100 * 35);
+    expect(estimate.total_cost).toBe(220 * STANDARD_HOURLY_RATE_USD);
     expect(estimate.team).toHaveLength(2);
-    expect(estimate.team[0]).toEqual({ role: 'Frontend Developer', hours: 120, hourly_rate: 30 });
+    expect(estimate.team[0]).toEqual({ role: 'Frontend Developer', hours: 120, hourly_rate: 5 });
+    expect(estimate.human_review_required).toBe(true);
   });
 
-  it('clamps out-of-range numbers instead of sending them', () => {
-    const hostile: AnalysisResult = {
+  it('carries the full budget-fit snapshot for the admin team', () => {
+    const estimate = buildPreliminaryEstimatePayload(sampleResult);
+    expect(estimate.budget_plan.selected_budget_usd).toBe(1100);
+    expect(estimate.budget_plan.hourly_rate_usd).toBe(5);
+    expect(estimate.budget_plan.available_hours).toBe(220);
+    expect(estimate.budget_plan.included_scope.length).toBeGreaterThan(0);
+    expect(estimate.budget_plan.provider).toBe('gemini');
+    expect(estimate.budget_plan.human_review_required).toBe(true);
+    expect(estimate.client_selected_option).toBeNull();
+  });
+
+  it('caps a stale stored rate at the standard rate instead of resubmitting it', () => {
+    const stale: AnalysisResult = {
       ...sampleResult,
       healthScore: 9999,
-      weeklyCapacityHours: -5,
+      weeklyCapacityHours: 168,
       team: [{ role: 'X'.repeat(500), hours: 10_000_000, hourlyRate: 99999 }],
     };
-    const estimate = buildDemoEstimatePayload(hostile);
+    const estimate = buildPreliminaryEstimatePayload(stale);
     expect(estimate.health_score).toBe(100);
-    expect(estimate.weekly_capacity_hours).toBe(1);
+    expect(estimate.weekly_capacity_hours).toBe(40);
     expect(estimate.team[0].role).toHaveLength(100);
     expect(estimate.team[0].hours).toBe(100000);
-    expect(estimate.team[0].hourly_rate).toBe(2000);
+    expect(estimate.team[0].hourly_rate).toBe(STANDARD_HOURLY_RATE_USD);
   });
 
   it('drops non-finite numbers to the safe minimum', () => {
@@ -151,9 +179,18 @@ describe('buildDemoEstimatePayload', () => {
       ...sampleResult,
       team: [{ role: 'Dev', hours: NaN as number, hourlyRate: Infinity as number }],
     };
-    const estimate = buildDemoEstimatePayload(broken);
+    const estimate = buildPreliminaryEstimatePayload(broken);
     expect(estimate.team[0].hours).toBe(0);
     expect(estimate.team[0].hourly_rate).toBe(0);
+  });
+
+  it('stores the policy estimate version with the requirement', () => {
+    const req = buildRequirementRequest(
+      { contact: { name: 'Jane', email: 'jane@example.com' }, mode: 'new', answers: {}, result: sampleResult },
+      'tok',
+      context,
+    );
+    expect(req.requirement?.estimate_version).toBe(samplePlan.estimateVersion);
   });
 });
 
@@ -188,7 +225,7 @@ describe('buildRequirementRequest / buildHumanReviewRequest', () => {
     expect(req.review).toBeUndefined();
     expect(req.requirement?.mode).toBe('new');
     expect(req.requirement?.requirement_summary).toBe('Web storefront\nOnline payments');
-    expect(req.requirement?.estimate_version).toBe('demo-v1');
+    expect(req.requirement?.estimate_version).toBe(samplePlan.estimateVersion);
     expect(req.requirement?.current_route).toBe(ctx.route);
   });
 

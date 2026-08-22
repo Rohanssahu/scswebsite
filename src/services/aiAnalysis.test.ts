@@ -9,6 +9,7 @@ vi.mock('@/services/supabaseClient', () => ({
   getSupabaseClient: () => ({ functions: { invoke: invokeMock } }),
 }));
 
+import { buildBudgetPlan, buildEstimateSnapshot, STANDARD_HOURLY_RATE_USD } from '@/policy/estimationPolicy';
 import {
   documentContextFor,
   extractFromDocument,
@@ -20,6 +21,16 @@ import {
   UnsupportedDocumentError,
 } from '@/services/aiAnalysis';
 
+const serverPlan = buildBudgetPlan({
+  selectedBudgetUsd: 1000,
+  scopeItems: [
+    { label: 'Accounts', tier: 'essential', complexity: 'standard' },
+    { label: 'Payments', tier: 'important', complexity: 'complex' },
+    { label: 'Analytics', tier: 'optional', complexity: 'complex' },
+  ],
+});
+
+/** Exactly the shape the ai-estimate Edge Function returns. */
 function validAnalysisResult(overrides: Record<string, unknown> = {}) {
   return {
     healthScore: 80,
@@ -29,12 +40,18 @@ function validAnalysisResult(overrides: Record<string, unknown> = {}) {
     problemsDetected: [{ title: 'Tight timeline', severity: 'medium', summary: 'Short deadline', detail: 'Needs parallel work' }],
     missingFeatures: ['Payments'],
     recommendedSolution: ['Start with an MVP'],
-    team: [{ role: 'Backend Developer', hours: 80, hourlyRate: 15 }],
+    team: [{ role: 'Backend Developer', hours: 80, hourlyRate: STANDARD_HOURLY_RATE_USD }],
     weeklyCapacityHours: 40,
+    hourlyRateUsd: STANDARD_HOURLY_RATE_USD,
     assumptions: ['Client provides content'],
     milestones: [{ title: 'Phase 1', week: 'Week 1-2', deliverables: ['Auth'] }],
     benefits: ['Transparent pricing'],
     nextSteps: ['Book a call'],
+    budgetPlan: serverPlan,
+    planNarrative: ['Your selected budget of $1,000 is a practical starting point.'],
+    estimateSnapshot: buildEstimateSnapshot(serverPlan, { provider: 'gemini', model: 'gemini-3.6-flash' }),
+    provider: 'gemini',
+    model: 'gemini-3.6-flash',
     ...overrides,
   };
 }
@@ -216,7 +233,7 @@ describe('extraction UI messages', () => {
 });
 
 describe('generateAiAnalysis — validation and fallback contract', () => {
-  it('throws (so the caller falls back to the demo engine) when the backend errors', async () => {
+  it('throws (so the caller shows the labelled basic estimate) when the backend errors', async () => {
     invokeMock.mockResolvedValueOnce({ data: null, error: { message: 'network down' } });
     await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('network down');
   });
@@ -226,9 +243,43 @@ describe('generateAiAnalysis — validation and fallback contract', () => {
     await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('AI returned an invalid analysis');
   });
 
-  it('rejects team.hourlyRate above the deterministic bound even if the shape is otherwise valid', async () => {
+  it('rejects any rate above the standard $5/hour, even one hour above it', async () => {
+    for (const rate of [STANDARD_HOURLY_RATE_USD + 1, 15, 9999]) {
+      invokeMock.mockResolvedValueOnce({
+        data: { ok: true, result: validAnalysisResult({ team: [{ role: 'Dev', hours: 40, hourlyRate: rate }] }) },
+        error: null,
+      });
+      await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('AI returned an invalid analysis');
+    }
+  });
+
+  it('rejects a plan whose base option costs more than the client budget', async () => {
+    const tampered = {
+      ...serverPlan,
+      base: { ...serverPlan.base, costUsd: serverPlan.selectedBudgetUsd + 5 },
+    };
     invokeMock.mockResolvedValueOnce({
-      data: { ok: true, result: validAnalysisResult({ team: [{ role: 'Dev', hours: 40, hourlyRate: 9999 }] }) },
+      data: { ok: true, result: validAnalysisResult({ budgetPlan: tampered }) },
+      error: null,
+    });
+    await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('AI returned an invalid analysis');
+  });
+
+  it('rejects an optional tier above its +20% / +30% ceiling', async () => {
+    const overRecommended = {
+      ...serverPlan,
+      recommended: { ...serverPlan.base, id: 'recommended', percentAboveBudget: 25, addedVsBase: [] },
+    };
+    invokeMock.mockResolvedValueOnce({
+      data: { ok: true, result: validAnalysisResult({ budgetPlan: overRecommended }) },
+      error: null,
+    });
+    await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('AI returned an invalid analysis');
+  });
+
+  it('rejects a response with no budget plan at all', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { ok: true, result: validAnalysisResult({ budgetPlan: undefined }) },
       error: null,
     });
     await expect(generateAiAnalysis('new', {}, [])).rejects.toThrow('AI returned an invalid analysis');
@@ -253,6 +304,9 @@ describe('generateAiAnalysis — validation and fallback contract', () => {
     expect(result).not.toHaveProperty('totalCost');
     expect(result).not.toHaveProperty('sneakyField');
     expect(result.riskLevel).toBe('Low');
+    expect(result.hourlyRateUsd).toBe(STANDARD_HOURLY_RATE_USD);
+    expect(result.budgetPlan.base.costUsd).toBeLessThanOrEqual(result.budgetPlan.selectedBudgetUsd);
+    expect(result.provider).toBe('gemini');
   });
 
   it('clamps healthScore into [0, 100] and rounds it', async () => {

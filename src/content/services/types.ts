@@ -94,6 +94,34 @@ export interface RelatedLink {
   blurb: string;
 }
 
+/**
+ * The market block every service page renders above its related-service cards.
+ *
+ * Only two fields, and both are deliberate.
+ *
+ * The *links* are not stored here: the component derives them from
+ * `LOCATION_META`, so every service page lists exactly the markets that have a
+ * written page, and adding a tenth market updates fifteen service pages without
+ * anyone editing them. A hand-kept list per service would be fifteen places for
+ * a link to a non-existent country page to hide.
+ *
+ * The *intro* is stored here, one sentence per service, because that is the part
+ * that must not repeat. Fifteen pages carrying the same paragraph about remote
+ * delivery would be fifteen near-duplicate blocks; fifteen pages each saying
+ * what *this* service actually looks like when the client is in another
+ * timezone is fifteen useful sentences. `servicePages.test.tsx` fails the build
+ * if two services share one.
+ *
+ * Neither field may claim a local office, a local entity, local pricing or
+ * local regulatory expertise — the same rule the market pages themselves follow.
+ */
+export interface ServiceMarkets {
+  /** Section heading, written for this service. */
+  title: string;
+  /** One sentence, unique to this service. */
+  intro: string;
+}
+
 export interface ServiceSectionHeader {
   eyebrow: string;
   heading: string;
@@ -171,6 +199,8 @@ export interface ServiceBody {
   engagement: ServiceSectionHeader & { options: EngagementOption[] };
   security: ServiceSectionHeader & { points: string[]; note: string };
   faqs: FaqItem[];
+  /** The markets block: a unique sentence, plus links derived from the manifest. */
+  markets: ServiceMarkets;
   related: RelatedLink[];
   cta: { title: string; body: string };
 }

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import { ASSISTANT_OPEN_EVENT } from '@/components/ai-assistant/assistantBus';
 import { getQuestions } from '@/data/analysisQuestions';
-import { buildGuideEstimate, ESTIMATE_DISCLAIMER_KEY, GUIDE_WEEKLY_CAPACITY_HOURS } from '@/data/demoEstimate';
+import { ESTIMATE_DISCLAIMER_KEY, GUIDE_WEEKLY_CAPACITY_HOURS, resolveGuideEstimate } from '@/data/guideEstimate';
 import { getRouteQuickActions, GUIDE_WELCOME_KEY, WELCOME_ACTIONS, WHATSAPP_NUMBER } from '@/data/guideContent';
 import { emitBuddyReaction, looksLikeJoke } from '@/data/buddyReactions';
 import { clarifyReply, routeMessage } from '@/data/guideIntents';
@@ -48,6 +48,14 @@ interface QueueItem {
   params?: Record<string, unknown>;
   actions?: GuideAction[];
 }
+
+/**
+ * Queue an already-final sentence (the estimation policy's own client-facing
+ * wording) instead of an i18n key. `defaultValue` makes i18next return the
+ * sentence verbatim, so the commercial text Buddy says is byte-identical to the
+ * text the report renders — no separate translation can drift from it.
+ */
+const asPlainText = (text: string): QueueItem => ({ key: text, params: { defaultValue: text } });
 
 interface GuidePrefs {
   voiceEnabled: boolean;
@@ -423,67 +431,84 @@ export function useVirtualGuide() {
     enqueueGuide([{ key: 'guide.msg.cancelFlow', actions: WELCOME_ACTIONS }]);
   }, [enqueueGuide]);
 
-  // ---------- demo analysis + estimate explanation ----------
+  // ---------- analysis + estimate explanation ----------
+  //
+  // The estimate comes from the server (Gemini classifies the scope, the shared
+  // policy computes every number). Nothing here does pricing arithmetic, and a
+  // provider failure is announced rather than hidden behind a local result.
   const runAnalysis = useCallback(() => {
     const f = flowRef.current;
     if (!f) return;
-    pushUser(i18n.t('guide.msg.runDemoAnalysis'));
+    pushUser(i18n.t('guide.msg.runAnalysis'));
     setFlow({ ...f, status: 'analyzing' });
   }, [pushUser]);
+
+  /** Bumped whenever a new estimate is produced, so each one is a new version. */
+  const estimateRevisionRef = useRef(0);
 
   const completeAnalysis = useCallback(() => {
     const f = flowRef.current;
     if (!f) return;
-    const result = buildGuideEstimate(f.mode, f.answers);
-    setEstimate(result);
-    saveResult(result);
-    setFlow({ ...f, status: 'done' });
-    setCelebrating(true);
-    emitBuddyReaction('requirement-complete');
-    addTimer(() => setCelebrating(false), 4000);
-    const roles = result.team
-      .map((r) =>
-        i18n.t('guide.msg.teamRole', {
-          role: tValue('roles', r.role),
-          hours: r.hours,
-          rate: r.hourlyRate,
-        }),
-      )
-      .join('; ');
-    enqueueGuide([
-      {
-        key: 'guide.msg.estimateReady',
-        params: {
-          service: tValue('services.names', result.recommendedService),
-          tech: result.suggestedTech.join(', '),
-        },
+    estimateRevisionRef.current += 1;
+    void resolveGuideEstimate(f.mode, f.answers, estimateRevisionRef.current).then(
+      ({ estimate: result, unavailableNotice }) => {
+        // The flow may have been cancelled or restarted while the request ran.
+        if (flowRef.current !== f) return;
+        setEstimate(result);
+        saveResult(result);
+        setFlow({ ...f, status: 'done' });
+        setCelebrating(true);
+        emitBuddyReaction('requirement-complete');
+        addTimer(() => setCelebrating(false), 4000);
+        const roles = result.team
+          .map((r) =>
+            i18n.t('guide.msg.teamRole', {
+              role: tValue('roles', r.role),
+              hours: r.hours,
+              rate: r.hourlyRate,
+            }),
+          )
+          .join('; ');
+        enqueueGuide([
+          ...(unavailableNotice ? [asPlainText(unavailableNotice)] : []),
+          {
+            key: 'guide.msg.estimateReady',
+            params: {
+              service: tValue('services.names', result.recommendedService),
+              tech: result.suggestedTech.join(', '),
+            },
+          },
+          // The budget wording comes straight from the policy, so what Buddy
+          // says here is character-for-character what the report renders.
+          ...result.budgetLines.map(asPlainText),
+          { key: 'guide.msg.teamRequirement', params: { roles, hours: result.totalHours, cost: result.totalCost } },
+          { key: 'guide.msg.duration', params: { capacity: result.weeklyCapacityHours, weeks: result.estimatedWeeks } },
+          {
+            key: 'guide.msg.whyWorks',
+            params: {
+              pro: i18n.t(result.pros[0]),
+              con: i18n.t(result.cons[0]),
+              risk: i18n.t(result.risks[0]),
+            },
+          },
+          {
+            key: 'guide.msg.disclaimerNext',
+            params: {
+              disclaimer: i18n.t(ESTIMATE_DISCLAIMER_KEY),
+              next: i18n.t(result.recommendedNextStep.key, result.recommendedNextStep.params),
+            },
+            actions: [
+              { label: 'View detailed breakdown', kind: 'open-results' },
+              { label: 'Edit requirements', kind: 'flow-edit' },
+              { label: 'Continue to Contact', kind: 'contact-handoff' },
+              { label: 'Open WhatsApp', kind: 'whatsapp' },
+              { label: 'Schedule a Call', kind: 'schedule-handoff' },
+              { label: 'Request Human Review', kind: 'contact-handoff' },
+            ],
+          },
+        ]);
       },
-      { key: 'guide.msg.teamRequirement', params: { roles, hours: result.totalHours, cost: result.totalCost } },
-      { key: 'guide.msg.duration', params: { capacity: result.weeklyCapacityHours, weeks: result.estimatedWeeks } },
-      {
-        key: 'guide.msg.whyWorks',
-        params: {
-          pro: i18n.t(result.pros[0]),
-          con: i18n.t(result.cons[0]),
-          risk: i18n.t(result.risks[0]),
-        },
-      },
-      {
-        key: 'guide.msg.disclaimerNext',
-        params: {
-          disclaimer: i18n.t(ESTIMATE_DISCLAIMER_KEY),
-          next: i18n.t(result.recommendedNextStep.key, result.recommendedNextStep.params),
-        },
-        actions: [
-          { label: 'View detailed breakdown', kind: 'open-results' },
-          { label: 'Edit requirements', kind: 'flow-edit' },
-          { label: 'Continue to Contact', kind: 'contact-handoff' },
-          { label: 'Open WhatsApp', kind: 'whatsapp' },
-          { label: 'Schedule a Call', kind: 'schedule-handoff' },
-          { label: 'Request Human Review', kind: 'contact-handoff' },
-        ],
-      },
-    ]);
+    );
   }, [addTimer, enqueueGuide]);
 
   // ---------- lead conversion ----------

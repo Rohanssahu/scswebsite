@@ -1,7 +1,7 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { RoleEstimate } from '@/types/projectAnalysis';
-import { totalCost, totalHours } from '@/data/demoAnalysis';
+import { totalCost, totalHours } from '@/data/basicEstimate';
 
 interface TeamBreakdownProps {
   team: RoleEstimate[];

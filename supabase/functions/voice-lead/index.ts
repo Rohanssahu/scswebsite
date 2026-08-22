@@ -158,6 +158,9 @@ async function handleSubmitLead(body: unknown): Promise<Response> {
           assumptions: s.estimate.assumptions,
           exclusions: s.estimate.exclusions,
           risks: s.estimate.risks,
+          // What the client's budget actually covers, and what it does not.
+          // The admin dashboard reads this to see exactly what was promised.
+          budget_plan: s.estimate.budget_plan,
         },
         total_hours_min: s.estimate.total_hours_min,
         total_hours_max: s.estimate.total_hours_max,

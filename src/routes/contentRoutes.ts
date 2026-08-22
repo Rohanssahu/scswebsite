@@ -1,8 +1,8 @@
 import { loadable, type LoadableRoute } from './loadable';
 
 /**
- * Route-level code splitting for the two content sections: `/services/*` and
- * `/locations/*`.
+ * Route-level code splitting for the three content sections: `/services/*`,
+ * `/locations/*` and `/insights/*`.
  *
  * Before Phase 3B, `App.tsx` imported all twenty-three of these pages
  * statically (twenty-six after Phase 3C added Germany, the Netherlands and
@@ -79,10 +79,28 @@ export const LOCATION_ROUTES: Record<string, LoadableRoute> = {
   '/locations/turkey': loadable(() => import('@/pages/locations/Turkey')),
 };
 
+/**
+ * The `/insights` hub and every published article.
+ *
+ * Split for the same reason the other two sections are: an article is a few
+ * hundred lines of prose that only its own readers need, and none of it belongs
+ * in the app shell that the homepage waits on.
+ */
+export const INSIGHT_ROUTES: Record<string, LoadableRoute> = {
+  '/insights': loadable(() => import('@/pages/insights/InsightsHub')),
+  '/insights/how-to-estimate-an-ai-app-project': loadable(
+    () => import('@/pages/insights/EstimatingAnAiAppProject'),
+  ),
+  '/insights/ai-voice-agent-production-checklist': loadable(
+    () => import('@/pages/insights/AiVoiceAgentProductionChecklist'),
+  ),
+};
+
 /** Every split content route, keyed by its canonical path. */
 export const CONTENT_ROUTES: Record<string, LoadableRoute> = {
   ...SERVICE_ROUTES,
   ...LOCATION_ROUTES,
+  ...INSIGHT_ROUTES,
 };
 
 /**

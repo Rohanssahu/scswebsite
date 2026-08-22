@@ -33,14 +33,14 @@ function validProposal(overrides: Record<string, unknown> = {}) {
   return {
     config_version: 'v1',
     currency: 'USD',
-    hourly_rate_min: 10,
-    hourly_rate_max: 20,
+    hourly_rate_min: 5,
+    hourly_rate_max: 5,
     weekly_capacity_hours: capacity,
     role_hours: roleHours,
     total_hours_min: hoursMin,
     total_hours_max: hoursMax,
-    total_cost_min: hoursMin * 10,
-    total_cost_max: hoursMax * 20,
+    total_cost_min: hoursMin * 5,
+    total_cost_max: hoursMax * 5,
     duration_weeks_min: Math.max(1, Math.ceil(hoursMin / capacity)),
     duration_weeks_max: Math.max(1, Math.ceil(hoursMax / capacity)),
     confidence: 'medium',
@@ -116,7 +116,7 @@ describe('deterministic proposal validation', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.total_hours_min).toBe(167);
-    expect(result.data.total_cost_min).toBe(1670);
+    expect(result.data.total_cost_min).toBe(167 * 5);
     expect(result.data.duration_weeks_max).toBe(Math.ceil(234 / 40));
   });
 
@@ -128,13 +128,15 @@ describe('deterministic proposal validation', () => {
 
   it('rejects out-of-band hourly rates and capacities', () => {
     expect(sanitizeProposal(validProposal({ hourly_rate_min: 1 }))).toMatchObject({ ok: false });
+    expect(sanitizeProposal(validProposal({ hourly_rate_min: 6, hourly_rate_max: 6 }))).toMatchObject({ ok: false });
+    expect(sanitizeProposal(validProposal({ hourly_rate_max: 20 }))).toMatchObject({ ok: false });
     expect(sanitizeProposal(validProposal({ hourly_rate_max: 5000 }))).toMatchObject({ ok: false });
     expect(sanitizeProposal(validProposal({ weekly_capacity_hours: 200 }))).toMatchObject({ ok: false });
     expect(sanitizeProposal(validProposal({ weekly_capacity_hours: 1 }))).toMatchObject({ ok: false });
   });
 
   it('rejects inverted ranges', () => {
-    expect(sanitizeProposal(validProposal({ hourly_rate_min: 30, hourly_rate_max: 20 }))).toMatchObject({ ok: false });
+    expect(sanitizeProposal(validProposal({ hourly_rate_min: 5, hourly_rate_max: 4 }))).toMatchObject({ ok: false });
     const inverted = validProposal();
     inverted.role_hours.frontend = { min: 84, max: 60 };
     expect(sanitizeProposal(inverted)).toMatchObject({ ok: false });
@@ -195,8 +197,8 @@ describe('deterministic proposal validation', () => {
     small.role_hours = roleHours;
     small.total_hours_min = 2;
     small.total_hours_max = 2;
-    small.total_cost_min = 20;
-    small.total_cost_max = 40;
+    small.total_cost_min = 10;
+    small.total_cost_max = 10;
     small.duration_weeks_min = 1;
     small.duration_weeks_max = 1;
     const result = sanitizeProposal(small);
@@ -369,5 +371,67 @@ describe('event and status validation', () => {
     expect(validateMeetingStatus({ meeting_id: MEETING_ID, status: 'in_progress' }).ok).toBe(true);
     expect(validateMeetingStatus({ meeting_id: MEETING_ID, status: 'cancelled' })).toMatchObject({ ok: false });
     expect(validateMeetingStatus({ meeting_id: MEETING_ID, status: 'scheduled' })).toMatchObject({ ok: false });
+  });
+});
+
+// --- budget-fit snapshot -------------------------------------------------------
+
+describe('proposal budget plan re-validation', () => {
+  const tier = (hours: number, percent = 0, budget = 2000) => ({
+    hours,
+    cost_usd: hours * 5,
+    weeks: Math.max(1, Math.ceil(hours / 40)),
+    budget_ceiling_usd: Math.floor((budget * (100 + percent)) / 100),
+    percent_above_budget: percent,
+    included_scope: [{ label: 'Catalogue', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [],
+    added_vs_base: [],
+  });
+
+  const plan = (overrides: Record<string, unknown> = {}) => ({
+    policy_version: 'estimation-policy-v1',
+    estimate_version: 'estimation-policy-v1#r2',
+    revision: 2,
+    currency: 'USD',
+    selected_budget_usd: 2000,
+    budget_provided: true,
+    hourly_rate_usd: 5,
+    weekly_capacity_hours: 40,
+    available_hours: 400,
+    budget_fit_percent: 70,
+    coverage_band: 'high-partial',
+    covers_essential_scope: true,
+    total_requested_hours: 400,
+    total_requested_cost_usd: 2000,
+    included_scope: [{ label: 'Catalogue', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [{ label: 'Native apps', tier: 'optional', complexity: 'complex', hours: 40 }],
+    unclear_scope: [],
+    base_estimate: tier(300),
+    optional_20_percent_estimate: tier(400, 20),
+    optional_30_percent_estimate: tier(500, 30),
+    client_selected_option: null,
+    assumptions: [],
+    provider: 'gemini',
+    model: 'gemini-3.6-flash',
+    human_review_required: true,
+    ...overrides,
+  });
+
+  it('carries a valid plan onto the validated proposal', () => {
+    const res = sanitizeProposal(validProposal({ budget_plan: plan() }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.budget_plan?.selected_budget_usd).toBe(2000);
+    expect(res.data.budget_plan?.optional_20_percent_estimate?.percent_above_budget).toBe(20);
+    expect(res.data.budget_plan?.human_review_required).toBe(true);
+  });
+
+  it('drops an unverifiable plan without rejecting the proposal', () => {
+    for (const bad of [plan({ hourly_rate_usd: 15 }), plan({ base_estimate: tier(500) }), 'nope']) {
+      const res = sanitizeProposal(validProposal({ budget_plan: bad }));
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.data.budget_plan).toBeNull();
+    }
   });
 });

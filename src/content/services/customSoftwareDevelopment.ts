@@ -270,6 +270,11 @@ export const customSoftwareDevelopment: ServiceBody = {
         'They usually do. Under a dedicated-team arrangement the backlog is simply reordered. Under a fixed-scope project, changes are quoted and scheduled as an amendment so the original baseline stays meaningful.',
     },
   ],
+  markets: {
+    title: 'Where custom software is built from',
+    intro:
+      'Most custom builds we take on start with a founder or operations lead abroad who already knows the process they want automated, so the work that matters is written scope and milestone demonstrations across a timezone gap rather than a shared office.',
+  },
   related: [
     {
       path: '/services/mobile-app-development',

@@ -266,6 +266,11 @@ export const mobileAppDevelopment: ServiceBody = {
         'There is a post-launch fix window on every project, and an optional monthly maintenance arrangement for OS upgrades, dependency and SDK updates, store policy changes, crash fixes and new features.',
     },
   ],
+  markets: {
+    title: 'Markets we ship apps for',
+    intro:
+      'App projects carry one constraint remote work cannot argue with — store review, device testing and release windows belong to Apple and Google, not to us — so each market page below sets out how release scheduling and test-device access are handled from India.',
+  },
   related: [
     {
       path: '/services/custom-software-development',

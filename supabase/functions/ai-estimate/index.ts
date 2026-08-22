@@ -8,10 +8,12 @@
 //     → reads a requirement/project document and returns auto-fill answers for
 //       the questionnaire plus a short document summary.
 //
-//   { task: 'analyze', mode, answers, docSummary? }
-//     → generates the full project analysis (health score, issues, team,
-//       milestones…) tailored to the client's actual answers, including any
-//       free-typed technologies or requirements.
+//   { task: 'analyze', mode, answers, docSummary?, clientBudgetUsd?, revision? }
+//     → Gemini interprets the requirements and CLASSIFIES scope (delivery tier
+//       + effort class per requirement) and names the delivery roles. This
+//       function then computes every number — hours, price, duration, budget
+//       fit and the three budget options — with the shared estimation policy
+//       (../_shared/estimationPolicy.ts). The model never sets a figure.
 //
 // Secrets (Supabase Edge Function secrets — NEVER in the frontend):
 //   GOOGLE_API_KEY   required
@@ -146,7 +148,13 @@ Deno.serve(async (req) => {
     }
 
     const docSummary = typeof body.docSummary === 'string' ? body.docSummary : undefined;
-    return json(200, await handleAnalyze(mode, body.answers, docSummary, { generate, apiKey, model }), origin);
+    // The budget and the estimate revision are the only extra inputs; both are
+    // re-parsed and clamped by the shared policy, never trusted as sent.
+    const analysis = await handleAnalyze(mode, body.answers, docSummary, { generate, apiKey, model }, {
+      clientBudgetUsd: body.clientBudgetUsd,
+      revision: typeof body.revision === 'number' ? body.revision : 1,
+    });
+    return json(200, analysis, origin);
   } catch (e) {
     const { code, status, message } = categorizeError(e);
     // Never log document content, answers, or the API key — only the safe

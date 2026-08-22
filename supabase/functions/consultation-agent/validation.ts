@@ -11,6 +11,15 @@
 // hours and rates, so model arithmetic can never reach the database.
 // =============================================================================
 
+import {
+  SCOPE_COMPLEXITY_HOURS,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS as POLICY_WEEKLY_CAPACITY_HOURS,
+  type PlanTierId,
+  type ScopeComplexity,
+  type ScopeTier,
+} from '../_shared/estimationPolicy.ts';
+
 export const MEETING_LIMITS = {
   name: { min: 2, max: 100 },
   email: { max: 254 },
@@ -33,14 +42,16 @@ export const MEETING_LIMITS = {
 /** Server-side sanity bounds — defense in depth, independent of the worker's
  * engine config (mirrors voice-lead's ESTIMATE_BOUNDS). */
 export const PROPOSAL_BOUNDS = {
-  minHourlyRate: 5,
-  maxHourlyRate: 100,
+  // Pinned to the shared commercial policy: no client-facing rate may
+  // exceed $5/hour, so nothing above it may be persisted either.
+  minHourlyRate: STANDARD_HOURLY_RATE_USD,
+  maxHourlyRate: STANDARD_HOURLY_RATE_USD,
   maxRoleHours: 2000,
   maxTotalHours: 10000,
   maxTotalCost: 1000000,
   maxWeeks: 260,
   minWeeklyCapacity: 10,
-  maxWeeklyCapacity: 60,
+  maxWeeklyCapacity: POLICY_WEEKLY_CAPACITY_HOURS,
 } as const;
 
 export const MEETING_INTENTS = ['new_project', 'improve_existing', 'repair_broken', 'consultation'] as const;
@@ -256,6 +267,9 @@ export interface ValidatedProposal {
     hourly_rate_min: number;
     hourly_rate_max: number;
   };
+  /** Budget-fit snapshot: included/deferred scope and the optional tiers.
+   * `null` when the worker sent none, or sent one that failed re-validation. */
+  budget_plan: SanitizedBudgetPlan | null;
 }
 
 /**
@@ -396,6 +410,7 @@ export function sanitizeProposal(raw: unknown): MeetingValidation<ValidatedPropo
         hourly_rate_min: raw.hourly_rate_min as number,
         hourly_rate_max: raw.hourly_rate_max as number,
       },
+      budget_plan: sanitizeBudgetPlan(raw.budget_plan),
     },
   };
 }
@@ -548,5 +563,161 @@ export function validateMeetingStatus(body: Dict): MeetingValidation<ValidatedSt
   return {
     ok: true,
     data: { meetingId: body.meeting_id, status: status as ValidatedStatus['status'], ended: body.ended === true },
+  };
+}
+
+// --- budget-fit plan (Phase 8 snapshot) --------------------------------------
+//
+// The worker sends the plan it computed; this function re-derives every figure
+// from the shared policy rather than trusting any of them. The rate is pinned,
+// tier costs are recomputed from hours, the base option must fit the client's
+// own budget and the optional tiers must stay inside +20% / +30%. A snapshot
+// that fails any check is dropped (null) — the lead is still stored, just
+// without an unverifiable plan.
+
+const COVERAGE_BANDS = ['full', 'high-partial', 'low-partial', 'below-mvp', 'unknown'] as const;
+const PLAN_TIER_IDS = ['base', 'recommended', 'growth'] as const;
+const SCOPE_TIERS = ['essential', 'important', 'optional', 'unclear'] as const;
+const SCOPE_COMPLEXITIES = ['simple', 'standard', 'complex'] as const;
+
+export interface SanitizedScopeItem {
+  label: string;
+  tier: ScopeTier;
+  complexity: ScopeComplexity;
+  hours: number;
+}
+
+export interface SanitizedPlanTier {
+  hours: number;
+  cost_usd: number;
+  weeks: number;
+  budget_ceiling_usd: number;
+  percent_above_budget: number;
+  included_scope: SanitizedScopeItem[];
+  deferred_scope: SanitizedScopeItem[];
+  added_vs_base: SanitizedScopeItem[];
+}
+
+export interface SanitizedBudgetPlan {
+  policy_version: string;
+  estimate_version: string;
+  revision: number;
+  currency: 'USD';
+  selected_budget_usd: number;
+  budget_provided: boolean;
+  hourly_rate_usd: number;
+  weekly_capacity_hours: number;
+  available_hours: number;
+  budget_fit_percent: number;
+  coverage_band: string;
+  covers_essential_scope: boolean;
+  total_requested_hours: number;
+  total_requested_cost_usd: number;
+  included_scope: SanitizedScopeItem[];
+  deferred_scope: SanitizedScopeItem[];
+  unclear_scope: SanitizedScopeItem[];
+  base_estimate: SanitizedPlanTier;
+  optional_20_percent_estimate: SanitizedPlanTier | null;
+  optional_30_percent_estimate: SanitizedPlanTier | null;
+  client_selected_option: PlanTierId | null;
+  assumptions: string[];
+  provider: string | null;
+  model: string | null;
+  human_review_required: true;
+}
+
+const MAX_PLAN_SCOPE_ITEMS = 60;
+const MAX_PLAN_LABEL = 200;
+
+function planScopeList(raw: unknown): SanitizedScopeItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SanitizedScopeItem[] = [];
+  for (const entry of raw) {
+    if (out.length >= MAX_PLAN_SCOPE_ITEMS) break;
+    if (!isDict(entry)) continue;
+    const label = asTrimmed(entry.label).slice(0, MAX_PLAN_LABEL);
+    if (!label) continue;
+    const tier = (SCOPE_TIERS as readonly string[]).includes(entry.tier as string)
+      ? (entry.tier as ScopeTier)
+      : 'unclear';
+    const complexity = (SCOPE_COMPLEXITIES as readonly string[]).includes(entry.complexity as string)
+      ? (entry.complexity as ScopeComplexity)
+      : 'standard';
+    // Hours come from the policy table, never from the payload.
+    out.push({ label, tier, complexity, hours: SCOPE_COMPLEXITY_HOURS[complexity] });
+  }
+  return out;
+}
+
+function planTier(raw: unknown, budgetUsd: number, maxPercent: number): SanitizedPlanTier | null {
+  if (!isDict(raw)) return null;
+  if (!isIntIn(raw.hours, 0, 100000)) return null;
+  if (!isIntIn(raw.weeks, 0, 520)) return null;
+  if (!isIntIn(raw.percent_above_budget, 0, maxPercent)) return null;
+  const hours = raw.hours as number;
+  const cost = hours * STANDARD_HOURLY_RATE_USD;
+  const ceiling = Math.floor((budgetUsd * (100 + (raw.percent_above_budget as number))) / 100);
+  if (cost > ceiling) return null;
+  return {
+    hours,
+    cost_usd: cost,
+    weeks: raw.weeks as number,
+    budget_ceiling_usd: ceiling,
+    percent_above_budget: raw.percent_above_budget as number,
+    included_scope: planScopeList(raw.included_scope),
+    deferred_scope: planScopeList(raw.deferred_scope),
+    added_vs_base: planScopeList(raw.added_vs_base),
+  };
+}
+
+export function sanitizeBudgetPlan(raw: unknown): SanitizedBudgetPlan | null {
+  if (!isDict(raw)) return null;
+  if (raw.currency !== 'USD') return null;
+  if (raw.hourly_rate_usd !== STANDARD_HOURLY_RATE_USD) return null;
+  if (!isIntIn(raw.selected_budget_usd, 0, 10000000)) return null;
+  if (!isIntIn(raw.available_hours, 0, 100000)) return null;
+  if (!isIntIn(raw.budget_fit_percent, 0, 100)) return null;
+  if (!isIntIn(raw.total_requested_hours, 0, 100000)) return null;
+  if (!isIntIn(raw.weekly_capacity_hours, 1, POLICY_WEEKLY_CAPACITY_HOURS)) return null;
+  if (!isIntIn(raw.revision, 1, 100000)) return null;
+  if (typeof raw.budget_provided !== 'boolean' || typeof raw.covers_essential_scope !== 'boolean') return null;
+  if (!(COVERAGE_BANDS as readonly string[]).includes(raw.coverage_band as string)) return null;
+
+  const budget = raw.selected_budget_usd as number;
+  const base = planTier(raw.base_estimate, budget, 0);
+  if (!base) return null;
+  const recommended = raw.optional_20_percent_estimate == null ? null : planTier(raw.optional_20_percent_estimate, budget, 20);
+  const growth = raw.optional_30_percent_estimate == null ? null : planTier(raw.optional_30_percent_estimate, budget, 30);
+  if (raw.optional_20_percent_estimate != null && !recommended) return null;
+  if (raw.optional_30_percent_estimate != null && !growth) return null;
+
+  return {
+    policy_version: asTrimmed(raw.policy_version).slice(0, 40) || 'unknown',
+    estimate_version: asTrimmed(raw.estimate_version).slice(0, 40) || 'unknown',
+    revision: raw.revision as number,
+    currency: 'USD',
+    selected_budget_usd: budget,
+    budget_provided: raw.budget_provided as boolean,
+    hourly_rate_usd: STANDARD_HOURLY_RATE_USD,
+    weekly_capacity_hours: raw.weekly_capacity_hours as number,
+    available_hours: raw.available_hours as number,
+    budget_fit_percent: raw.budget_fit_percent as number,
+    coverage_band: raw.coverage_band as string,
+    covers_essential_scope: raw.covers_essential_scope as boolean,
+    total_requested_hours: raw.total_requested_hours as number,
+    total_requested_cost_usd: (raw.total_requested_hours as number) * STANDARD_HOURLY_RATE_USD,
+    included_scope: planScopeList(raw.included_scope),
+    deferred_scope: planScopeList(raw.deferred_scope),
+    unclear_scope: planScopeList(raw.unclear_scope),
+    base_estimate: base,
+    optional_20_percent_estimate: recommended,
+    optional_30_percent_estimate: growth,
+    client_selected_option: (PLAN_TIER_IDS as readonly string[]).includes(raw.client_selected_option as string)
+      ? (raw.client_selected_option as PlanTierId)
+      : null,
+    assumptions: cleanStringList(raw.assumptions, 25, 300),
+    provider: asTrimmed(raw.provider).slice(0, 60) || null,
+    model: asTrimmed(raw.model).slice(0, 60) || null,
+    human_review_required: true,
   };
 }

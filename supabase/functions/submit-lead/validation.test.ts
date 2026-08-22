@@ -7,6 +7,7 @@ import {
   isOriginAllowed,
   resolveAllowedOrigins,
   sanitizeAnswers,
+  sanitizeBudgetPlan,
   sanitizeDemoEstimate,
   validateSubmission,
 } from './validation';
@@ -18,7 +19,7 @@ const validEstimate = {
   estimated_weeks: 6,
   health_score: 82,
   risk_level: 'Medium',
-  team: [{ role: 'Frontend Developer', hours: 120, hourly_rate: 30 }],
+  team: [{ role: 'Frontend Developer', hours: 120, hourly_rate: 5 }],
 };
 
 const validRequirement = {
@@ -213,7 +214,7 @@ describe('validateSubmission — requirement & review', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.requirement?.mode).toBe('new');
-      expect(result.data.requirement?.demo_estimate.status).toBe('demo');
+      expect(result.data.requirement?.demo_estimate.status).toBe('preliminary');
       expect(result.data.lead.project_mode).toBe('new');
     }
   });
@@ -263,7 +264,7 @@ describe('validateSubmission — requirement & review', () => {
     expect(estimate).toBeTruthy();
     expect(estimate && 'final_price' in estimate).toBe(false);
     expect(estimate && 'approved' in estimate).toBe(false);
-    expect(estimate?.status).toBe('demo');
+    expect(estimate?.status).toBe('preliminary');
   });
 
   it('human_review: keeps only visitor-safe review fields and flags the lead', () => {
@@ -318,5 +319,122 @@ describe('validateSubmission — requirement & review', () => {
       }),
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+// --- budget-fit snapshot -------------------------------------------------------
+//
+// The browser sends the plan; the server must re-derive it rather than trust it.
+
+describe('sanitizeBudgetPlan', () => {
+  const tier = (hours: number, percent = 0, budget = 1000) => ({
+    hours,
+    cost_usd: hours * 5,
+    weeks: Math.max(1, Math.ceil(hours / 40)),
+    budget_ceiling_usd: Math.floor((budget * (100 + percent)) / 100),
+    percent_above_budget: percent,
+    included_scope: [{ label: 'Accounts', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [],
+    added_vs_base: [],
+  });
+
+  const validPlan = (overrides: Record<string, unknown> = {}) => ({
+    policy_version: 'estimation-policy-v1',
+    estimate_version: 'estimation-policy-v1#r1',
+    revision: 1,
+    currency: 'USD',
+    selected_budget_usd: 1000,
+    budget_provided: true,
+    hourly_rate_usd: 5,
+    weekly_capacity_hours: 40,
+    available_hours: 200,
+    budget_fit_percent: 75,
+    coverage_band: 'high-partial',
+    covers_essential_scope: true,
+    total_requested_hours: 160,
+    total_requested_cost_usd: 800,
+    included_scope: [{ label: 'Accounts', tier: 'essential', complexity: 'standard', hours: 16 }],
+    deferred_scope: [{ label: 'Mobile app', tier: 'optional', complexity: 'complex', hours: 40 }],
+    unclear_scope: [],
+    base_estimate: tier(120),
+    optional_20_percent_estimate: tier(200, 20),
+    optional_30_percent_estimate: tier(240, 30),
+    client_selected_option: null,
+    assumptions: ['Client provides content'],
+    provider: 'gemini',
+    model: 'gemini-3.6-flash',
+    human_review_required: true,
+    ...overrides,
+  });
+
+  it('accepts a well-formed plan and pins the rate', () => {
+    const plan = sanitizeBudgetPlan(validPlan());
+    expect(plan).not.toBeNull();
+    expect(plan?.hourly_rate_usd).toBe(5);
+    expect(plan?.base_estimate.cost_usd).toBe(600);
+    expect(plan?.human_review_required).toBe(true);
+  });
+
+  it('refuses any rate other than the standard rate', () => {
+    for (const rate of [1, 6, 10, 25, 2000]) {
+      expect(sanitizeBudgetPlan(validPlan({ hourly_rate_usd: rate }))).toBeNull();
+    }
+  });
+
+  it('recomputes tier cost from hours, so a tampered total cannot be stored', () => {
+    const plan = sanitizeBudgetPlan(
+      validPlan({ base_estimate: { ...tier(120), cost_usd: 999_999 } }),
+    );
+    expect(plan?.base_estimate.cost_usd).toBe(600);
+  });
+
+  it('rejects a base option that costs more than the client budget', () => {
+    // 220 h x $5 = $1,100 against a $1,000 budget.
+    expect(sanitizeBudgetPlan(validPlan({ base_estimate: tier(220) }))).toBeNull();
+  });
+
+  it('rejects an optional tier outside its band', () => {
+    expect(sanitizeBudgetPlan(validPlan({ optional_20_percent_estimate: tier(300, 20) }))).toBeNull();
+    expect(sanitizeBudgetPlan(validPlan({ optional_30_percent_estimate: tier(300, 30) }))).toBeNull();
+    expect(sanitizeBudgetPlan(validPlan({ optional_20_percent_estimate: tier(200, 45) }))).toBeNull();
+  });
+
+  it('rejects a weekly capacity above the standard delivery week', () => {
+    expect(sanitizeBudgetPlan(validPlan({ weekly_capacity_hours: 60 }))).toBeNull();
+    expect(sanitizeBudgetPlan(validPlan({ weekly_capacity_hours: 168 }))).toBeNull();
+  });
+
+  it('re-derives scope-item hours from the policy table, ignoring the payload', () => {
+    const plan = sanitizeBudgetPlan(
+      validPlan({
+        included_scope: [{ label: 'Accounts', tier: 'essential', complexity: 'simple', hours: 9999 }],
+      }),
+    );
+    expect(plan?.included_scope[0].hours).toBe(6);
+  });
+
+  it('rejects an unknown coverage band and a nonsense fit percentage', () => {
+    expect(sanitizeBudgetPlan(validPlan({ coverage_band: 'amazing' }))).toBeNull();
+    expect(sanitizeBudgetPlan(validPlan({ budget_fit_percent: 150 }))).toBeNull();
+  });
+
+  it('returns null for a missing or non-object plan rather than inventing one', () => {
+    expect(sanitizeBudgetPlan(undefined)).toBeNull();
+    expect(sanitizeBudgetPlan(null)).toBeNull();
+    expect(sanitizeBudgetPlan('plan')).toBeNull();
+    expect(sanitizeBudgetPlan(validPlan({ base_estimate: undefined }))).toBeNull();
+  });
+
+  it('still stores the lead when the plan is unverifiable — it just drops the plan', () => {
+    const estimate = sanitizeDemoEstimate({ ...validEstimate, budget_plan: { hourly_rate_usd: 999 } });
+    expect(estimate.error).toBeUndefined();
+    expect(estimate.estimate?.budget_plan).toBeNull();
+    expect(estimate.estimate?.human_review_required).toBe(true);
+  });
+
+  it('carries the client-selected option through when one was chosen', () => {
+    const plan = sanitizeBudgetPlan(validPlan({ client_selected_option: 'recommended' }));
+    expect(plan?.client_selected_option).toBe('recommended');
+    expect(sanitizeBudgetPlan(validPlan({ client_selected_option: 'premium' }))?.client_selected_option).toBeNull();
   });
 });

@@ -1,3 +1,10 @@
+import {
+  monthlyCostRangeLabel,
+  STANDARD_HOURLY_RATE_USD,
+  WEEKLY_CAPACITY_HOURS,
+  WEEKLY_COST_USD,
+} from '@/policy/estimationPolicy';
+
 // Local intent router for the demo website assistant.
 // Purely keyword-based frontend logic — no LLM or network calls.
 
@@ -42,7 +49,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     id: 'cost',
     keywords: [['cost'], ['price'], ['pricing'], ['how much'], ['budget'], ['rate'], ['charge'], ['quote']],
     response:
-      'We work on transparent hourly rates — for example UI/UX design from $10/hr, frontend from $15/hr and backend from $20/hr (demo figures). The fastest way to a number is our free demo estimator: it breaks down roles, hours and total cost for your specific project.',
+      `We work on transparent hourly pricing at a standard rate of up to $${STANDARD_HOURLY_RATE_USD} per hour, with a maximum of ${WEEKLY_CAPACITY_HOURS} development hours per week — up to $${WEEKLY_COST_USD} for a full delivery week and roughly ${monthlyCostRangeLabel()} for a full-time month. Tell the estimator your budget and it builds the strongest production-ready scope inside it, listing exactly what falls outside it.`,
     actions: [
       { label: 'Get a demo estimate', to: '/project-analysis' },
       { label: 'Schedule a call', to: '/schedule-call' },
@@ -52,7 +59,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     id: 'which-developer',
     keywords: [['which', 'developer'], ['what', 'developer'], ['team', 'need'], ['hire'], ['developer', 'need'], ['skills', 'need']],
     response:
-      'That depends on your project scope. Our demo analysis recommends an exact team — for a typical web app that is a requirement analyst, UI/UX designer, frontend and backend developers plus a QA tester, with hours per role.',
+      'That depends on your project scope. The analysis recommends a team — for a typical web app that is a requirement analyst, UI/UX designer, frontend and backend developers plus a QA tester — and splits the hours your budget covers across them.',
     actions: [
       { label: 'Get my team recommendation', to: '/project-analysis' },
       { label: 'View services', to: '/services' },
@@ -90,7 +97,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
     id: 'estimate-explain',
     keywords: [['explain', 'estimate'], ['estimate', 'mean'], ['understand', 'estimate'], ['about', 'estimate'], ['analysis', 'mean']],
     response:
-      'The demo estimate multiplies each recommended role\'s hours by its hourly rate and sums them, then divides total hours by a 40-hour weekly capacity to project the delivery duration. It is a preliminary figure — a review call confirms the final scope and quote.',
+      `Each requirement is classified as essential, important or optional, hours come from a fixed effort table, and the total is those hours at up to $${STANDARD_HOURLY_RATE_USD} per hour. Your budget then decides which requirements fit — the rest are listed as deferred, never hidden. Duration divides total hours by a maximum ${WEEKLY_CAPACITY_HOURS}-hour delivery week. It is preliminary: a human technical review confirms the final scope and quote.`,
     actions: [
       { label: 'View my analysis', to: '/project-analysis/result' },
       { label: 'Request human review', to: '/contact' },

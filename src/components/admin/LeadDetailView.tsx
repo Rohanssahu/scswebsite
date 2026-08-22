@@ -21,6 +21,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { StatusPill } from '@/components/admin/LeadsTable';
+import { formatUsd } from '@/policy/estimationPolicy';
 import {
   LEAD_STATUS_OPTIONS,
   NOTE_MAX_LENGTH,
@@ -29,9 +30,11 @@ import {
   formatCostRange,
   formatDateTime,
   formatRange,
+  coverageBandLabel,
   jsonNumber,
   jsonString,
   jsonStringList,
+  readBudgetPlan,
   leadSourceLabel,
   leadStatusLabel,
   meetingStatusLabel,
@@ -212,6 +215,12 @@ const LeadDetailView = ({
     ...jsonStringList(snapshot, 'missingFeatures'),
   ];
   const analysisSource = jsonString(snapshot, 'source');
+
+  // The budget-fit snapshot the human team reviews: what the client's own
+  // budget was told to cover, and what it was told it does not. A meeting
+  // proposal wins over the website requirement; a record from before the
+  // policy landed simply has none, and is shown as such.
+  const budgetPlan = readBudgetPlan(proposal?.proposal) ?? readBudgetPlan(requirement?.demo_estimate);
 
   const submitStatus = (value: string) => {
     if (!LEAD_STATUS_OPTIONS.includes(value as LeadStatus)) return;
@@ -438,6 +447,142 @@ const LeadDetailView = ({
                   </ul>
                 )}
               </div>
+            </div>
+
+            {/* -------------------------------------------------- budget fit */}
+            <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <h3 className="text-xs uppercase tracking-wide text-gray-500">
+                Budget fit — exactly what was promised
+              </h3>
+              {!budgetPlan ? (
+                <Empty>
+                  No budget-fit snapshot was recorded for this lead. Records created before the shared estimation
+                  policy have none, and are not recalculated.
+                </Empty>
+              ) : (
+                <>
+                  <dl className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Field
+                      label="Client-selected budget"
+                      value={
+                        budgetPlan.budgetProvided && budgetPlan.selectedBudgetUsd !== null
+                          ? formatUsd(budgetPlan.selectedBudgetUsd)
+                          : 'Client stated no budget'
+                      }
+                    />
+                    <Field
+                      label="Hourly rate quoted"
+                      value={budgetPlan.hourlyRateUsd === null ? null : `up to ${formatUsd(budgetPlan.hourlyRateUsd)} / hour`}
+                    />
+                    <Field
+                      label="Available development hours"
+                      value={budgetPlan.availableHours === null ? null : `${budgetPlan.availableHours} h`}
+                    />
+                    <Field
+                      label="Estimated scope coverage"
+                      value={budgetPlan.budgetFitPercent === null ? null : `${budgetPlan.budgetFitPercent}%`}
+                    />
+                    <Field label="Coverage" value={coverageBandLabel(budgetPlan.coverageBand)} />
+                    <Field
+                      label="Covers core launch scope"
+                      value={budgetPlan.coversEssentialScope ? 'Yes' : 'NO — a smaller Phase 1 was proposed'}
+                    />
+                    <Field
+                      label="Base plan (client budget)"
+                      value={
+                        budgetPlan.baseEstimate
+                          ? `${formatUsd(budgetPlan.baseEstimate.costUsd)} · ${budgetPlan.baseEstimate.hours} h · ${budgetPlan.baseEstimate.weeks} wk`
+                          : null
+                      }
+                    />
+                    <Field
+                      label="Optional +20% plan"
+                      value={
+                        budgetPlan.optional20PercentEstimate
+                          ? `${formatUsd(budgetPlan.optional20PercentEstimate.costUsd)} · ${budgetPlan.optional20PercentEstimate.hours} h`
+                          : 'Not offered'
+                      }
+                    />
+                    <Field
+                      label="Optional +30% plan"
+                      value={
+                        budgetPlan.optional30PercentEstimate
+                          ? `${formatUsd(budgetPlan.optional30PercentEstimate.costUsd)} · ${budgetPlan.optional30PercentEstimate.hours} h`
+                          : 'Not offered'
+                      }
+                    />
+                    <Field label="Client-selected option" value={budgetPlan.clientSelectedOption ?? 'None selected'} />
+                    <Field label="Estimate version" value={budgetPlan.estimateVersion} />
+                    <Field
+                      label="Provider / model"
+                      value={[budgetPlan.provider, budgetPlan.model].filter(Boolean).join(' · ') || null}
+                    />
+                    <Field
+                      label="Human review required"
+                      value={budgetPlan.humanReviewRequired ? 'Yes' : 'Not flagged'}
+                    />
+                  </dl>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <h4 className="text-xs uppercase tracking-wide text-gray-500">
+                        Included in the quoted price
+                      </h4>
+                      {budgetPlan.includedScope.length === 0 ? (
+                        <Empty>Nothing was included at this budget.</Empty>
+                      ) : (
+                        <ul className="mt-1 list-inside list-disc text-sm text-gray-200">
+                          {budgetPlan.includedScope.map((item, index) => (
+                            <li key={`inc-${item.label}-${index}`}>
+                              {item.label} <span className="text-xs text-gray-500">({item.hours} h · {item.tier})</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs uppercase tracking-wide text-gray-500">
+                        Deferred — the client was told this is NOT in the price
+                      </h4>
+                      {budgetPlan.deferredScope.length === 0 ? (
+                        <Empty>Nothing was deferred.</Empty>
+                      ) : (
+                        <ul className="mt-1 list-inside list-disc text-sm text-gray-200">
+                          {budgetPlan.deferredScope.map((item, index) => (
+                            <li key={`def-${item.label}-${index}`}>
+                              {item.label} <span className="text-xs text-gray-500">({item.hours} h · {item.tier})</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  {budgetPlan.unclearScope.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-xs uppercase tracking-wide text-gray-500">
+                        Not costed — needs more detail
+                      </h4>
+                      <ul className="mt-1 list-inside list-disc text-sm text-gray-200">
+                        {budgetPlan.unclearScope.map((item, index) => (
+                          <li key={`unc-${item.label}-${index}`}>{item.label}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {budgetPlan.assumptions.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-xs uppercase tracking-wide text-gray-500">Stated assumptions</h4>
+                      <ul className="mt-1 list-inside list-disc text-sm text-gray-200">
+                        {budgetPlan.assumptions.map((item, index) => (
+                          <li key={`asm-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <PreliminaryBadge />

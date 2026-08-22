@@ -267,6 +267,11 @@ export const saasDevelopment: ServiceBody = {
         'You do. Code lives in your repository, cloud and payment provider accounts are set up in your name, and all credentials are handed over. Nothing about the product depends on us continuing to be involved.',
     },
   ],
+  markets: {
+    title: 'Markets our SaaS clients sell into',
+    intro:
+      'SaaS founders come to us with a market already chosen, and the questions that follow are about billing currency, hosting region and how quickly a change lands in production — which each market page answers rather than repeating a generic delivery promise.',
+  },
   related: [
     {
       path: '/services/custom-software-development',

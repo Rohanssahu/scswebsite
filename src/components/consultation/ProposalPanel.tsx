@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download } from 'lucide-react';
+import { formatUsd } from '@/policy/estimationPolicy';
 import type { BuddyProposalView } from '@/services/voiceSessionCore';
 
 interface ProposalPanelProps {
@@ -41,17 +42,22 @@ const ProposalPanel: React.FC<ProposalPanelProps> = ({ proposal, onDownload }) =
     );
   }
 
+  const plan = proposal.budgetPlan;
+  const range = (min: number, max: number, unit: string) =>
+    min === max ? `${min} ${unit}` : `${min}–${max} ${unit}`;
+  const money = (min: number, max: number) =>
+    min === max
+      ? formatUsd(min)
+      : `${formatUsd(min)}–${formatUsd(max)}`;
+
   const stats = [
-    { label: t('meeting.proposal.hours'), value: `${proposal.totalHoursMin}–${proposal.totalHoursMax} h` },
-    {
-      label: t('meeting.proposal.cost'),
-      value: `$${proposal.totalCostMin.toLocaleString('en-US')}–$${proposal.totalCostMax.toLocaleString('en-US')}`,
-    },
+    { label: t('meeting.proposal.hours'), value: range(proposal.totalHoursMin, proposal.totalHoursMax, 'h') },
+    { label: t('meeting.proposal.cost'), value: money(proposal.totalCostMin, proposal.totalCostMax) },
     {
       label: t('meeting.proposal.duration'),
-      value: `${proposal.durationWeeksMin}–${proposal.durationWeeksMax} ${t('meeting.proposal.weeks')}`,
+      value: range(proposal.durationWeeksMin, proposal.durationWeeksMax, t('meeting.proposal.weeks')),
     },
-    { label: t('meeting.proposal.capacity'), value: `${proposal.weeklyCapacityHours} h/${t('meeting.proposal.week')}` },
+    { label: t('meeting.proposal.rate'), value: `≤ ${formatUsd(proposal.hourlyRateUsd)}/h` },
   ];
 
   return (
@@ -81,6 +87,19 @@ const ProposalPanel: React.FC<ProposalPanelProps> = ({ proposal, onDownload }) =
 
       <p className="mt-4 text-sm leading-relaxed text-gray-700">{proposal.summary}</p>
 
+      {/* The client's budget and exactly what it covers. These are the same
+          sentences Buddy speaks — read from the same published object — so a
+          spoken figure and a rendered figure can never disagree. */}
+      {proposal.budgetNarrative.length > 0 && (
+        <div className="mt-4 space-y-1.5 rounded-xl border border-pink-200 bg-pink-50/60 p-3">
+          {proposal.budgetNarrative.map((line) => (
+            <p key={line} className="text-sm leading-relaxed text-gray-800">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
       <dl className="mt-4 grid grid-cols-2 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-2.5">
@@ -89,6 +108,52 @@ const ProposalPanel: React.FC<ProposalPanelProps> = ({ proposal, onDownload }) =
           </div>
         ))}
       </dl>
+
+      {plan && (
+        <section className="mt-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {t('meeting.proposal.budgetFit')}
+          </h4>
+          <dl className="mt-1.5 grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-gray-200 bg-white p-2.5">
+              <dt className="text-[11px] text-gray-500">{t('meeting.proposal.selectedBudget')}</dt>
+              <dd className="text-sm font-semibold text-gray-900">
+                {plan.budgetProvided ? formatUsd(plan.selectedBudgetUsd) : t('meeting.proposal.noBudgetSet')}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-2.5">
+              <dt className="text-[11px] text-gray-500">{t('meeting.proposal.availableHours')}</dt>
+              <dd className="text-sm font-semibold text-gray-900">{plan.availableHours} h</dd>
+            </div>
+          </dl>
+          <Section
+            title={t('meeting.proposal.included')}
+            items={plan.base.includedScope.map((i) => `${i.label} — ${i.hours} h`)}
+          />
+          <Section
+            title={t('meeting.proposal.deferred')}
+            items={plan.base.deferredScope.map((i) => `${i.label} — ${i.hours} h`)}
+          />
+          {plan.unclearScope.length > 0 && (
+            <Section
+              title={t('meeting.proposal.needsDetail')}
+              items={plan.unclearScope.map((i) => i.label)}
+            />
+          )}
+          {(plan.recommended || plan.growth) && (
+            <Section
+              title={t('meeting.proposal.optionalUpgrades')}
+              items={[plan.recommended, plan.growth]
+                .filter((tier): tier is NonNullable<typeof tier> => tier !== null)
+                .map(
+                  (tier) =>
+                    `+${tier.percentAboveBudget}% → ${formatUsd(tier.costUsd)} (${tier.hours} h): ` +
+                    `${tier.addedVsBase.map((i) => i.label).join(', ')}`,
+                )}
+            />
+          )}
+        </section>
+      )}
 
       <Section title={t('meeting.proposal.recommended')} items={proposal.recommendedSolution} />
       <Section title={t('meeting.proposal.architecture')} items={proposal.architecture} />

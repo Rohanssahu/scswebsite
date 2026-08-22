@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
-import { DEMO_ANALYSIS_STEP_KEYS } from '@/data/demoEstimate';
+import { ANALYSIS_STEP_KEYS } from '@/data/guideEstimate';
 
 // Simulated "Demo analysis" progress sequence shown inside the chat before
 // the estimate appears. Timed frontend transitions only — nothing is analyzed.
@@ -21,7 +21,7 @@ const DemoAnalysis = ({ onComplete, reduceMotion }: DemoAnalysisProps) => {
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    if (step >= DEMO_ANALYSIS_STEP_KEYS.length) {
+    if (step >= ANALYSIS_STEP_KEYS.length) {
       const done = window.setTimeout(() => onCompleteRef.current(), reduceMotion ? 100 : 500);
       return () => window.clearTimeout(done);
     }
@@ -29,7 +29,7 @@ const DemoAnalysis = ({ onComplete, reduceMotion }: DemoAnalysisProps) => {
     return () => window.clearTimeout(timer);
   }, [step, reduceMotion, stepDuration]);
 
-  const progress = Math.min(100, Math.round((step / DEMO_ANALYSIS_STEP_KEYS.length) * 100));
+  const progress = Math.min(100, Math.round((step / ANALYSIS_STEP_KEYS.length) * 100));
 
   return (
     <div
@@ -52,7 +52,7 @@ const DemoAnalysis = ({ onComplete, reduceMotion }: DemoAnalysisProps) => {
         />
       </div>
       <ul className="mt-3 space-y-1.5">
-        {DEMO_ANALYSIS_STEP_KEYS.map((key, i) => {
+        {ANALYSIS_STEP_KEYS.map((key, i) => {
           const state = i < step ? 'done' : i === step ? 'active' : 'pending';
           return (
             <li key={key} className="flex items-center gap-2 text-xs">

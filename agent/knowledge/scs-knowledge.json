@@ -1,51 +1,104 @@
 {
-  "$comment": "Version-controlled SCS Softwares knowledge base for Buddy. Every statement here is sourced from existing, published website content (src/i18n/locales/en.json, src/data/demoAnalysis.ts, service pages). Buddy may only state what is in this file. Do NOT add clients, certifications, team sizes, guarantees, delivery promises, testimonials or fixed prices — none of those are confirmed business content. The five-hour minimum rule was NOT found in existing business content and is therefore intentionally absent.",
+  "$comment": "Version-controlled SCS Softwares knowledge base for Buddy. Every statement here is sourced from existing, published business content. Buddy may only state what is in this file. Do NOT add clients, certifications, team sizes, guarantees, delivery promises or testimonials. COMMERCIAL FIGURES: the rate, weekly capacity and monthly band below are mirrors of the single shared estimation policy (src/policy/estimationPolicy.ts, mirrored to agent/src/estimationPolicy.ts and supabase/functions/_shared/estimationPolicy.ts). Never edit them here alone — change the policy and its tests, and agent/src/knowledge.test.ts will hold this file to it.",
   "version": "1.0.0",
   "company": {
     "name": "SCS Softwares",
     "positioning": "Software agency offering transparent, hourly-billed development with an AI-assisted preliminary estimate before any commitment."
   },
   "services": [
-    { "id": "web-development", "name": "Web Development", "summary": "Websites and web applications, typically React frontends with Node.js APIs and PostgreSQL." },
-    { "id": "mobile-development", "name": "Mobile App Development", "summary": "Cross-platform mobile apps, typically React Native with a Node.js API backend." },
-    { "id": "ui-ux-design", "name": "UI/UX Design", "summary": "Wireframes, UI screens and design systems ahead of development." },
-    { "id": "cloud-solutions", "name": "Cloud Solutions", "summary": "Cloud architecture, hosting and scaling for web and mobile products." },
-    { "id": "devops-services", "name": "DevOps Services", "summary": "CI/CD pipelines, deployment automation and infrastructure operations." },
-    { "id": "digital-marketing", "name": "Digital Marketing", "summary": "Marketing services for launched digital products." },
-    { "id": "project-rescue", "name": "Project Rescue & Completion", "summary": "Audit, stabilisation and completion of broken or unfinished projects, starting with a short code audit." }
+    {
+      "id": "web-development",
+      "name": "Web Development",
+      "summary": "Websites and web applications, typically React frontends with Node.js APIs and PostgreSQL."
+    },
+    {
+      "id": "mobile-development",
+      "name": "Mobile App Development",
+      "summary": "Cross-platform mobile apps, typically React Native with a Node.js API backend."
+    },
+    {
+      "id": "ui-ux-design",
+      "name": "UI/UX Design",
+      "summary": "Wireframes, UI screens and design systems ahead of development."
+    },
+    {
+      "id": "cloud-solutions",
+      "name": "Cloud Solutions",
+      "summary": "Cloud architecture, hosting and scaling for web and mobile products."
+    },
+    {
+      "id": "devops-services",
+      "name": "DevOps Services",
+      "summary": "CI/CD pipelines, deployment automation and infrastructure operations."
+    },
+    {
+      "id": "digital-marketing",
+      "name": "Digital Marketing",
+      "summary": "Marketing services for launched digital products."
+    },
+    {
+      "id": "project-rescue",
+      "name": "Project Rescue & Completion",
+      "summary": "Audit, stabilisation and completion of broken or unfinished projects, starting with a short code audit."
+    }
   ],
   "engagementProcess": [
     "Share your requirement with Buddy or the project-analysis form.",
-    "Receive a preliminary estimate with roles, hours and a cost range.",
+    "Receive a preliminary estimate showing which requirements fit your budget and which are deferred.",
     "A consultant reviews the requirement on a free review call.",
     "You receive a confirmed quote and sprint plan within 2 business days of the review call.",
     "Development runs in weekly cycles with demo builds every week."
   ],
   "supportedTechnologies": [
-    "React", "React Native", "Node.js", "PostgreSQL", "Tailwind CSS", "TypeScript"
+    "React",
+    "React Native",
+    "Node.js",
+    "PostgreSQL",
+    "Tailwind CSS",
+    "TypeScript"
   ],
   "benefits": [
-    "Transparent hourly pricing — you approve every hour before work starts",
+    "Transparent hourly pricing at up to $5 per hour — you approve every hour before work starts",
     "You see an estimated team, cost and timeline before committing",
     "Dedicated project manager and weekly demo calls",
     "NDA and full source-code ownership from day one",
     "Post-launch support window included in every engagement"
   ],
   "hourlyEngagementModel": {
-    "description": "Work is billed by the hour per role at transparent rates. Example published rates: UI/UX design from $10/hr, frontend from $15/hr, backend from $20/hr. Final rates are confirmed on the review call.",
+    "description": "Work is billed by the hour at a transparent standard rate of up to $5 per hour across roles. A full delivery week at the standard 40-hour capacity is up to $200, and a full-time month is approximately $800 to $1,000 depending on calendar weeks and the agreed scope. Final scope and pricing are confirmed by a human technical review.",
+    "standardHourlyRateUsd": 5,
+    "weeklyCostUsd": 200,
+    "monthlyCostMinUsd": 800,
+    "monthlyCostMaxUsd": 1000,
     "minimumEngagementHours": null,
     "minimumEngagementNote": "No minimum-hours rule is published; do not claim one."
   },
   "weeklyCapacity": {
     "hoursPerWeek": 40,
-    "explanation": "Delivery duration is projected by dividing total estimated hours by a standard 40-hour weekly team capacity. Faster delivery may be possible with a larger team, confirmed during review."
+    "explanation": "Delivery duration is projected by dividing total estimated hours by the standard 40-hour weekly capacity. 40 hours per week is the MAXIMUM used in any client-facing estimate — never quote a higher weekly capacity to shorten a timeline."
   },
   "humanReviewProcess": "Every preliminary estimate is reviewed by an SCS Softwares consultant before any final quotation. Visitors can request a human review of their estimate at any time; a consultant then confirms scope, cost and timeline — a preliminary estimate is never a final quote.",
   "contactOptions": [
-    { "id": "schedule-call", "label": "Schedule a free review call", "path": "/schedule-call" },
-    { "id": "contact-form", "label": "Contact form", "path": "/contact" },
-    { "id": "whatsapp", "label": "WhatsApp chat", "path": null },
-    { "id": "consultation-form", "label": "Consultation request form", "path": "/consultation-form" }
+    {
+      "id": "schedule-call",
+      "label": "Schedule a free review call",
+      "path": "/schedule-call"
+    },
+    {
+      "id": "contact-form",
+      "label": "Contact form",
+      "path": "/contact"
+    },
+    {
+      "id": "whatsapp",
+      "label": "WhatsApp chat",
+      "path": null
+    },
+    {
+      "id": "consultation-form",
+      "label": "Consultation request form",
+      "path": "/consultation-form"
+    }
   ],
   "prohibitedClaims": [
     "That a preliminary estimate is a final quotation",
@@ -53,6 +106,23 @@
     "That payment has been received",
     "That the project has been approved",
     "That SCS guarantees any particular business result",
-    "Any client names, testimonials, certifications, team size or delivery-date guarantees"
-  ]
+    "Any client names, testimonials, certifications, team size or delivery-date guarantees",
+    "That any percentage of the project is already complete",
+    "That a partial scope is the complete project",
+    "Any hourly rate above $5, or any weekly capacity above 40 hours",
+    "Any discount, promotion or time-limited offer"
+  ],
+  "budgetPolicy": {
+    "positioning": "The client's selected budget is the primary base plan. Build the strongest production-usable scope inside it, and state plainly what falls outside it.",
+    "optionalUpgradeMinPercent": 20,
+    "optionalUpgradeMaxPercent": 30,
+    "rules": [
+      "Always start with what the selected budget CAN deliver.",
+      "Always list the deferred requirements alongside the included ones. Never hide remaining scope.",
+      "Never describe partial scope as a completed project, and never claim a percentage of the project is already complete.",
+      "Optional expansions of roughly 20% and 30% above the selected budget may be offered, clearly labelled optional, never preselected and never as a hidden later charge.",
+      "Never quote below the minimum a usable first release needs. If the budget cannot cover the core scope, say so and propose a smaller Phase 1.",
+      "Every estimate is preliminary and requires human technical review before any commercial commitment."
+    ]
+  }
 }

@@ -482,6 +482,138 @@ export function jsonString(source: unknown, key: string): string | null {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, 4000) : null;
 }
 
+// --- budget-fit snapshot ------------------------------------------------------
+//
+// Phase 8 of the estimation policy: the human team must be able to see exactly
+// what was promised to a client, and exactly what was not. The snapshot is
+// stored inside the existing jsonb columns (`requirements.demo_estimate` for
+// the website flow, `consultation_proposals.proposal` for a meeting), so this
+// helper reads it out of an untrusted blob and normalises it for display.
+//
+// Historical leads created before the policy landed simply have no snapshot —
+// they are shown as "not recorded" rather than recalculated.
+
+export interface AdminScopeItem {
+  label: string;
+  tier: string;
+  hours: number;
+}
+
+export interface AdminBudgetTier {
+  hours: number;
+  costUsd: number;
+  weeks: number;
+  percentAboveBudget: number;
+  addedVsBase: AdminScopeItem[];
+}
+
+export interface AdminBudgetPlan {
+  policyVersion: string | null;
+  estimateVersion: string | null;
+  selectedBudgetUsd: number | null;
+  budgetProvided: boolean;
+  hourlyRateUsd: number | null;
+  availableHours: number | null;
+  budgetFitPercent: number | null;
+  coverageBand: string | null;
+  coversEssentialScope: boolean;
+  includedScope: AdminScopeItem[];
+  deferredScope: AdminScopeItem[];
+  unclearScope: AdminScopeItem[];
+  baseEstimate: AdminBudgetTier | null;
+  optional20PercentEstimate: AdminBudgetTier | null;
+  optional30PercentEstimate: AdminBudgetTier | null;
+  clientSelectedOption: string | null;
+  assumptions: string[];
+  provider: string | null;
+  model: string | null;
+  humanReviewRequired: boolean;
+}
+
+function scopeItems(source: unknown, key: string): AdminScopeItem[] {
+  if (typeof source !== 'object' || source === null) return [];
+  const value = (source as Record<string, unknown>)[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    .slice(0, 60)
+    .map((item) => ({
+      label: typeof item.label === 'string' ? item.label.trim().slice(0, 200) : '',
+      tier: typeof item.tier === 'string' ? item.tier.slice(0, 20) : 'unclear',
+      hours: typeof item.hours === 'number' && Number.isFinite(item.hours) ? item.hours : 0,
+    }))
+    .filter((item) => item.label);
+}
+
+function budgetTier(source: unknown, key: string): AdminBudgetTier | null {
+  if (typeof source !== 'object' || source === null) return null;
+  const raw = (source as Record<string, unknown>)[key];
+  if (typeof raw !== 'object' || raw === null) return null;
+  const tier = raw as Record<string, unknown>;
+  const hours = jsonNumber(tier, 'hours');
+  const cost = jsonNumber(tier, 'cost_usd');
+  if (hours === null || cost === null) return null;
+  return {
+    hours,
+    costUsd: cost,
+    weeks: jsonNumber(tier, 'weeks') ?? 0,
+    percentAboveBudget: jsonNumber(tier, 'percent_above_budget') ?? 0,
+    addedVsBase: scopeItems(tier, 'added_vs_base'),
+  };
+}
+
+/**
+ * Read the budget-fit snapshot out of a stored estimate/proposal blob.
+ * Returns null when the record predates the policy or carries no plan —
+ * the dashboard then says so instead of showing invented figures.
+ */
+export function readBudgetPlan(source: unknown): AdminBudgetPlan | null {
+  if (typeof source !== 'object' || source === null) return null;
+  const raw = (source as Record<string, unknown>).budget_plan;
+  if (typeof raw !== 'object' || raw === null) return null;
+  const plan = raw as Record<string, unknown>;
+  const base = budgetTier(plan, 'base_estimate');
+  if (!base) return null;
+  return {
+    policyVersion: jsonString(plan, 'policy_version'),
+    estimateVersion: jsonString(plan, 'estimate_version'),
+    selectedBudgetUsd: jsonNumber(plan, 'selected_budget_usd'),
+    budgetProvided: plan.budget_provided === true,
+    hourlyRateUsd: jsonNumber(plan, 'hourly_rate_usd'),
+    availableHours: jsonNumber(plan, 'available_hours'),
+    budgetFitPercent: jsonNumber(plan, 'budget_fit_percent'),
+    coverageBand: jsonString(plan, 'coverage_band'),
+    coversEssentialScope: plan.covers_essential_scope === true,
+    includedScope: scopeItems(plan, 'included_scope'),
+    deferredScope: scopeItems(plan, 'deferred_scope'),
+    unclearScope: scopeItems(plan, 'unclear_scope'),
+    baseEstimate: base,
+    optional20PercentEstimate: budgetTier(plan, 'optional_20_percent_estimate'),
+    optional30PercentEstimate: budgetTier(plan, 'optional_30_percent_estimate'),
+    clientSelectedOption: jsonString(plan, 'client_selected_option'),
+    assumptions: jsonStringList(plan, 'assumptions'),
+    provider: jsonString(plan, 'provider'),
+    model: jsonString(plan, 'model'),
+    humanReviewRequired: plan.human_review_required === true,
+  };
+}
+
+/** Plain-language label for a coverage band, for the dashboard. */
+export function coverageBandLabel(band: string | null): string {
+  switch (band) {
+    case 'full':
+      return 'Full requested scope fits the budget';
+    case 'high-partial':
+      return 'Core scope plus most of the requested scope fits';
+    case 'low-partial':
+      return 'Only a reduced core scope fits';
+    case 'below-mvp':
+      return 'Budget does NOT cover the core launch scope';
+    default:
+      return 'Scope not classified';
+  }
+}
+
 // --- notes --------------------------------------------------------------------
 
 export const NOTE_MAX_LENGTH = 4000;

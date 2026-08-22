@@ -312,6 +312,11 @@ export const digitalMarketing: ServiceBody = {
         'Traffic and source mix against the baseline, conversions by source, the technical health checks, a list of exactly what we changed in the period, and what we recommend next with an effort estimate. Changes and results are shown separately, and anything we tried that did not help is included rather than quietly dropped.',
     },
   ],
+  markets: {
+    title: 'Markets this supports',
+    intro:
+      'Search behaviour, ad platforms and acceptable claims differ enough between markets that we scope this work per country, and the pages below explain what we support directly and what stays with your own team or a local specialist.',
+  },
   related: [
     {
       path: '/services/web-application-development',
