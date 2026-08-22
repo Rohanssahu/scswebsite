@@ -21,7 +21,7 @@ export const WELCOME_ACTIONS: GuideAction[] = [
   { label: 'Start website tour', kind: 'start-tour' },
   { label: 'I have a new project', kind: 'flow-new' },
   { label: 'Fix an existing project', kind: 'flow-existing' },
-  { label: 'Explore services', kind: 'navigate', to: '/#services' },
+  { label: 'Explore services', kind: 'navigate', to: '/services' },
 ];
 
 /**
@@ -36,6 +36,27 @@ export interface PageInfo {
 }
 
 export const PAGE_INFO: Record<string, PageInfo> = {
+  '/services/ai-development': { nameKey: 'ai-development', pageKey: 'ai-development' },
+  '/services/machine-learning-development': {
+    nameKey: 'machine-learning-development',
+    pageKey: 'machine-learning-development',
+  },
+  '/services/ai-voice-agent-development': {
+    nameKey: 'ai-voice-agent-development',
+    pageKey: 'ai-voice-agent-development',
+  },
+  '/services/ai-video-consultation-agents': {
+    nameKey: 'ai-video-consultation-agents',
+    pageKey: 'ai-video-consultation-agents',
+  },
+  '/services/conversational-ai-development': {
+    nameKey: 'conversational-ai-development',
+    pageKey: 'conversational-ai-development',
+  },
+  '/services/ai-automation-integration': {
+    nameKey: 'ai-automation-integration',
+    pageKey: 'ai-automation-integration',
+  },
   '/services/custom-software-development': {
     nameKey: 'custom-software-development',
     pageKey: 'custom-software-development',
@@ -48,6 +69,7 @@ export const PAGE_INFO: Record<string, PageInfo> = {
   '/gig/cloud-solutions': { nameKey: 'cloud-solutions', pageKey: 'cloud-solutions' },
   '/gig/devops-services': { nameKey: 'devops-services', pageKey: 'devops-services' },
   '/gig/digital-marketing': { nameKey: 'digital-marketing', pageKey: 'digital-marketing' },
+  '/services': { nameKey: 'all-services', pageKey: 'services-hub' },
   '/products': { nameKey: 'scs-products', pageKey: 'products' },
   '/ProductDetailsPage': { nameKey: 'this-product', pageKey: 'product-details' },
 };
@@ -93,7 +115,7 @@ export function getRouteQuickActions(pathname: string): GuideAction[] {
     return [
       { label: 'What does SCS do?', kind: 'send', message: 'What does SCS Softwares do?' },
       { label: 'Why choose SCS?', kind: 'send', message: 'Why should I choose SCS?' },
-      { label: 'Show services', kind: 'navigate', to: '/#services' },
+      { label: 'Show services', kind: 'navigate', to: '/services' },
       { label: 'Talk to the team', kind: 'navigate', to: '/contact' },
     ];
   }
@@ -115,7 +137,7 @@ export function getRouteQuickActions(pathname: string): GuideAction[] {
   // Homepage + everything else.
   return [
     { label: 'Start website tour', kind: 'start-tour' },
-    { label: 'Explore services', kind: 'navigate', to: '/#services' },
+    { label: 'Explore services', kind: 'navigate', to: '/services' },
     { label: 'View products', kind: 'navigate', to: '/products' },
     { label: 'Start a project', kind: 'flow-new' },
     { label: 'Fix an existing project', kind: 'flow-existing' },

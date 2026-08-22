@@ -71,13 +71,23 @@ export const GUIDE_INTENTS: GuideIntent[] = [
     ],
   },
   {
+    id: 'about-buddy',
+    keywords: [['who', 'are', 'you'], ['what', 'are', 'you'], ['buddy'], ['ai', 'agent'], ['voice', 'agent'], ['are', 'you', 'human']],
+    responseKey: 'guide.intents.about-buddy',
+    actions: [
+      { label: 'AI voice agents', kind: 'navigate', to: '/services/ai-voice-agent-development' },
+      { label: 'Conversational AI', kind: 'navigate', to: '/services/conversational-ai-development' },
+      { label: 'Talk to Buddy', kind: 'open-voice' },
+    ],
+  },
+  {
     id: 'choose-service',
     keywords: [['which', 'service'], ['suitable'], ['help', 'choose'], ['right', 'for', 'me'], ['recommend', 'service']],
     responseKey: 'guide.intents.choose-service',
     actions: [
       { label: 'I have a new idea', kind: 'flow-new' },
       { label: 'I have an existing project', kind: 'flow-existing' },
-      { label: 'See all services', kind: 'navigate', to: '/#services' },
+      { label: 'See all services', kind: 'navigate', to: '/services' },
     ],
   },
   {

@@ -9,9 +9,14 @@ import {
   Cloud,
   Settings,
   Boxes,
+  BrainCircuit,
   Layers,
   LayoutDashboard,
+  MessagesSquare,
+  Mic,
   RefreshCw,
+  Video,
+  Workflow,
   ArrowRight,
   CheckCircle,
   Sparkles,
@@ -34,7 +39,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import VisualPlaceholder from '../components/VisualPlaceholder';
-import { CORE_SERVICE_NAV, OTHER_SERVICE_NAV } from '@/data/serviceNav';
+import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
 
 const DEMO_TEAM = [
   { slug: 'requirement-analyst', rate: 5 },
@@ -57,6 +62,21 @@ const CORE_SERVICE_ICONS: Record<string, React.ElementType> = {
 
 const CORE_SERVICES = CORE_SERVICE_NAV.map((service) => ({
   icon: CORE_SERVICE_ICONS[service.nameKey] ?? Code,
+  nameKey: `services.names.${service.nameKey}`,
+  path: service.path,
+}));
+
+const AI_SERVICE_ICONS: Record<string, React.ElementType> = {
+  'ai-development': Sparkles,
+  'machine-learning-development': BrainCircuit,
+  'ai-voice-agent-development': Mic,
+  'ai-video-consultation-agents': Video,
+  'conversational-ai-development': MessagesSquare,
+  'ai-automation-integration': Workflow,
+};
+
+const AI_SERVICES = AI_SERVICE_NAV.map((service) => ({
+  icon: AI_SERVICE_ICONS[service.nameKey] ?? Sparkles,
   nameKey: `services.names.${service.nameKey}`,
   path: service.path,
 }));
@@ -418,6 +438,23 @@ const Index = () => {
           </div>
 
           <h3 className="mb-4 mt-10 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
+            {t('nav.aiDevelopment')}
+          </h3>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {AI_SERVICES.map((s, i) => (
+              <Reveal key={s.path} delay={i * 0.05}>
+                <Link
+                  to={s.path}
+                  className="group flex h-full flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-center transition-colors hover:border-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
+                >
+                  <s.icon className="h-7 w-7 text-pink-600 transition-transform group-hover:scale-110" aria-hidden="true" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{t(s.nameKey)}</span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+
+          <h3 className="mb-4 mt-10 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">
             {t('nav.moreServices')}
           </h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -433,6 +470,17 @@ const Index = () => {
               </Reveal>
             ))}
           </div>
+
+          <Reveal delay={0.1}>
+            <div className="mt-8 text-center">
+              <Link
+                to={SERVICES_HUB.path}
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+              >
+                {t('nav.allServices')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 

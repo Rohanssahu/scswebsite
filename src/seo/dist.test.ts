@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { indexableRoutes, prerenderRoutes, ROUTE_SEO } from './registry';
 import { SITE_ORIGIN } from './site';
-import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
+import { AI_SERVICE_CONTENT, SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb } from '@/content/services';
 
 /**
  * Assertions about the deployable artifact.
@@ -152,7 +152,9 @@ describe.skipIf(!built)('prerender output', () => {
       const crumbs = serviceBreadcrumb(service);
       expect(crumbNode.itemListElement, service.path).toHaveLength(crumbs.length);
       // Every crumb name is on the page a visitor sees, not only in the markup.
-      for (const crumb of crumbs) expect(html, `${service.path}: ${crumb.name}`).toContain(crumb.name);
+      // The rendered HTML entity-encodes "&", so decode before comparing.
+      const visible = html.replace(/&amp;/g, '&');
+      for (const crumb of crumbs) expect(visible, `${service.path}: ${crumb.name}`).toContain(crumb.name);
       expect(crumbNode.itemListElement.at(-1).item, service.path).toBe(canonicalOf(html));
     }
   });
@@ -163,6 +165,46 @@ describe.skipIf(!built)('prerender output', () => {
       for (const faq of service.faqs) {
         expect(html, `${service.path}: ${faq.question}`).toContain(faq.question.replace(/&/g, '&amp;'));
       }
+    }
+  });
+
+  it('ships the services hub with its own breadcrumb, trail markup and links', () => {
+    const html = read('/services');
+    expect(html).toContain('aria-label="Breadcrumb"');
+    const blocks = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((m) =>
+      JSON.parse(m[1].replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&')),
+    );
+    expect(blocks.map((node) => node['@type'])).toEqual(['BreadcrumbList']);
+    const crumbs = hubBreadcrumb();
+    expect(blocks[0].itemListElement).toHaveLength(crumbs.length);
+    expect(blocks[0].itemListElement.at(-1).item).toBe(canonicalOf(html));
+    // Every service page is reachable in one click from the hub.
+    for (const service of SERVICE_CONTENT) {
+      expect(html, `hub does not link to ${service.path}`).toContain(`href="${service.path}"`);
+    }
+    for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
+      expect(html, `hub has no link to ${target}`).toContain(`href="${target}"`);
+    }
+  });
+
+  it('routes every prerendered service breadcrumb through the hub', () => {
+    for (const service of SERVICE_CONTENT) {
+      const html = read(service.path);
+      const crumbs = serviceBreadcrumb(service);
+      expect(crumbs.map((crumb) => crumb.name), service.path).toEqual(['Home', 'Services', service.navLabel]);
+      // The middle crumb is a real link on the page, not just a name in the markup.
+      expect(html, `${service.path} does not link to the hub`).toContain('href="/services"');
+    }
+  });
+
+  it('ships the AI-specific sections on every AI page', () => {
+    for (const service of AI_SERVICE_CONTENT) {
+      const html = read(service.path);
+      const text = html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+      expect(text, `${service.path} use cases`).toContain(service.useCases!.heading);
+      expect(text, `${service.path} integration`).toContain(service.integration!.heading);
+      expect(text, `${service.path} limitations`).toContain(service.limitations!.heading);
+      expect(text, `${service.path} oversight`).toContain(service.limitations!.oversight.title);
     }
   });
 

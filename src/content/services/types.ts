@@ -19,7 +19,21 @@
  */
 
 /** Icon slot, resolved to a lucide icon inside the layout. */
-export type ServiceIconKey = 'custom-software' | 'mobile' | 'web' | 'saas' | 'modernization';
+export type ServiceIconKey =
+  | 'custom-software'
+  | 'mobile'
+  | 'web'
+  | 'saas'
+  | 'modernization'
+  | 'ai'
+  | 'machine-learning'
+  | 'voice'
+  | 'video-consultation'
+  | 'conversational'
+  | 'automation';
+
+/** Which menu group a service belongs to, in the header, footer and hub. */
+export type ServiceGroup = 'software' | 'ai';
 
 export interface ProblemBlock {
   title: string;
@@ -67,6 +81,8 @@ export interface ServiceSectionHeader {
 export interface ServiceContent {
   /** Canonical path, e.g. `/services/mobile-app-development`. */
   path: string;
+  /** Menu group. Defaults to software when a page predates the AI group. */
+  group: ServiceGroup;
   /** Short label for navigation, breadcrumbs and related-service cards. */
   navLabel: string;
   /** schema.org `Service.name`. */
@@ -91,7 +107,24 @@ export interface ServiceContent {
   /** Opening paragraphs, rendered as the overview block. */
   intro: string[];
   problems: ServiceSectionHeader & { items: ProblemBlock[] };
+  /**
+   * Concrete situations the service is bought for. Required on the AI pages,
+   * where "what would we actually use this for?" is the buyer's first question.
+   */
+  useCases?: ServiceSectionHeader & { items: ProblemBlock[] };
   capabilities: ServiceSectionHeader & { groups: CapabilityGroup[] };
+  /** How the service connects to the systems a client already runs. */
+  integration?: ServiceSectionHeader & { points: string[] };
+  /**
+   * What the technology cannot do, and the human review that compensates.
+   * Required on every AI page: model output is probabilistic, and saying so
+   * plainly is part of selling it honestly.
+   */
+  limitations?: ServiceSectionHeader & {
+    points: string[];
+    oversight: { title: string; points: string[] };
+    note: string;
+  };
   approach: ServiceSectionHeader & { points: string[] };
   process: ServiceSectionHeader & { steps: ProcessStep[] };
   engagement: ServiceSectionHeader & { options: EngagementOption[] };

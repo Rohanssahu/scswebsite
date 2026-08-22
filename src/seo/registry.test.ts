@@ -253,7 +253,14 @@ describe('sitemap route matching', () => {
         '/products',
         '/project-analysis',
         '/schedule-call',
+        '/services',
+        '/services/ai-automation-integration',
+        '/services/ai-development',
+        '/services/ai-video-consultation-agents',
+        '/services/ai-voice-agent-development',
+        '/services/conversational-ai-development',
         '/services/custom-software-development',
+        '/services/machine-learning-development',
         '/services/mobile-app-development',
         '/services/saas-development',
         '/services/software-modernization',
@@ -304,6 +311,7 @@ describe('structured data', () => {
   it('puts a Service and a BreadcrumbList node on each canonical service page', () => {
     const servicePages = ALL_ROUTES.filter((route) => route.canonicalPath.startsWith('/services/'));
     expect(servicePages).toHaveLength(SERVICE_CONTENT.length);
+    expect(SERVICE_CONTENT).toHaveLength(11);
     for (const route of servicePages) {
       expect(route.jsonLd.map((node) => node['@type']), route.canonicalPath).toEqual(['Service', 'BreadcrumbList']);
       expect(route.jsonLd[0].url).toBe(route.canonical);
@@ -342,9 +350,33 @@ describe('structured data', () => {
   });
 
   it('emits a BreadcrumbList only where a visible breadcrumb trail is rendered', () => {
+    // The hub and every service page under it render a trail; nothing else does.
     for (const route of ALL_ROUTES) {
       const hasBreadcrumb = route.jsonLd.some((node) => node['@type'] === 'BreadcrumbList');
-      expect(hasBreadcrumb, route.routePattern).toBe(route.canonicalPath.startsWith('/services/'));
+      const rendersTrail = route.canonicalPath === '/services' || route.canonicalPath.startsWith('/services/');
+      expect(hasBreadcrumb, route.routePattern).toBe(rendersTrail);
+    }
+  });
+
+  it('gives the services hub a BreadcrumbList but no Service node', () => {
+    const hub = ROUTE_SEO['/services'];
+    expect(hub.indexability).toBe('indexable');
+    expect(hub.prerender).toBe(true);
+    expect(hub.jsonLd.map((node) => node['@type'])).toEqual(['BreadcrumbList']);
+    const trail = hub.jsonLd[0] as { itemListElement: { name: string; item: string }[] };
+    expect(trail.itemListElement.map((item) => item.name)).toEqual(['Home', 'Services']);
+    expect(trail.itemListElement.at(-1)?.item).toBe(hub.canonical);
+  });
+
+  it('routes every service breadcrumb through the hub', () => {
+    for (const service of SERVICE_CONTENT) {
+      const trail = ROUTE_SEO[service.path].jsonLd[1] as { itemListElement: { name: string; item: string }[] };
+      expect(trail.itemListElement.map((item) => item.name), service.path).toEqual([
+        'Home',
+        'Services',
+        service.navLabel,
+      ]);
+      expect(trail.itemListElement[1].item).toBe(ROUTE_SEO['/services'].canonical);
     }
   });
 

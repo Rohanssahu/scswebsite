@@ -2,6 +2,7 @@ import type { ServiceContent } from './types';
 
 export const webApplicationDevelopment: ServiceContent = {
   path: '/services/web-application-development',
+  group: 'software',
   navLabel: 'Web Application Development',
   serviceName: 'Web Application Development',
   serviceType: 'Web Application Development',
@@ -294,6 +295,16 @@ export const webApplicationDevelopment: ServiceContent = {
       path: '/services/software-modernization',
       label: 'Software Modernization',
       blurb: 'For an existing web application that is slow, fragile or expensive to change.',
+    },
+    {
+      path: '/services/ai-development',
+      label: 'AI Development',
+      blurb: 'AI features inside the application: assistants, retrieval, extraction and drafting.',
+    },
+    {
+      path: '/services/conversational-ai-development',
+      label: 'Conversational AI Development',
+      blurb: 'A grounded assistant on the site or inside the product, with a handoff to your team.',
     },
   ],
   cta: {

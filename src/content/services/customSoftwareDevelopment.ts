@@ -6,6 +6,7 @@ import type { ServiceContent } from './types';
  */
 export const customSoftwareDevelopment: ServiceContent = {
   path: '/services/custom-software-development',
+  group: 'software',
   navLabel: 'Custom Software Development',
   serviceName: 'Custom Software Development',
   serviceType: 'Custom Software Development',
@@ -298,6 +299,16 @@ export const customSoftwareDevelopment: ServiceContent = {
       path: '/services/software-modernization',
       label: 'Software Modernization',
       blurb: 'Assessment and incremental improvement of an application you already depend on.',
+    },
+    {
+      path: '/services/ai-development',
+      label: 'AI Development',
+      blurb: 'Assistants, generative integrations and retrieval over your own content, built into the product.',
+    },
+    {
+      path: '/services/ai-automation-integration',
+      label: 'AI Automation & Integration',
+      blurb: 'Connecting AI to the systems you already run, with approvals, audit trails and failure handling.',
     },
   ],
   cta: {

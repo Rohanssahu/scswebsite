@@ -16,7 +16,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Reveal from '../components/Reveal';
 import VisualPlaceholder from '../components/VisualPlaceholder';
-import { CORE_SERVICE_NAV } from '@/data/serviceNav';
+import { AI_SERVICE_NAV, CORE_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -232,7 +232,7 @@ const ProductShowcase = () => {
             <p className="mt-4 text-gray-600">{t('products.buildCustom.text')}</p>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {CORE_SERVICE_NAV.map((service, i) => (
+            {[...CORE_SERVICE_NAV, ...AI_SERVICE_NAV].map((service, i) => (
               <Reveal key={service.path} delay={i * 0.05}>
                 <Link
                   to={service.path}
@@ -242,6 +242,14 @@ const ProductShowcase = () => {
                 </Link>
               </Reveal>
             ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link
+              to={SERVICES_HUB.path}
+              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+            >
+              {t('nav.allServices')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </section>

@@ -6,7 +6,7 @@ import { icon } from '@/asset/images';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 // One shared service list with the header, so the footer can never keep
 // advertising a service URL the navigation has already retired.
-import { ALL_SERVICE_NAV } from '@/data/serviceNav';
+import { ALL_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
 
 const quickLinks = [
   { key: 'nav.home', path: '/' },
@@ -76,8 +76,13 @@ const Footer = () => {
           {/* Services */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-500">{t('footer.ourServices')}</h3>
-            {/* Two columns so nine links stay compact instead of running down the page */}
+            {/* Two columns so the full service list stays compact */}
             <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <li className="col-span-2">
+                <Link to={SERVICES_HUB.path} className="text-sm font-semibold text-pink-400 transition-colors hover:text-pink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded">
+                  {t('nav.allServices')}
+                </Link>
+              </li>
               {ALL_SERVICE_NAV.map((service) => (
                 <li key={service.path}>
                   <Link to={service.path} className={footerLinkCls}>

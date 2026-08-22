@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ModeSelection from '../components/project-analysis/ModeSelection';
@@ -180,6 +180,22 @@ const ProjectAnalysis = () => {
           )}
         </div>
       </main>
+
+      {/* The analyser itself is one of the AI systems we build for clients. */}
+      <section className="border-t border-gray-200 py-10">
+        <div className="container mx-auto px-4 text-center">
+          <p className="mx-auto max-w-2xl text-sm text-gray-600">
+            This analyser is an example of the requirement-analysis systems we build for clients.{' '}
+            <Link
+              to="/services/ai-development"
+              className="rounded font-medium text-pink-700 underline underline-offset-4 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+            >
+              See our AI development service
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
 
       </main>
 

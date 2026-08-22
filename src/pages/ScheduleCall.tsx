@@ -674,6 +674,21 @@ const ScheduleCall = () => {
         )}
       </main>
 
+      {/* The agent that runs this page is a service we build for other companies too. */}
+      <section className="border-t border-gray-200 py-10">
+        <div className="container mx-auto px-4 text-center">
+          <p className="mx-auto max-w-2xl text-sm text-gray-600">
+            {t('schedule.aiAgentNote')}{' '}
+            <Link
+              to="/services/ai-video-consultation-agents"
+              className="rounded font-medium text-pink-700 underline underline-offset-4 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+            >
+              {t('schedule.aiAgentLink')}
+            </Link>
+          </p>
+        </div>
+      </section>
+
       </main>
 
       <Footer />

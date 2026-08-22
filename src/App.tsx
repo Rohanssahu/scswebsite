@@ -25,11 +25,18 @@ import ProductDetailsPage from "./pages/ProductDetailsPage";
 import ProductShowcase from "./pages/ProductShowcase";
 import ProjectAnalysis from "./pages/ProjectAnalysis";
 import ScheduleCall from "./pages/ScheduleCall";
+import ServicesHub from "./pages/services/ServicesHub";
 import CustomSoftwareDevelopment from "./pages/services/CustomSoftwareDevelopment";
 import MobileAppDevelopment from "./pages/services/MobileAppDevelopment";
 import WebApplicationDevelopment from "./pages/services/WebApplicationDevelopment";
 import SaasDevelopment from "./pages/services/SaasDevelopment";
 import SoftwareModernization from "./pages/services/SoftwareModernization";
+import AiDevelopment from "./pages/services/AiDevelopment";
+import MachineLearningDevelopment from "./pages/services/MachineLearningDevelopment";
+import AiVoiceAgentDevelopment from "./pages/services/AiVoiceAgentDevelopment";
+import AiVideoConsultationAgents from "./pages/services/AiVideoConsultationAgents";
+import ConversationalAiDevelopment from "./pages/services/ConversationalAiDevelopment";
+import AiAutomationIntegration from "./pages/services/AiAutomationIntegration";
 
 // Lazy-loaded: keeps recharts out of the main bundle.
 const ProjectAnalysisResult = lazy(() => import("./pages/ProjectAnalysisResult"));
@@ -137,12 +144,20 @@ const RoutesComponent = () => {
       <Route path="/consultation-form" element={<Navigate to="/schedule-call" replace />} />
       <Route path="/BlogPage" element={<BlogPage />} />
       <Route path="/ApplicationForm" element={<ApplicationForm />} />
-      {/* Canonical software-development service pages. */}
+      {/* The services hub, then the canonical service pages it lists. */}
+      <Route path="/services" element={<ServicesHub />} />
       <Route path="/services/custom-software-development" element={<CustomSoftwareDevelopment />} />
       <Route path="/services/mobile-app-development" element={<MobileAppDevelopment />} />
       <Route path="/services/web-application-development" element={<WebApplicationDevelopment />} />
       <Route path="/services/saas-development" element={<SaasDevelopment />} />
       <Route path="/services/software-modernization" element={<SoftwareModernization />} />
+      {/* AI service pages. */}
+      <Route path="/services/ai-development" element={<AiDevelopment />} />
+      <Route path="/services/machine-learning-development" element={<MachineLearningDevelopment />} />
+      <Route path="/services/ai-voice-agent-development" element={<AiVoiceAgentDevelopment />} />
+      <Route path="/services/ai-video-consultation-agents" element={<AiVideoConsultationAgents />} />
+      <Route path="/services/conversational-ai-development" element={<ConversationalAiDevelopment />} />
+      <Route path="/services/ai-automation-integration" element={<AiAutomationIntegration />} />
       {/* The two migrated gig paths keep working, forwarding to their replacements. */}
       <Route path="/gig/web-development" element={<Navigate to="/services/web-application-development" replace />} />
       <Route path="/gig/mobile-development" element={<Navigate to="/services/mobile-app-development" replace />} />

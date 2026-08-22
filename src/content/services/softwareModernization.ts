@@ -2,6 +2,7 @@ import type { ServiceContent } from './types';
 
 export const softwareModernization: ServiceContent = {
   path: '/services/software-modernization',
+  group: 'software',
   navLabel: 'Software Modernization',
   serviceName: 'Software Modernization',
   serviceType: 'Legacy Software Modernization',
@@ -299,6 +300,16 @@ export const softwareModernization: ServiceContent = {
       path: '/services/saas-development',
       label: 'SaaS Development',
       blurb: 'When an internal system is being turned into a multi-tenant subscription product.',
+    },
+    {
+      path: '/services/ai-development',
+      label: 'AI Development',
+      blurb: 'Adding AI capability to a system once it is stable enough to extend safely.',
+    },
+    {
+      path: '/services/ai-automation-integration',
+      label: 'AI Automation & Integration',
+      blurb: 'Giving an older system modern automation through APIs, extraction and workflow rules.',
     },
   ],
   cta: {

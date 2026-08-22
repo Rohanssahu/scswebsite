@@ -2,6 +2,7 @@ import type { ServiceContent } from './types';
 
 export const saasDevelopment: ServiceContent = {
   path: '/services/saas-development',
+  group: 'software',
   navLabel: 'SaaS Development',
   serviceName: 'SaaS Development',
   serviceType: 'SaaS Product Development',
@@ -295,6 +296,16 @@ export const saasDevelopment: ServiceContent = {
       path: '/services/software-modernization',
       label: 'Software Modernization',
       blurb: 'For an existing subscription product that has become slow or hard to change.',
+    },
+    {
+      path: '/services/ai-development',
+      label: 'AI Development',
+      blurb: 'AI features that differentiate a subscription product without destabilising it.',
+    },
+    {
+      path: '/services/ai-automation-integration',
+      label: 'AI Automation & Integration',
+      blurb: 'Automating onboarding, support triage and internal operations around the product.',
     },
   ],
   cta: {

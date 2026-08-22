@@ -28,7 +28,7 @@ import {
   webSiteJsonLd,
   type JsonLd,
 } from './jsonld';
-import { SERVICE_CONTENT, serviceBreadcrumb } from '@/content/services';
+import { SERVICE_CONTENT, hubBreadcrumb, serviceBreadcrumb, servicesHub } from '@/content/services';
 
 export type RobotsDirective = 'index,follow' | 'noindex,follow' | 'noindex,nofollow';
 
@@ -222,7 +222,25 @@ const SERVICE_ROUTES: RouteSpec[] = SERVICE_PAGES.map((service) => ({
 }));
 
 /**
- * The five canonical software-development service pages.
+ * The `/services` hub. It lists every service and is the middle crumb in every
+ * service page's `Home › Services › Service Name` trail, so it carries a
+ * BreadcrumbList but no Service node — it describes no single service.
+ */
+const SERVICES_HUB_ROUTE: RouteSpec = {
+  path: servicesHub.path,
+  title: servicesHub.metaTitle,
+  description: servicesHub.metaDescription,
+  shareTitle: servicesHub.shareTitle,
+  robots: 'index,follow',
+  indexability: 'indexable',
+  prerender: true,
+  priority: 0.9,
+  jsonLd: [breadcrumbJsonLd(hubBreadcrumb())],
+};
+
+/**
+ * Every canonical service page — the software-development group and the AI
+ * group.
  *
  * Title, description, Service JSON-LD and the BreadcrumbList all come from the
  * same content module the page body renders, so the metadata and the visible
@@ -365,6 +383,7 @@ const ROUTE_SPECS: RouteSpec[] = [
     prerender: true,
     priority: 0.6,
   },
+  SERVICES_HUB_ROUTE,
   ...CANONICAL_SERVICE_ROUTES,
   ...SERVICE_ROUTES,
   {

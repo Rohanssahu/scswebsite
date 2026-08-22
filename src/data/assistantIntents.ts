@@ -35,7 +35,7 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
       'Great — SCS Softwares builds web and mobile products end to end. Tell me about your idea through a short guided flow and you will get a demo estimate of team, hours, cost and timeline.',
     actions: [
       { label: 'Start new-project analysis', to: '/project-analysis', state: 'new' },
-      { label: 'See our services', to: '/#services' },
+      { label: 'See our services', to: '/services' },
     ],
   },
   {
@@ -55,18 +55,18 @@ export const ASSISTANT_INTENTS: AssistantIntent[] = [
       'That depends on your project scope. Our demo analysis recommends an exact team — for a typical web app that is a requirement analyst, UI/UX designer, frontend and backend developers plus a QA tester, with hours per role.',
     actions: [
       { label: 'Get my team recommendation', to: '/project-analysis' },
-      { label: 'View services', to: '/#services' },
+      { label: 'View services', to: '/services' },
     ],
   },
   {
     id: 'services',
     keywords: [['service'], ['what', 'do', 'you', 'do'], ['offer'], ['portfolio'], ['work', 'done']],
     response:
-      'SCS Softwares offers custom software development, mobile app development, web application development, SaaS development and software modernization, plus UI/UX design, cloud solutions, DevOps and digital marketing. You can browse each service or jump straight to a project estimate.',
+      'SCS Softwares offers custom software, mobile app, web application and SaaS development, software modernization, and AI work — AI development, machine learning, voice agents, AI video consultation agents, conversational AI and AI automation. UI/UX design, cloud, DevOps and digital marketing sit alongside them.',
     actions: [
+      { label: 'All services', to: '/services' },
+      { label: 'AI development', to: '/services/ai-development' },
       { label: 'Custom software', to: '/services/custom-software-development' },
-      { label: 'Mobile app development', to: '/services/mobile-app-development' },
-      { label: 'All services', to: '/#services' },
     ],
   },
   {
@@ -110,7 +110,7 @@ export const FALLBACK_RESPONSE =
 export const FALLBACK_ACTIONS: AssistantAction[] = [
   { label: 'Analyze a new project', to: '/project-analysis', state: 'new' },
   { label: 'Fix an existing project', to: '/project-analysis', state: 'existing' },
-  { label: 'See services', to: '/#services' },
+  { label: 'See services', to: '/services' },
   { label: 'Schedule a call', to: '/schedule-call' },
 ];
 

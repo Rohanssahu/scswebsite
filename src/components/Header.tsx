@@ -5,15 +5,16 @@ import { Menu, X, ChevronDown, Sparkles, Bot, ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { icon } from '@/asset/images';
-import { CORE_SERVICE_NAV, OTHER_SERVICE_NAV, isServicePath } from '@/data/serviceNav';
+import { AI_SERVICE_NAV, CORE_SERVICE_NAV, OTHER_SERVICE_NAV, SERVICES_HUB, isServicePath } from '@/data/serviceNav';
 
 // Service names come from the shared services.names.* i18n table so they stay
 // consistent with Buddy and the footer. Layout uses logical properties so the
 // navbar mirrors correctly in RTL (Arabic/Urdu).
 //
-// The menu is grouped: the canonical software-development pages under
-// /services/*, then the remaining /gig/* services. Both lists come from
-// src/data/serviceNav.ts, so the header, drawer and footer cannot drift.
+// The menu is grouped into software development, AI development and the
+// remaining /gig/* services, with a link to the /services hub. Every list
+// comes from src/data/serviceNav.ts, so the header, drawer, footer and hub
+// cannot drift apart.
 
 // One highest-intent action on the site: an AI meeting that starts immediately.
 // "Book a free call" read like "someone will phone me later", so the label says
@@ -54,6 +55,13 @@ const Header = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   };
+
+  // One class for every link inside the services panel, so the three groups
+  // stay visually identical.
+  const menuItemCls = (path: string) =>
+    `block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-pink-50 hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pink-400 ${
+      isActive(path) ? 'font-semibold text-pink-600' : 'text-gray-700'
+    }`;
 
   const linkCls = (path: string) =>
     `whitespace-nowrap rounded-lg px-1 py-1 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 xl:text-sm ${
@@ -103,38 +111,67 @@ const Header = () => {
                 />
               </button>
               {isServicesOpen && (
-                <div className="absolute start-0 top-full z-50 w-72 pt-2">
-                  <div className="glow-card overflow-hidden rounded-2xl border border-gray-200 bg-white py-2">
-                    <span className="block px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
-                      {t('nav.softwareDevelopment')}
-                    </span>
-                    {CORE_SERVICE_NAV.map((service) => (
-                      <Link
-                        key={service.path}
-                        to={service.path}
-                        className={`block px-4 py-2.5 text-sm transition-colors hover:bg-pink-50 hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pink-400 ${
-                          isActive(service.path) ? 'font-semibold text-pink-600' : 'text-gray-700'
-                        }`}
-                        onClick={() => setIsServicesOpen(false)}
-                      >
-                        {t(`services.names.${service.nameKey}`)}
-                      </Link>
-                    ))}
-                    <span className="mt-2 block border-t border-gray-200 px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
-                      {t('nav.moreServices')}
-                    </span>
-                    {OTHER_SERVICE_NAV.map((service) => (
-                      <Link
-                        key={service.path}
-                        to={service.path}
-                        className={`block px-4 py-2.5 text-sm transition-colors hover:bg-pink-50 hover:text-pink-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pink-400 ${
-                          isActive(service.path) ? 'font-semibold text-pink-600' : 'text-gray-700'
-                        }`}
-                        onClick={() => setIsServicesOpen(false)}
-                      >
-                        {t(`services.names.${service.nameKey}`)}
-                      </Link>
-                    ))}
+                <div className="absolute start-0 top-full z-50 w-[min(46rem,calc(100vw-2rem))] pt-2">
+                  <div className="glow-card overflow-hidden rounded-2xl border border-gray-200 bg-white p-4">
+                    <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                      <div>
+                        <span className="block px-3 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
+                          {t('nav.softwareDevelopment')}
+                        </span>
+                        {CORE_SERVICE_NAV.map((service) => (
+                          <Link
+                            key={service.path}
+                            to={service.path}
+                            className={menuItemCls(service.path)}
+                            onClick={() => setIsServicesOpen(false)}
+                          >
+                            {t(`services.names.${service.nameKey}`)}
+                          </Link>
+                        ))}
+                      </div>
+                      <div>
+                        <span className="block px-3 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
+                          {t('nav.aiDevelopment')}
+                        </span>
+                        {AI_SERVICE_NAV.map((service) => (
+                          <Link
+                            key={service.path}
+                            to={service.path}
+                            className={menuItemCls(service.path)}
+                            onClick={() => setIsServicesOpen(false)}
+                          >
+                            {t(`services.names.${service.nameKey}`)}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 border-t border-gray-200 pt-3">
+                      <span className="block px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-pink-600">
+                        {t('nav.moreServices')}
+                      </span>
+                      <div className="grid gap-x-6 sm:grid-cols-2">
+                        {OTHER_SERVICE_NAV.map((service) => (
+                          <Link
+                            key={service.path}
+                            to={service.path}
+                            className={menuItemCls(service.path)}
+                            onClick={() => setIsServicesOpen(false)}
+                          >
+                            {t(`services.names.${service.nameKey}`)}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Link
+                      to={SERVICES_HUB.path}
+                      className="mt-3 flex items-center gap-1.5 rounded-xl border-t border-gray-200 px-3 pt-3 text-sm font-semibold text-pink-700 transition-colors hover:text-pink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                      onClick={() => setIsServicesOpen(false)}
+                    >
+                      {t('nav.allServices')}
+                      <ArrowRight className={`h-3.5 w-3.5 ${rtl ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </Link>
                   </div>
                 </div>
               )}
@@ -252,9 +289,36 @@ const Header = () => {
                 ))}
 
                 <div className="mt-3 border-t border-gray-200 pt-4">
+                  <Link
+                    to={SERVICES_HUB.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                      isActive(SERVICES_HUB.path) ? 'bg-pink-50 text-pink-600' : 'text-pink-700 hover:bg-pink-50'
+                    }`}
+                  >
+                    {t('nav.allServices')}
+                    <ArrowRight className={`ms-auto h-4 w-4 ${rtl ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </Link>
+
                   <span className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.softwareDevelopment')}</span>
                   <div className="mt-2 flex flex-col gap-1">
                     {CORE_SERVICE_NAV.map((service) => (
+                      <Link
+                        key={service.path}
+                        to={service.path}
+                        className={`rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                          isActive(service.path) ? 'bg-pink-50 font-semibold text-pink-600' : 'text-gray-600 hover:bg-gray-50 hover:text-pink-600'
+                        }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {t(`services.names.${service.nameKey}`)}
+                      </Link>
+                    ))}
+                  </div>
+
+                  <span className="mt-4 block px-3 text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">{t('nav.aiDevelopment')}</span>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {AI_SERVICE_NAV.map((service) => (
                       <Link
                         key={service.path}
                         to={service.path}

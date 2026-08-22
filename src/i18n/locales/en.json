@@ -38,6 +38,8 @@
     "services": "Services",
     "softwareDevelopment": "Software development",
     "moreServices": "More services",
+    "aiDevelopment": "AI development",
+    "allServices": "All services",
     "products": "Products",
     "projectEstimate": "Project Estimate",
     "about": "About",
@@ -55,6 +57,13 @@
       "web-application-development": "Web Application Development",
       "saas-development": "SaaS Development",
       "software-modernization": "Software Modernization",
+      "ai-development": "AI Development",
+      "machine-learning-development": "Machine Learning Development",
+      "ai-voice-agent-development": "AI Voice Agent Development",
+      "ai-video-consultation-agents": "AI Video Consultation Agents",
+      "conversational-ai-development": "Conversational AI Development",
+      "ai-automation-integration": "AI Automation & Integration",
+      "all-services": "All services",
       "mobile-app-development": "Mobile App Development",
       "mobile-apps": "Mobile Apps",
       "digital-marketing": "Digital Marketing",
@@ -210,7 +219,7 @@
       "title1": "From a small team to a",
       "title2": "trusted partner",
       "p1": "Founded in 2018, SCS Softwares began as a small team of passionate developers who believed technology could solve complex business challenges. Today, we've grown into a leading software development company serving clients worldwide.",
-      "p2": "Our journey has been marked by continuous learning, innovation and a commitment to delivering exceptional results. We've helped over 500 businesses transform their operations and achieve their digital goals.",
+      "p2": "Our journey has been marked by continuous learning and a commitment to doing the work properly: a written scope before development starts, a named team rather than a rotating pool, and a build you can open and click every week.",
       "p3": "At SCS Softwares, we don't just write code — we craft solutions that make a real difference in people's lives and businesses.",
       "imageAlt": "Inside the SCS Softwares office"
     },
@@ -543,7 +552,9 @@
     "confirmedTitle": "Your call request is noted, {{name}}!",
     "confirmedAt": "{{date}} at {{slot}} · {{meeting}}",
     "confirmedNote": "Your request has reached our team. A consultant confirms the exact call time by email — nothing is auto-booked on a calendar yet.",
-    "analyzeMeanwhile": "Analyze a project meanwhile"
+    "analyzeMeanwhile": "Analyze a project meanwhile",
+    "aiAgentNote": "This consultation runs on an AI video consultation agent we built and operate ourselves.",
+    "aiAgentLink": "See how we build them for other companies"
   },
   "notFound": {
     "title": "404",
@@ -1112,7 +1123,8 @@
       "choose-service": "That depends on where you are: a brand-new idea usually starts with UI/UX design plus web or mobile development, while an existing app that misbehaves starts with a rescue audit. Which describes you better?",
       "how-long": "Duration depends on scope. As a demo reference: a typical web app estimate lands around 50–70 hours, and with a 40-hour weekly team capacity that is roughly 2 weeks of build plus a launch week. Answer the requirement questions and I will calculate a duration for your exact project.",
       "application-process": "Applying is simple: check the open positions on the careers page, then submit the application form with your details and portfolio. The team reviews applications and contacts shortlisted candidates for an interview.",
-      "whatsapp": "You can chat with the SCS team on WhatsApp — I will open it with a short intro message you can review and send yourself."
+      "whatsapp": "You can chat with the SCS team on WhatsApp — I will open it with a short intro message you can review and send yourself.",
+      "about-buddy": "I'm Buddy, an AI agent built by SCS Softwares. I can speak with you, answer questions about the company, collect what your project needs and prepare a preliminary estimate. The same kind of agent is something we build for other companies — as a voice agent inside a site or app, or as a chat assistant grounded in your own content."
     },
     "context": {
       "explain": "{{name}}: {{blurb}}",
@@ -1265,6 +1277,98 @@
         "limitations": [
           "Not every legacy system can be migrated without risk",
           "Lost source code or unsupported components may force replacement"
+        ]
+      },
+      "services-hub": {
+        "blurb": "One page listing everything SCS Softwares builds: custom software, mobile, web and SaaS development, software modernization, and the AI, machine learning, voice and automation services.",
+        "forWho": "Anyone still deciding which service fits the problem they have.",
+        "benefits": [
+          "Every service in one place with a short description",
+          "Grouped so related services are easy to compare",
+          "Links straight through to a project estimate"
+        ],
+        "limitations": [
+          "It is an index page, so the detail lives on each service page"
+        ]
+      },
+      "ai-development": {
+        "blurb": "AI features built into products: assistants, generative integrations, retrieval over your own content, structured AI workflows, and the monitoring and cost controls around them.",
+        "forWho": "Teams who want an AI feature that survives contact with real users rather than a demo.",
+        "benefits": [
+          "Answers grounded in your own content",
+          "Human review designed in where output has consequences",
+          "Cost and usage limits enforced server-side"
+        ],
+        "limitations": [
+          "Model output is probabilistic and can still be wrong",
+          "We do not promise an accuracy figure before measuring on your data"
+        ]
+      },
+      "machine-learning-development": {
+        "blurb": "Machine learning on your own data: prediction, classification, recommendation, anomaly detection and document sorting, integrated into the tools your team already uses.",
+        "forWho": "Businesses with historical data and a repeated decision they want to support.",
+        "benefits": [
+          "Feasibility judged on your data before anything is proposed",
+          "Predictions delivered with confidence attached",
+          "Monitoring and retraining planned from the start"
+        ],
+        "limitations": [
+          "Model quality is bounded by the data available",
+          "We do not promise accuracy figures or business outcomes"
+        ]
+      },
+      "ai-voice-agent-development": {
+        "blurb": "Real-time AI voice agents for websites and apps: natural two-way speech, interruption handling, requirement collection, lead qualification and escalation to your team.",
+        "forWho": "Teams whose first conversation with a customer is worth automating.",
+        "benefits": [
+          "Natural conversation instead of a phone-menu tree",
+          "Available whenever the visitor is",
+          "Structured summary handed to your team"
+        ],
+        "limitations": [
+          "No telephone calling — these agents run in a browser or an app",
+          "Multilingual support is custom scope, not a switch"
+        ]
+      },
+      "ai-video-consultation-agents": {
+        "blurb": "An avatar-led consultation room with two-way voice, a live transcript, text chat, document and link collection, and a structured summary reviewed by a person afterwards.",
+        "forWho": "Businesses losing enquiries in the gap before the first meeting can be scheduled.",
+        "benefits": [
+          "A first conversation the visitor can start immediately",
+          "Structured summary and preliminary estimate",
+          "Everything reviewed by a human before follow-up"
+        ],
+        "limitations": [
+          "The consultant is an AI agent shown as an animated avatar, not a person",
+          "Estimates are preliminary and never binding",
+          "No telephone dial-in and no third-party meeting platform"
+        ]
+      },
+      "conversational-ai-development": {
+        "blurb": "Website and in-app assistants grounded in your own material, able to take defined actions against your systems and hand over to a person with the conversation intact.",
+        "forWho": "Teams answering the same questions repeatedly, or with documentation nobody reads.",
+        "benefits": [
+          "Answers from your content, with sources shown",
+          "Defined tools and actions rather than open-ended access",
+          "A visible route to a human at any point"
+        ],
+        "limitations": [
+          "Answer quality is capped by the content behind it",
+          "Each supported language is scoped and tested separately"
+        ]
+      },
+      "ai-automation-integration": {
+        "blurb": "Connecting AI to the systems you already run: document processing, structured extraction, workflow automation, approval checkpoints, audit trails and failure handling.",
+        "forWho": "Teams re-typing data between systems or chasing approvals through email.",
+        "benefits": [
+          "A person stays accountable at every decision point",
+          "Complete audit trail of what happened and who approved it",
+          "Failures are visible and replayable rather than silent"
+        ],
+        "limitations": [
+          "Integrations are custom work, not ready-made connectors",
+          "Extraction accuracy depends on your document quality",
+          "Automation cannot fix an unclear underlying process"
         ]
       }
     }

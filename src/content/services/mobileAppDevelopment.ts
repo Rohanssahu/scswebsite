@@ -2,6 +2,7 @@ import type { ServiceContent } from './types';
 
 export const mobileAppDevelopment: ServiceContent = {
   path: '/services/mobile-app-development',
+  group: 'software',
   navLabel: 'Mobile App Development',
   serviceName: 'Mobile App Development',
   serviceType: 'Mobile Application Development',
@@ -294,6 +295,16 @@ export const mobileAppDevelopment: ServiceContent = {
       path: '/services/software-modernization',
       label: 'Software Modernization',
       blurb: 'For an existing app that needs upgrading, rebuilding or bringing back into store compliance.',
+    },
+    {
+      path: '/services/ai-development',
+      label: 'AI Development',
+      blurb: 'The AI practice behind in-app assistants, document extraction and generative features.',
+    },
+    {
+      path: '/services/ai-voice-agent-development',
+      label: 'AI Voice Agent Development',
+      blurb: 'Spoken, interruptible conversation inside a mobile app rather than another typing interface.',
     },
   ],
   cta: {

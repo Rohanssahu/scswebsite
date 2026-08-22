@@ -1,18 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowRight,
   Boxes,
+  BrainCircuit,
   CheckCircle,
   ClipboardList,
   Layers,
   LayoutDashboard,
   Mail,
+  MessagesSquare,
+  Mic,
   PhoneCall,
+  Plug,
   RefreshCw,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Target,
+  UserCheck,
+  Video,
+  Workflow,
 } from 'lucide-react';
 import Header from '../Header';
 import Footer from '../Footer';
@@ -40,6 +49,12 @@ const SERVICE_ICONS: Record<ServiceIconKey, React.ElementType> = {
   web: LayoutDashboard,
   saas: Layers,
   modernization: RefreshCw,
+  ai: Sparkles,
+  'machine-learning': BrainCircuit,
+  voice: Mic,
+  'video-consultation': Video,
+  conversational: MessagesSquare,
+  automation: Workflow,
 };
 
 const primaryBtn =
@@ -156,14 +171,34 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
           </div>
         </section>
 
+        {/* ===== Use cases (AI pages) ===== */}
+        {content.useCases && (
+          <section className="border-t border-gray-200 bg-white py-20">
+            <div className="container mx-auto px-4">
+              <SectionHeading {...content.useCases} />
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {content.useCases.items.map((item, index) => (
+                  <Reveal key={item.title} delay={index * 0.05}>
+                    <div className="h-full rounded-2xl border border-gray-200 bg-gray-50 p-6 transition-colors hover:border-pink-300">
+                      <Target className="h-5 w-5 text-pink-600" aria-hidden="true" />
+                      <h3 className="mt-3 text-base font-semibold text-gray-900">{item.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.body}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ===== Capabilities / platforms ===== */}
-        <section className="border-t border-gray-200 bg-white py-20">
+        <section className={`border-t border-gray-200 py-20 ${content.useCases ? '' : 'bg-white'}`}>
           <div className="container mx-auto px-4">
             <SectionHeading {...content.capabilities} />
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {content.capabilities.groups.map((group, index) => (
                 <Reveal key={group.title} delay={index * 0.05}>
-                  <div className="h-full rounded-2xl border border-gray-200 bg-gray-50 p-6 transition-colors hover:border-pink-300">
+                  <div className="h-full rounded-2xl border border-gray-200 bg-white p-6 transition-colors hover:border-pink-300">
                     <h3 className="text-base font-semibold text-gray-900">{group.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-gray-600">{group.body}</p>
                     <ul className="mt-4 space-y-2">
@@ -230,6 +265,25 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
           </div>
         </section>
 
+        {/* ===== Integration approach ===== */}
+        {content.integration && (
+          <section className="py-20">
+            <div className="container mx-auto px-4">
+              <SectionHeading {...content.integration} />
+              <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
+                {content.integration.points.map((point, index) => (
+                  <Reveal key={point.slice(0, 40)} delay={index * 0.04}>
+                    <div className="flex h-full items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5">
+                      <Plug className="mt-0.5 h-5 w-5 shrink-0 text-purple-600" aria-hidden="true" />
+                      <span className="text-sm leading-relaxed text-gray-700">{point}</span>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ===== Mid-page CTA ===== */}
         <section className="py-16">
           <div className="container mx-auto px-4">
@@ -275,8 +329,47 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
           </div>
         </section>
 
+        {/* ===== Limitations and human oversight (AI pages) ===== */}
+        {content.limitations && (
+          <section className="border-t border-gray-200 py-20">
+            <div className="container mx-auto px-4">
+              <SectionHeading {...content.limitations} />
+              <div className="mx-auto max-w-4xl">
+                <Reveal>
+                  <div className="rounded-3xl border border-amber-200 bg-amber-50/60 p-6 sm:p-8">
+                    <ul className="space-y-3">
+                      {content.limitations.points.map((point) => (
+                        <li key={point.slice(0, 40)} className="flex items-start gap-2 text-sm leading-relaxed text-gray-800">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Reveal>
+                <Reveal delay={0.1}>
+                  <div className="mt-5 rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
+                    <h3 className="text-lg font-semibold text-gray-900">{content.limitations.oversight.title}</h3>
+                    <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {content.limitations.oversight.points.map((point) => (
+                        <li key={point.slice(0, 40)} className="flex items-start gap-2 text-sm text-gray-700">
+                          <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-6 border-t border-gray-200 pt-5 text-sm leading-relaxed text-gray-600">
+                      {content.limitations.note}
+                    </p>
+                  </div>
+                </Reveal>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ===== Security ===== */}
-        <section className="py-20">
+        <section className={`py-20 ${content.limitations ? 'border-t border-gray-200 bg-white' : ''}`}>
           <div className="container mx-auto px-4">
             <SectionHeading {...content.security} />
             <div className="mx-auto max-w-4xl">
@@ -300,7 +393,7 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
         </section>
 
         {/* ===== FAQs ===== */}
-        <section className="border-t border-gray-200 bg-white py-20">
+        <section className={`border-t border-gray-200 py-20 ${content.limitations ? '' : 'bg-white'}`}>
           <div className="container mx-auto px-4">
             <div className="mx-auto mb-12 max-w-3xl text-center">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-600">FAQs</span>
@@ -345,7 +438,7 @@ const ServicePage = ({ content }: { content: ServiceContent }) => {
                 Most projects touch more than one of these. Follow whichever describes the next piece of your build.
               </p>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {content.related.map((related, index) => (
                 <Reveal key={related.path} delay={index * 0.05}>
                   <Link

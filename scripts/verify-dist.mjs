@@ -12,7 +12,8 @@
  *   6. static-server check     — serve dist with GitHub Pages path resolution
  *                                and GET every generated route, asserting the
  *                                status, title, canonical and robots directive
- *   7. service-page check      — the five canonical /services/* pages: physical
+ *   7. service-page check      — the /services hub and every /services/* page:
+ *                                physical
  *                                HTML with real copy, unique metadata, correct
  *                                canonical, sitemap membership, a visible
  *                                breadcrumb, matching Service and
@@ -64,6 +65,16 @@ function resolveDistPath(urlPath) {
   }
   return null;
 }
+
+/** Decode the handful of entities the renderer emits, for text comparisons. */
+const decodeEntities = (value) =>
+  value
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
@@ -281,14 +292,41 @@ async function serveAndCheck() {
 // 7: the Phase 2A service pages, served through the static server
 // ---------------------------------------------------------------------------
 
-/** Canonical service URLs and the old paths that now forward to them. */
+/** The hub, then every canonical service URL it lists. */
+const SERVICES_HUB_PATH = '/services';
+
 const SERVICE_PATHS = [
   '/services/custom-software-development',
   '/services/mobile-app-development',
   '/services/web-application-development',
   '/services/saas-development',
   '/services/software-modernization',
+  '/services/ai-development',
+  '/services/machine-learning-development',
+  '/services/ai-voice-agent-development',
+  '/services/ai-video-consultation-agents',
+  '/services/conversational-ai-development',
+  '/services/ai-automation-integration',
 ];
+
+/** Claims these pages must never make. Checked against the rendered text. */
+const FABRICATION_PATTERNS = [
+  [/\bguarantee(?:d|s)?\b/i, 'a guarantee'],
+  [/\b\d{2,}\+? (?:happy )?(?:clients|customers|projects)\b/i, 'a client or project count'],
+  [/\b\d+% (?:satisfaction|success|accuracy|uptime)\b/i, 'a performance percentage'],
+  [/\baward[- ]winning\b/i, 'an award'],
+  [/\bISO ?\d{4,}[- ]certified\b/i, 'a certification'],
+  [/\b\d+\+ years\b/i, 'a years-in-business claim'],
+  [/\boffices? in (?:the )?(?:USA|UK|Canada|Australia|Germany|Netherlands|Singapore|UAE|Turkey)\b/i, 'a foreign office'],
+  [/\bbest AI (?:development )?(?:company|agency)\b/i, 'a best-company claim'],
+];
+
+/** Text that appears on a page only if a disclaimer was removed. */
+const REQUIRED_DISCLAIMERS = {
+  '/services/ai-voice-agent-development': [/we do not offer telephone calling/i],
+  '/services/ai-video-consultation-agents': [/not a human employee/i, /preliminary/i],
+  '/services/machine-learning-development': [/bounded by the data available/i],
+};
 
 const LEGACY_SERVICE_FORWARDS = [
   ['/gig/web-development', '/services/web-application-development'],
@@ -314,7 +352,8 @@ async function checkServicePages(sitemapLocs) {
   const descriptions = new Map();
 
   try {
-    for (const urlPath of SERVICE_PATHS) {
+    for (const urlPath of [SERVICES_HUB_PATH, ...SERVICE_PATHS]) {
+      const isHub = urlPath === SERVICES_HUB_PATH;
       const response = await fetch(`${base}${urlPath}`);
       const html = await response.text();
       if (response.status !== 200) {
@@ -324,8 +363,27 @@ async function checkServicePages(sitemapLocs) {
 
       // --- physical HTML with meaningful copy before JavaScript ------------
       const body = html.split('<div id="root">')[1]?.split('<script type="module"')[0] ?? '';
-      const words = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(' ').length;
-      if (words < 800) fail('service-pages', `${urlPath}: only ${words} words of prerendered copy`);
+      const bodyText = decodeEntities(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+      const words = bodyText.split(' ').length;
+      // The hub is an index page, so it carries less copy than a service page.
+      const minimumWords = isHub ? 400 : 800;
+      if (words < minimumWords) fail('service-pages', `${urlPath}: only ${words} words of prerendered copy`);
+
+      // --- no fabricated claims --------------------------------------------
+      for (const [pattern, label] of FABRICATION_PATTERNS) {
+        const hit = bodyText.match(pattern);
+        if (!hit) continue;
+        // A disclaimer may use the word; a claim may not. Require a negation
+        // close in front of it.
+        const index = bodyText.indexOf(hit[0]);
+        const context = bodyText.slice(Math.max(0, index - 140), index);
+        if (!/\b(?:no|not|never|cannot|without|nor|do not|does not|will not)\b/i.test(context)) {
+          fail('fabricated-claims', `${urlPath}: ${label} — "${hit[0]}"`);
+        }
+      }
+      for (const pattern of REQUIRED_DISCLAIMERS[urlPath] ?? []) {
+        if (!pattern.test(bodyText)) fail('fabricated-claims', `${urlPath}: missing disclaimer ${pattern}`);
+      }
       const h1s = html.match(/<h1[\s>]/g) ?? [];
       if (h1s.length !== 1) fail('service-pages', `${urlPath}: ${h1s.length} <h1> elements`);
 
@@ -361,8 +419,14 @@ async function checkServicePages(sitemapLocs) {
       const blocks = jsonLdBlocks(html);
       const service = blocks.find((node) => node['@type'] === 'Service');
       const breadcrumb = blocks.find((node) => node['@type'] === 'BreadcrumbList');
-      if (!service) fail('structured-data', `${urlPath}: no Service JSON-LD`);
-      else if (service.url !== canonical) fail('structured-data', `${urlPath}: Service.url is "${service.url}"`);
+      if (isHub) {
+        // The hub describes no single service, so it must carry no Service node.
+        if (service) fail('structured-data', `${urlPath}: hub must not carry a Service node`);
+      } else if (!service) {
+        fail('structured-data', `${urlPath}: no Service JSON-LD`);
+      } else if (service.url !== canonical) {
+        fail('structured-data', `${urlPath}: Service.url is "${service.url}"`);
+      }
       if (!breadcrumb) fail('structured-data', `${urlPath}: no BreadcrumbList JSON-LD`);
       else {
         const items = breadcrumb.itemListElement ?? [];
@@ -370,8 +434,10 @@ async function checkServicePages(sitemapLocs) {
         if (items.at(-1)?.item !== canonical) {
           fail('structured-data', `${urlPath}: BreadcrumbList does not end on the canonical URL`);
         }
-        // Every crumb name must be readable on the page a visitor sees.
-        const text = html.replace(/<[^>]+>/g, ' ');
+        // Every crumb name must be readable on the page a visitor sees. The
+        // markup carries entity-encoded text ("AI Automation &amp; ..."), so
+        // decode before comparing against the JSON-LD name.
+        const text = decodeEntities(html.replace(/<[^>]+>/g, ' '));
         for (const item of items) {
           if (!text.includes(item.name)) {
             fail('structured-data', `${urlPath}: breadcrumb "${item.name}" is not visible on the page`);
@@ -382,6 +448,15 @@ async function checkServicePages(sitemapLocs) {
       // --- the three required calls to action -------------------------------
       for (const target of ['/project-analysis', '/schedule-call', '/contact']) {
         if (!html.includes(`href="${target}"`)) fail('service-pages', `${urlPath}: no link to ${target}`);
+      }
+
+      // --- hub linkage -------------------------------------------------------
+      if (isHub) {
+        for (const servicePath of SERVICE_PATHS) {
+          if (!html.includes(`href="${servicePath}"`)) fail('service-pages', `${urlPath}: no link to ${servicePath}`);
+        }
+      } else if (!html.includes(`href="${SERVICES_HUB_PATH}"`)) {
+        fail('service-pages', `${urlPath}: no link back to the services hub`);
       }
     }
 
@@ -398,7 +473,9 @@ async function checkServicePages(sitemapLocs) {
       if (sitemapLocs.includes(`${ORIGIN}${from}`)) fail('legacy-forwards', `${from} is still in the sitemap`);
     }
 
-    notes.push(`verified ${SERVICE_PATHS.length} service pages and ${LEGACY_SERVICE_FORWARDS.length} legacy forwards`);
+    notes.push(
+      `verified the services hub, ${SERVICE_PATHS.length} service pages and ${LEGACY_SERVICE_FORWARDS.length} legacy forwards`,
+    );
   } finally {
     server.close();
   }
