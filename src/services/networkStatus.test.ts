@@ -209,6 +209,7 @@ describe('NetworkStatusMonitor', () => {
     monitor.report('form');
     await flush();
 
+    env.linkUp = true;
     env.reachable = true;
     env.advance(20_000);
     await monitor.check();
@@ -238,6 +239,9 @@ describe('NetworkStatusMonitor', () => {
     env.linkUp = false;
     env.reachable = false;
     env.emit('offline');
+    // The link comes back but the internet behind it does not, so the schedule
+    // has something worth asking about.
+    env.linkUp = true;
 
     expect(env.scheduledDelay).toBe(4000);
     env.fireTimer();
@@ -255,6 +259,7 @@ describe('NetworkStatusMonitor', () => {
     expect(monitor.getSnapshot().online).toBe(true);
     expect(env.pendingTimers).toBe(0);
 
+    env.linkUp = false;
     env.reachable = false;
     env.emit('offline');
     expect(env.scheduledDelay).toBe(4000);
@@ -274,6 +279,7 @@ describe('NetworkStatusMonitor', () => {
     expect(env.pendingTimers).toBe(1); // still armed for later
 
     env.visible = true;
+    env.linkUp = true;
     env.reachable = true;
     env.emit('visibilitychange');
     await flush();
@@ -287,6 +293,51 @@ describe('NetworkStatusMonitor', () => {
     env.emit('visibilitychange');
     await flush();
     expect(env.probeCalls).toBe(0);
+  });
+
+  it('never announces recovery while the browser reports no link at all', async () => {
+    // The reported bug: on a dev server (or any local origin) the probe answers
+    // from the same machine, so a device with its Wi-Fi switched off was told
+    // it was back online seconds into the outage.
+    const env = new FakeEnv();
+    const monitor = monitorOn(env);
+    env.linkUp = false;
+    env.emit('offline');
+    env.reachable = true; // localhost keeps answering
+
+    await monitor.check(); // the visitor's "check again"
+    env.fireTimer(); // and the monitor's own re-probe
+    await flush();
+
+    expect(env.probeCalls).toBe(0);
+    expect(monitor.getSnapshot()).toMatchObject({ online: false, recoveredAt: null });
+    expect(monitor.getSnapshot().lastCheckedAt).toBe(env.time);
+  });
+
+  it('keeps re-arming the schedule while there is no link to probe', async () => {
+    const env = new FakeEnv();
+    const monitor = monitorOn(env);
+    env.linkUp = false;
+    env.reachable = true;
+    env.emit('offline');
+
+    env.fireTimer();
+    await flush();
+    expect(env.scheduledDelay).toBe(8000);
+    env.fireTimer();
+    await flush();
+    expect(env.scheduledDelay).toBe(15_000);
+    expect(monitor.getSnapshot().online).toBe(false);
+  });
+
+  it('discards a probe that succeeds after the link has dropped', async () => {
+    const env = new FakeEnv();
+    const monitor = monitorOn(env);
+    const settled = monitor.check(); // starts while the link is up
+    env.linkUp = false; // ...and drops before the answer arrives
+    await settled;
+
+    expect(monitor.getSnapshot()).toMatchObject({ online: false, recoveredAt: null });
   });
 
   it('detaches every listener and timer on stop, and can start again', () => {

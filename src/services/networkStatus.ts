@@ -1,13 +1,26 @@
 // =============================================================================
 // networkStatus — the site's single source of truth for "is the internet there".
 //
-// The browser's own `navigator.onLine` only answers "is there a link", so it
-// stays true on a dead hotel Wi-Fi, a captive portal or a dropped tunnel. This
-// monitor treats it as a hint and confirms with a real request to a tiny
-// same-origin file:
+// `navigator.onLine` is only trustworthy in one direction, so it is used in
+// exactly that direction and confirmed in the other:
+//
+//   - it reports NO link  -> conclusively offline. The device has no network at
+//     all, and nothing may overrule that. In particular a same-origin probe
+//     must not: a dev server (or any local/proxied origin) happily answers from
+//     the same machine while the device's Wi-Fi is switched off, which would
+//     otherwise announce "back online" seconds into a real outage.
+//   - it reports a link   -> unproven, so a real request decides. It stays true
+//     on dead hotel Wi-Fi, a captive portal or a dropped tunnel.
+//
+// The deciding request asks for a tiny same-origin file:
 //
 //   - any HTTP answer (even a 404) proves the network is reachable  -> online
 //   - fetch rejecting, or taking longer than PROBE_TIMEOUT_MS       -> offline
+//
+// One consequence worth knowing while developing: on `localhost` the probe can
+// only ever prove the dev server is up, so there the link check above is the
+// whole of the detection. On the deployed domain the probe is a real
+// internet round-trip.
 //
 // While offline it re-probes on a backing-off schedule and whenever the tab
 // becomes visible again, so recovery is noticed without the visitor doing
@@ -135,6 +148,13 @@ export class NetworkStatusMonitor {
    */
   check(): Promise<boolean> {
     if (this.probeInFlight) return this.probeInFlight;
+    // No link at all: conclusive, and a request would only ask the local
+    // machine a question it cannot answer for the internet.
+    if (!this.deps.isOnline()) {
+      this.patch({ checking: false, lastCheckedAt: this.deps.now() });
+      this.goOffline();
+      return Promise.resolve(false);
+    }
     this.patch({ checking: true });
     const run = this.deps.probe().then(
       (reachable) => this.settleProbe(reachable),
@@ -182,7 +202,9 @@ export class NetworkStatusMonitor {
     this.probeInFlight = null;
     const wasOffline = !this.snapshot.online;
     this.patch({ checking: false, lastCheckedAt: this.deps.now() });
-    if (!reachable) {
+    // The link can drop while a probe is in flight; its late success says
+    // nothing about the connection the visitor has now.
+    if (!reachable || !this.deps.isOnline()) {
       this.goOffline();
       return false;
     }
