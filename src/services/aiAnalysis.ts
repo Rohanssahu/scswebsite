@@ -15,6 +15,7 @@ import {
 } from '@/policy/estimationPolicy';
 import { AnalysisResult, AnswerMap, ProjectMode, UploadedFileMeta } from '@/types/projectAnalysis';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
+import { isConnectionError, reportNetworkFailure } from './networkStatus';
 
 /** True when the AI backend can be reached (Supabase public config present). */
 export const isAiAnalysisReady = isSupabaseConfigured;
@@ -132,7 +133,10 @@ export async function extractFromDocument(mode: ProjectMode, doc: ReadDocument):
       pdfBase64: doc.pdfBase64,
     },
   });
-  if (error || !data?.ok) throw new Error(error?.message ?? 'Document extraction failed');
+  if (error || !data?.ok) {
+    if (isConnectionError(error)) reportNetworkFailure('ai');
+    throw new Error(error?.message ?? 'Document extraction failed');
+  }
   const answers = (data.answers ?? {}) as AnswerMap;
   const docSummary = typeof data.docSummary === 'string' ? data.docSummary.slice(0, MAX_STORED_SUMMARY_CHARS) : '';
   const extractedFieldsCount = Object.keys(answers).length;
@@ -358,7 +362,10 @@ export async function generateAiAnalysis(
       revision,
     },
   });
-  if (error || !data?.ok) throw new AiAnalysisUnavailableError(error?.message ?? 'AI analysis failed');
+  if (error || !data?.ok) {
+    if (isConnectionError(error)) reportNetworkFailure('ai');
+    throw new AiAnalysisUnavailableError(error?.message ?? 'AI analysis failed');
+  }
   if (!validateAnalysis(data.result)) throw new AiAnalysisUnavailableError('AI returned an invalid analysis');
   const safe = stripUnknownKeys(data.result as Record<string, unknown>);
   return {

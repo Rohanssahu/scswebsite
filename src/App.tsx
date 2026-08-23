@@ -41,6 +41,8 @@ import VirtualGuide from "./components/virtual-guide/VirtualGuide";
 import ScrollButtons from "./components/ScrollButtons";
 import SkipToContent from "./components/SkipToContent";
 import PrintWatermark from "./components/PrintWatermark";
+import ConnectionStatus from "./components/ConnectionStatus";
+import RouteErrorBoundary from "./routes/RouteErrorBoundary";
 import Seo from "./seo/Seo";
 import RouteAnalytics from "./components/RouteAnalytics";
 import AdminBoundary from "./components/admin/AdminBoundary";
@@ -110,7 +112,11 @@ const App = () => {
         <ScrollToTop />
         <RouteAnalytics />
         <LanguageAnnouncer />
-        <SiteRoutes />
+        {/* A page whose chunk cannot be downloaded (the usual way an offline
+            visitor finds out) is caught here instead of blanking the site. */}
+        <RouteErrorBoundary>
+          <SiteRoutes />
+        </RouteErrorBoundary>
         {/* After the routes: page-level head patching (e.g. the admin noindex
             hook) runs first, so the registry always has the last word. */}
         <Seo />
@@ -118,6 +124,9 @@ const App = () => {
         <GlobalScrollButtons />
         {/* Print-only: brands whatever a visitor saves as a PDF from a page. */}
         <PrintWatermark />
+        {/* Right-edge drawer for the whole visit: names a lost connection
+            without taking the already-loaded page away from the visitor. */}
+        <ConnectionStatus />
       </BrowserRouter>
     </AppProviders>
   );

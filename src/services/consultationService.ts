@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { getSupabaseClient, isSupabaseConfigured } from '@/services/supabaseClient';
+import { isConnectionError, reportNetworkFailure } from '@/services/networkStatus';
 import {
   mapConsultationError,
   parseJoinResponse,
@@ -43,6 +44,7 @@ async function invoke(body: Record<string, unknown>): Promise<Record<string, unk
         payload = null;
       }
     }
+    if (isConnectionError(error)) reportNetworkFailure('meeting');
     throw new ConsultationError(mapConsultationError(payload?.error, context?.status), 'Consultation request failed.');
   }
   if (typeof data !== 'object' || data === null || (data as Record<string, unknown>).ok !== true) {

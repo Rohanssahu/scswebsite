@@ -1,4 +1,5 @@
 import { createElement, type ComponentType } from 'react';
+import { reportNetworkFailure } from '@/services/networkStatus';
 
 /**
  * A route component that is fetched on demand, with an explicit preload step.
@@ -28,6 +29,13 @@ import { createElement, type ComponentType } from 'react';
  * blank page: during the build that fails the route (and therefore the build),
  * and in the browser it reaches the nearest error boundary.
  *
+ * A failure sticks, so the boundary is not thrown back into an endless retry
+ * loop by React re-rendering. The one thing that clears it is an explicit
+ * `resetFailedRoutes()` — which is what the visitor's "try again" button calls
+ * once their connection is back. Chunk downloads are also the most common way
+ * an offline visitor notices the outage at all, so each failure is reported to
+ * the connection monitor and named in the connection drawer.
+ *
  * The component is built with `createElement` rather than JSX so this module can
  * stay a plain `.ts` file — it exports a factory, not a component, and mixing
  * the two in one file breaks React Fast Refresh.
@@ -39,6 +47,19 @@ export interface LoadableRoute {
   preload: () => Promise<void>;
   /** True once the chunk is in memory and the component renders synchronously. */
   isLoaded: () => boolean;
+  /** Clears a failed load so the next render fetches the chunk again. */
+  reset: () => void;
+}
+
+/**
+ * Every loadable ever created, so a single "try again" can clear whichever one
+ * failed without the caller having to know which route it was.
+ */
+const registry = new Set<LoadableRoute>();
+
+/** Re-arms every route whose chunk failed to download. */
+export function resetFailedRoutes(): void {
+  registry.forEach((route) => route.reset());
 }
 
 type ModuleLoader = () => Promise<{ default: ComponentType }>;
@@ -61,6 +82,7 @@ export function loadable(load: ModuleLoader): LoadableRoute {
         (error: unknown) => {
           failure = error instanceof Error ? error : new Error(String(error));
           status = 'failed';
+          reportNetworkFailure('page');
         },
       );
     }
@@ -74,5 +96,14 @@ export function loadable(load: ModuleLoader): LoadableRoute {
     throw preload();
   };
 
-  return { Component, preload, isLoaded: () => status === 'loaded' };
+  const reset = (): void => {
+    if (status !== 'failed') return;
+    status = 'idle';
+    failure = null;
+    pending = null;
+  };
+
+  const route: LoadableRoute = { Component, preload, isLoaded: () => status === 'loaded', reset };
+  registry.add(route);
+  return route;
 }

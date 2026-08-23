@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import emailjs from "emailjs-com";
+import { reportNetworkFailure } from "@/services/networkStatus";
 const ApplicationForm = () => {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +81,10 @@ const handleSubmit = async (e) => {
 
   } catch (error) {
     console.error(error);
+    // The upload and the mail both need the internet: if the connection is the
+    // reason this failed, the connection drawer says so (a probe confirms it,
+    // and clears the entry again when the network turns out to be fine).
+    reportNetworkFailure('form');
     setDialog({
       open: true,
       type: "error",

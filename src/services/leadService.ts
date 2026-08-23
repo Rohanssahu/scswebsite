@@ -4,6 +4,7 @@
 // errors into safe, user-presentable shapes.
 
 import { getSupabaseClient, isSupabaseConfigured } from '@/services/supabaseClient';
+import { isConnectionError, reportNetworkFailure } from '@/services/networkStatus';
 import { normalizePhone } from '@/lib/leadValidation';
 import type { AnalysisResult, AnswerMap } from '@/types/projectAnalysis';
 import { estimatedWeeks, totalCost, totalHours } from '@/data/basicEstimate';
@@ -283,6 +284,9 @@ export async function submitLead(request: SubmitLeadRequest): Promise<SubmitLead
           : payload?.error === 'invalid_request' || payload?.error === 'honeypot'
             ? 'invalid_request'
             : 'network';
+    // A submission the connection swallowed is named in the connection drawer
+    // too, so the visitor sees why rather than just that it failed.
+    if (isConnectionError(error)) reportNetworkFailure('form');
     throw new LeadSubmissionError(code, payload?.message ?? 'Could not reach the submission service. Please try again.');
   }
 

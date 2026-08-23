@@ -1360,16 +1360,36 @@ async function checkPrerenderCompleteness() {
  *
  * Raise a ceiling only together with a measurement, in the same change that
  * makes the code bigger.
+ *
+ * Re-measured for the offline connection notice (the right-edge drawer, the
+ * connection monitor behind it and the route error boundary that catches a
+ * chunk which cannot be downloaded). Two builds of the same tree, one without
+ * the feature and one with it:
+ *
+ *   before  main 1,470,527 raw / 426,257 gzip   total 3,182,128 raw / 943,755 gzip
+ *   after   main 1,489,728 raw / 431,247 gzip   total 3,200,531 raw / 948,689 gzip
+ *   delta        +19,201 raw /  +4,990 gzip           +18,403 raw /  +4,934 gzip
+ *
+ * All of it lands in the main bundle on purpose, and none of it can be split
+ * out: a visitor whose internet just died cannot download the chunk that would
+ * have told them their internet died. The three locale blocks are part of the
+ * cost — the notice speaks English, Arabic and Urdu like the rest of the site.
+ *
+ * Note the "before" column: the main gzip and both totals were already over
+ * these ceilings before this change, so an earlier change grew the bundle
+ * without re-measuring. The numbers below are measured off the "after" build
+ * with the usual ~3% tolerance, which re-bases all four consistently.
  */
 const BUNDLE_BUDGET = {
-  mainRaw: 1_473_000,
-  mainGzip: 426_000,
-  totalRaw: 3_170_000,
+  mainRaw: 1_534_000,
+  mainGzip: 444_000,
+  totalRaw: 3_296_000,
   // Raised from 936_000 with the shared estimation policy: the budget-aware
   // scope engine, its client-facing wording and the report/proposal/admin
   // panels that render it. Measured immediately after that change:
-  // 3_160_447 B raw / 936_899 B gzip across 50 chunks.
-  totalGzip: 940_000,
+  // 3_160_447 B raw / 936_899 B gzip across 50 chunks. Raised again with the
+  // offline connection notice measured above.
+  totalGzip: 977_000,
   /** Route chunks the split must actually produce (services + locations + hubs). */
   minimumContentChunks: 26,
 };

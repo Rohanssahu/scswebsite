@@ -33,6 +33,36 @@
     "recommendedLanguage": "Recommended based on your browser settings",
     "skipToContent": "Skip to main content"
   },
+  "connection": {
+    "offlineTitle": "No internet connection",
+    "offlineBody": "This page keeps working. Anything that needs the internet — opening a new page, sending a form, AI features — will wait until you are back online.",
+    "offlineFor": "Offline for {{duration}}",
+    "checking": "Checking the connection…",
+    "checkAgain": "Check again",
+    "lastChecked": "Last checked at {{time}}",
+    "onlineTitle": "Back online",
+    "onlineBody": "Your connection is back. Reload the page if something did not finish.",
+    "reload": "Reload page",
+    "dismiss": "Dismiss",
+    "hide": "Hide the connection notice",
+    "showOffline": "No internet connection — show details",
+    "showOnline": "Back online — show details",
+    "waitingTitle": "Waiting for the connection",
+    "repeated": "×{{count}}",
+    "blocked": {
+      "page": "Page could not load",
+      "form": "Form could not be sent",
+      "ai": "AI feature unavailable",
+      "meeting": "AI meeting interrupted",
+      "request": "Request could not be sent"
+    },
+    "pageTitle": "This page needs a connection",
+    "pageBody": "You are offline, so this page could not be downloaded. Reconnect and try again — the page you came from still works.",
+    "pageRetry": "Try again",
+    "pageBack": "Go back",
+    "pageErrorTitle": "This page could not load",
+    "pageErrorBody": "Something went wrong while loading this page. Trying again usually fixes it."
+  },
   "nav": {
     "home": "Home",
     "services": "Services",
