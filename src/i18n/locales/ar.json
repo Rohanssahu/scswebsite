@@ -726,6 +726,7 @@
     "start-a-project": "ابدأ مشروعًا",
     "run-demo-analysis": "شغّل التحليل التجريبي",
     "view-detailed-breakdown": "عرض التفصيل الكامل",
+    "download-report": "تنزيل التقرير (PDF)",
     "edit-requirements": "تعديل المتطلبات",
     "continue-to-contact": "المتابعة إلى التواصل",
     "request-human-review": "اطلب مراجعة بشرية",
@@ -886,7 +887,9 @@
       "whatsappSummary": "مرحبًا SCS Softwares! استخدمت Buddy، دليلكم في SCS (تجريبي). {{summary}}. التقدير التجريبي: {{hours}} ساعة، ~{{cost}}، نحو {{weeks}} أسبوع (أسابيع). أودّ مناقشة الخطوات التالية.",
       "whatsappNoEstimate": "مرحبًا SCS Softwares! استكشفت موقعكم مع Buddy، دليلكم في SCS، وأودّ مناقشة مشروع.",
       "languageChanged": "تم! سأتابع بلغة {{language}} من الآن.",
-      "runAnalysis": "Run the analysis"
+      "runAnalysis": "Run the analysis",
+      "reportReady": "تقريرك جاهز — اختر «حفظ بصيغة PDF» في نافذة الطباعة للاحتفاظ به. كل صفحة تحمل اسم SCS Softwares وعلامته المائية.",
+      "reportBlocked": "منع متصفحك نافذة التقرير. اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة."
     },
     "clarify": "أنا دليل تجريبي بمجموعة محددة من المواضيع، لذا لم أفهم ذلك تمامًا. هل تستكشف SCS، أم تبدأ مشروعًا جديدًا، أم تُصلح مشروعًا قائمًا؟ قد تساعدك هذه الخيارات:",
     "tour": {
@@ -1016,6 +1019,44 @@
       "phasedNone": "Nothing is deferred: every requirement recorded so far fits inside the selected budget.",
       "phasedPrefix": "Phase two:",
       "budgetFit": "Your budget and what it covers"
+    },
+    "report": {
+      "title": "تقرير تقدير المشروع",
+      "fileName": "{{brand}} — تقرير تقدير المشروع {{date}}",
+      "page": "صفحة {{page}} من {{total}}",
+      "generated": "تاريخ الإنشاء",
+      "projectType": "المشروع",
+      "modeNew": "مشروع جديد",
+      "modeExisting": "مشروع قائم",
+      "basis": "الأساس",
+      "basisAi": "تحليل بالذكاء الاصطناعي — أولي ويحتاج مراجعة بشرية",
+      "basisBasic": "تقدير أساسي — محسوب من إجاباتك",
+      "version": "إصدار التقدير",
+      "rate": "السعر القياسي",
+      "rateValue": "حتى {{rate}} للساعة",
+      "solution": "الحل المقترح",
+      "working": "ما يعمل بالفعل",
+      "problems": "المشكلات المكتشفة",
+      "severity": {
+        "low": "خطورة منخفضة",
+        "medium": "خطورة متوسطة",
+        "high": "خطورة عالية"
+      },
+      "missing": "الميزات الناقصة",
+      "included": "مشمول في خطة الميزانية",
+      "deferred": "مؤجَّل إلى المرحلة الثانية",
+      "milestones": "مراحل التسليم",
+      "health": "صحة المشروع",
+      "healthScore": "درجة الصحة",
+      "healthValue": "{{score}}/100",
+      "riskLevel": "مستوى المخاطر",
+      "risk": {
+        "low": "منخفض",
+        "medium": "متوسط",
+        "high": "عالي"
+      },
+      "assumptions": "الافتراضات",
+      "watermarkNote": "تقرير أولي مجاني — كل صفحة تحمل اسم {{brand}} وعلامته المائية."
     },
     "intents": {
       "tour": "بكل سرور! سآخذك في جولة على الموقع — الخدمات والمنتجات وكيف نعمل وكيف تصل إلى الفريق. يمكنك التخطي أو طرح الأسئلة في أي خطوة.",

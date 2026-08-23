@@ -154,6 +154,7 @@ const RecommendationPanel = ({ guide }: RecommendationPanelProps) => {
                 guide.runAction(a);
               }}
               actions={[
+                { label: 'Download report (PDF)', kind: 'download-report' },
                 { label: 'Edit requirements', kind: 'flow-edit' },
                 { label: 'Continue to Contact', kind: 'contact-handoff' },
                 { label: 'Open WhatsApp', kind: 'whatsapp' },

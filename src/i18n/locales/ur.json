@@ -722,6 +722,7 @@
     "start-a-project": "پروجیکٹ شروع کریں",
     "run-demo-analysis": "ڈیمو تجزیہ چلائیں",
     "view-detailed-breakdown": "تفصیلی بریک ڈاؤن دیکھیں",
+    "download-report": "رپورٹ ڈاؤن لوڈ کریں (PDF)",
     "edit-requirements": "ضروریات میں ترمیم کریں",
     "continue-to-contact": "رابطے کی طرف بڑھیں",
     "request-human-review": "انسانی جائزے کی درخواست کریں",
@@ -882,7 +883,9 @@
       "whatsappSummary": "سلام SCS Softwares! میں نے Buddy، آپ کا SCS گائیڈ (ڈیمو) استعمال کیا۔ {{summary}}۔ ڈیمو تخمینہ: {{hours}} گھنٹے، ~{{cost}}، تقریباً {{weeks}} ہفتے۔ میں اگلے اقدامات پر بات کرنا چاہوں گا/گی۔",
       "whatsappNoEstimate": "سلام SCS Softwares! میں نے Buddy، آپ کے SCS گائیڈ کے ساتھ آپ کی ویب سائٹ دیکھی اور ایک پروجیکٹ پر بات کرنا چاہوں گا/گی۔",
       "languageChanged": "ہو گیا! اب سے میں {{language}} میں بات جاری رکھوں گا۔",
-      "runAnalysis": "Run the analysis"
+      "runAnalysis": "Run the analysis",
+      "reportReady": "آپ کی رپورٹ تیار ہے — پرنٹ ونڈو میں «Save as PDF» منتخب کریں۔ ہر صفحے پر SCS Softwares کا نام اور واٹرمارک موجود ہے۔",
+      "reportBlocked": "براؤزر نے رپورٹ ونڈو روک دی۔ اس سائٹ کے لیے پاپ اپ کی اجازت دیں اور دوبارہ کوشش کریں۔"
     },
     "clarify": "میں ایک ڈیمو گائیڈ ہوں اور میرے موضوعات محدود ہیں، اس لیے میں یہ بات پوری طرح سمجھ نہیں پایا۔ کیا آپ SCS کو دریافت کر رہے ہیں، نیا پروجیکٹ شروع کر رہے ہیں، یا کوئی موجودہ پروجیکٹ ٹھیک کروانا چاہتے ہیں؟ شاید یہ مدد کریں:",
     "tour": {
@@ -1012,6 +1015,44 @@
       "phasedNone": "Nothing is deferred: every requirement recorded so far fits inside the selected budget.",
       "phasedPrefix": "Phase two:",
       "budgetFit": "Your budget and what it covers"
+    },
+    "report": {
+      "title": "پروجیکٹ تخمینہ رپورٹ",
+      "fileName": "{{brand}} — پروجیکٹ تخمینہ رپورٹ {{date}}",
+      "page": "صفحہ {{page}} از {{total}}",
+      "generated": "تیاری کی تاریخ",
+      "projectType": "پروجیکٹ",
+      "modeNew": "نیا پروجیکٹ",
+      "modeExisting": "موجودہ پروجیکٹ",
+      "basis": "بنیاد",
+      "basisAi": "اے آئی تجزیہ — ابتدائی، انسانی جائزہ درکار",
+      "basisBasic": "بنیادی تخمینہ — آپ کے جوابات سے شمار کیا گیا",
+      "version": "تخمینہ ورژن",
+      "rate": "معیاری ریٹ",
+      "rateValue": "{{rate}} فی گھنٹہ تک",
+      "solution": "تجویز کردہ حل",
+      "working": "جو پہلے سے کام کر رہا ہے",
+      "problems": "شناخت شدہ مسائل",
+      "severity": {
+        "low": "کم شدت",
+        "medium": "درمیانی شدت",
+        "high": "زیادہ شدت"
+      },
+      "missing": "غائب فیچرز",
+      "included": "بجٹ کے مطابق پلان میں شامل",
+      "deferred": "دوسرے مرحلے کے لیے مؤخر",
+      "milestones": "ڈیلیوری مراحل",
+      "health": "پروجیکٹ کی صحت",
+      "healthScore": "ہیلتھ اسکور",
+      "healthValue": "{{score}}/100",
+      "riskLevel": "خطرے کی سطح",
+      "risk": {
+        "low": "کم",
+        "medium": "درمیانی",
+        "high": "زیادہ"
+      },
+      "assumptions": "مفروضات",
+      "watermarkNote": "مفت ابتدائی رپورٹ — ہر صفحے پر {{brand}} کا نام اور واٹرمارک موجود ہے۔"
     },
     "intents": {
       "tour": "بخوشی! میں آپ کو ویب سائٹ کی سیر کراؤں گا — خدمات، پروڈکٹس، ہمارا طریقہ کار، اور ٹیم تک پہنچنے کا طریقہ۔ آپ کسی بھی مرحلے پر سوال پوچھ سکتے ہیں یا اسے چھوڑ سکتے ہیں۔",

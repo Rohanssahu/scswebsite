@@ -27,6 +27,7 @@ export type GuideActionKind =
   | 'schedule-handoff' // navigate to the schedule-call page
   | 'run-analysis' // start the simulated demo analysis
   | 'flow-edit' // reopen the requirement flow at the review step
+  | 'download-report' // build the branded, watermarked estimate report as a PDF
   | 'open-voice'; // open the real-time voice session panel
 
 export interface GuideAction {

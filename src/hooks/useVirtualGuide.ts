@@ -13,6 +13,7 @@ import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import i18n, { setAppLanguage } from '@/i18n/config';
 import { formatUsd, getLocaleConfig, isSupportedLanguage, LanguageCode, SpeechSpeed, valueKey } from '@/i18n/languageConfig';
 import { loadDraft, saveDraft, saveResult } from '@/lib/analysisStore';
+import { downloadEstimateReport } from '@/lib/estimateReport';
 import { AnswerValue, ProjectMode } from '@/types/projectAnalysis';
 import {
   AvatarState,
@@ -510,6 +511,9 @@ export function useVirtualGuide() {
               { label: 'Open WhatsApp', kind: 'whatsapp' },
               { label: 'Schedule a Call', kind: 'schedule-handoff' },
               { label: 'Request Human Review', kind: 'contact-handoff' },
+              // Closes the analysis: the visitor leaves with the branded,
+              // watermarked PDF of everything Buddy just quoted.
+              { label: 'Download report (PDF)', kind: 'download-report' },
             ],
           },
         ]);
@@ -535,6 +539,37 @@ export function useVirtualGuide() {
   const openWhatsApp = useCallback(() => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildSummaryText())}`, '_blank', 'noopener,noreferrer');
   }, [buildSummaryText]);
+
+  /**
+   * Hand the visitor the estimate as a PDF. The document is built from the same
+   * stored estimate the chat quoted, and every page of it carries the company
+   * name and watermark (see `printReport`). Nothing is downloadable before an
+   * estimate exists, so Buddy offers to run the flow instead.
+   */
+  const downloadReport = useCallback(() => {
+    const e = estimateRef.current;
+    if (!e) {
+      enqueueGuide([
+        {
+          key: 'guide.msg.noEstimateYet',
+          actions: [
+            { label: 'Start requirement flow', kind: 'flow-new' },
+            { label: 'Fix an existing project', kind: 'flow-existing' },
+          ],
+        },
+      ]);
+      return;
+    }
+    const started = downloadEstimateReport(e);
+    enqueueGuide([
+      started
+        ? { key: 'guide.msg.reportReady' }
+        : {
+            key: 'guide.msg.reportBlocked',
+            actions: [{ label: 'View detailed breakdown', kind: 'open-results' }],
+          },
+    ]);
+  }, [enqueueGuide]);
 
   const contactHandoff = useCallback(() => {
     const e = estimateRef.current;
@@ -781,6 +816,9 @@ export function useVirtualGuide() {
         case 'run-analysis':
           runAnalysis();
           break;
+        case 'download-report':
+          downloadReport();
+          break;
         case 'flow-edit': {
           const e = estimateRef.current;
           const mode: ProjectMode = e?.mode ?? 'new';
@@ -792,7 +830,7 @@ export function useVirtualGuide() {
           break;
       }
     },
-    [addTimer, contactHandoff, navigate, openVoice, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
+    [addTimer, contactHandoff, downloadReport, navigate, openVoice, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
   );
 
   const restartConversation = useCallback(() => {
@@ -847,6 +885,7 @@ export function useVirtualGuide() {
                 },
                 actions: [
                   { label: 'View detailed breakdown', kind: 'open-results' },
+                  { label: 'Download report (PDF)', kind: 'download-report' },
                   { label: 'Schedule a review call', kind: 'schedule-handoff' },
                 ],
               }

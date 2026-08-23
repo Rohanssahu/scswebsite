@@ -795,6 +795,7 @@
     "start-a-project": "Start a project",
     "run-demo-analysis": "Run project analysis",
     "view-detailed-breakdown": "View detailed breakdown",
+    "download-report": "Download report (PDF)",
     "edit-requirements": "Edit requirements",
     "continue-to-contact": "Continue to Contact",
     "request-human-review": "Request Human Review",
@@ -955,7 +956,9 @@
       "whatsappSummary": "Hello SCS Softwares! I used Buddy, your SCS guide. {{summary}}. Preliminary estimate: {{hours}} hours, ~{{cost}}, about {{weeks}} week(s). I would like to discuss the next steps.",
       "whatsappNoEstimate": "Hello SCS Softwares! I explored your website with Buddy, your SCS guide, and would like to discuss a project.",
       "languageChanged": "Done! I'll continue in {{language}} from here.",
-      "runAnalysis": "Run the analysis"
+      "runAnalysis": "Run the analysis",
+      "reportReady": "Your report is ready — pick \"Save as PDF\" in the print window to keep it. Every page carries the SCS Softwares label and watermark.",
+      "reportBlocked": "Your browser blocked the report window. Allow pop-ups for this site and try the download again."
     },
     "clarify": "I'm a Buddy guide with a fixed set of topics, so I didn't quite catch that. Are you exploring SCS, starting a new project, or fixing an existing one? These might help:",
     "tour": {
@@ -1085,6 +1088,44 @@
       "phasedNone": "Nothing is deferred: every requirement recorded so far fits inside the selected budget.",
       "phasedPrefix": "Phase two:",
       "budgetFit": "Your budget and what it covers"
+    },
+    "report": {
+      "title": "Project estimate report",
+      "fileName": "{{brand}} — Project estimate report {{date}}",
+      "page": "Page {{page}} of {{total}}",
+      "generated": "Generated",
+      "projectType": "Project",
+      "modeNew": "New project",
+      "modeExisting": "Existing project",
+      "basis": "Basis",
+      "basisAi": "AI analysis — preliminary, requires human review",
+      "basisBasic": "Basic estimate — calculated from your answers",
+      "version": "Estimate version",
+      "rate": "Standard rate",
+      "rateValue": "up to {{rate}}/hour",
+      "solution": "Recommended solution",
+      "working": "What already works",
+      "problems": "Problems detected",
+      "severity": {
+        "low": "low severity",
+        "medium": "medium severity",
+        "high": "high severity"
+      },
+      "missing": "Missing features",
+      "included": "Included in the budget-fit plan",
+      "deferred": "Deferred to phase two",
+      "milestones": "Delivery milestones",
+      "health": "Project health",
+      "healthScore": "Health score",
+      "healthValue": "{{score}}/100",
+      "riskLevel": "Risk level",
+      "risk": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "assumptions": "Assumptions",
+      "watermarkNote": "Free preliminary report — every page carries the {{brand}} name and watermark."
     },
     "intents": {
       "tour": "Happy to! I'll walk you through the website — services, products, how we work, and how to reach the team. You can skip or ask questions at any step.",

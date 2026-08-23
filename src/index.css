@@ -131,6 +131,11 @@
   }
 }
 
+/* The brand stamp is print-only: invisible on screen, painted on paper/PDF. */
+.print-watermark {
+  display: none;
+}
+
 /* Print styles: show only the estimate document on the result page */
 @media print {
   header,
@@ -150,5 +155,38 @@
     background: transparent !important;
     border-color: #ddd !important;
     box-shadow: none !important;
+  }
+
+  /* Company name on anything printed from a page. Drawn as text, not a
+     background image, so it survives the printer dialog's "Background
+     graphics" checkbox being off — which it is by default in Chrome. The
+     generated PDF report (src/lib/printReport.ts) does not depend on this: it
+     paginates itself and stamps every single page. */
+  .print-watermark {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+  }
+  .print-watermark-mark {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    white-space: nowrap;
+    font-size: 46px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    color: rgba(219, 39, 119, 0.12) !important;
+  }
+  .print-watermark-label {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 6mm;
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 0.02em;
+    color: #6b7280 !important;
   }
 }

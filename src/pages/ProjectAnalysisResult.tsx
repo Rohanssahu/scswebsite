@@ -26,6 +26,7 @@ import MilestoneTimeline from '../components/estimation/MilestoneTimeline';
 import IssueCards from '../components/estimation/IssueCards';
 import SubmitRequirementDialog, { SubmitVariant } from '../components/estimation/SubmitRequirementDialog';
 import { loadDraft, loadResult } from '@/lib/analysisStore';
+import { downloadEstimateReport } from '@/lib/estimateReport';
 import BudgetPlanPanel from '../components/estimation/BudgetPlanPanel';
 import {
   AI_UNAVAILABLE_NOTICE,
@@ -84,6 +85,15 @@ const ProjectAnalysisResult = () => {
   const hours = totalHours(result.team);
   const cost = totalCost(result.team);
   const weeks = estimatedWeeks(result.team, result.weeklyCapacityHours);
+
+  // Saves the branded report: the same watermarked, company-labelled document
+  // Buddy hands out, built from this stored result. Falls back to the browser's
+  // own print view if an iframe cannot be opened.
+  const downloadReport = () => {
+    if (downloadEstimateReport(result)) return;
+    toast({ title: 'Opening the print view instead', description: 'Choose "Save as PDF" to keep your report.' });
+    window.print();
+  };
 
   const share = async () => {
     const url = `${window.location.origin}${window.location.pathname}?demo=1`;
@@ -146,10 +156,10 @@ const ProjectAnalysisResult = () => {
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={downloadReport}
               className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-pink-400 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
             >
-              <Download className="h-4 w-4" aria-hidden="true" /> Download estimate
+              <Download className="h-4 w-4" aria-hidden="true" /> Download report (PDF)
             </button>
             <button
               type="button"

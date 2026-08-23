@@ -40,6 +40,7 @@ const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
 import VirtualGuide from "./components/virtual-guide/VirtualGuide";
 import ScrollButtons from "./components/ScrollButtons";
 import SkipToContent from "./components/SkipToContent";
+import PrintWatermark from "./components/PrintWatermark";
 import Seo from "./seo/Seo";
 import RouteAnalytics from "./components/RouteAnalytics";
 import AdminBoundary from "./components/admin/AdminBoundary";
@@ -115,6 +116,8 @@ const App = () => {
         <Seo />
         <GlobalVirtualGuide />
         <GlobalScrollButtons />
+        {/* Print-only: brands whatever a visitor saves as a PDF from a page. */}
+        <PrintWatermark />
       </BrowserRouter>
     </AppProviders>
   );
