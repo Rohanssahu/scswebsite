@@ -208,7 +208,7 @@ visible prerendered copy, `<head>` metadata, and JSON-LD.
 | Founding year | `FOUNDING_YEAR = 2022` | `/about` story + track-record tile + homepage pointer | `/about` description | `Organization.foundingDate = "2022"` | ✅ |
 | Founding location | Indore, Madhya Pradesh, India | `/about`, `/locations` hub | — | `Organization.foundingLocation` (Place + PostalAddress, `addressCountry: IN`) | ✅ |
 | Address | `CONTACT` — 9th Floor, Shekhar Central, Palasia Square, Indore, MP 452001, IN | Footer + `/contact` | — | `Organization.address` | ✅ one company, one address |
-| Telephone | `+917828690192` | Footer + `/contact` | `/contact` description | `Organization.telephone`, `contactPoint`, `ContactPage.mainEntity` | ✅ |
+| Telephone | Not public | Not displayed | Not included | Not included | ✅ |
 | Email | `info@scssoftwares.com` | Footer + `/contact` | `/contact` description | `Organization.email`, `contactPoint` | ✅ |
 | Logo | `/images/logo.png` (500×500) | Header + footer | — | `Organization.logo` (ImageObject) | ✅ |
 | Founder image | `/images/rohan-sahu-founder-scs-softwares.jpg` (768×768) | `/about` founder card | — | `Person.image` | ✅ |

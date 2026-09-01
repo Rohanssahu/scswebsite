@@ -109,7 +109,7 @@ describe('nothing identifying can leave the module', () => {
   // known words".
   const POISON = [
     'rohan@example.com',
-    '+917828690192',
+    '+15555550123',
     'Rohan Sahu',
     'eyJhbGciOiJIUzI1NiJ9.secret.token',
     'MEET-9F3A-2B71',

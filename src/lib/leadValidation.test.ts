@@ -39,7 +39,7 @@ describe('validateEmail', () => {
 
 describe('normalizePhone / validatePhone', () => {
   it('normalizes separators and keeps a leading +', () => {
-    expect(normalizePhone('+91 78286-90192')).toBe('+917828690192');
+    expect(normalizePhone('+1 555-555-0123')).toBe('+15555550123');
     expect(normalizePhone('(0731) 123 4567')).toBe('07311234567');
   });
   it('rejects non-phone input', () => {
@@ -88,7 +88,7 @@ describe('validateConsultationForm', () => {
   const valid = {
     name: 'Jane Doe',
     email: 'jane@example.com',
-    phone: '+917828690192',
+    phone: '+15555550123',
     company: '',
     projectMode: 'new',
     service: 'web-development',

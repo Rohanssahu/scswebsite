@@ -5,8 +5,6 @@
 
 import { GuideAction } from '@/types/virtualGuide';
 
-export const WHATSAPP_NUMBER = '917828690192';
-
 /** i18n key of Buddy's welcome message. */
 export const GUIDE_WELCOME_KEY = 'guide.welcome';
 
@@ -122,7 +120,7 @@ export function getRouteQuickActions(pathname: string): GuideAction[] {
   if (p.startsWith('/contact')) {
     return [
       { label: 'Help me prepare my inquiry', kind: 'flow-new' },
-      { label: 'Open WhatsApp', kind: 'whatsapp' },
+      { label: 'Email the team', kind: 'navigate', to: '/contact' },
       { label: 'Schedule a call', kind: 'schedule-handoff' },
       { label: 'Talk to a human', kind: 'send', message: 'I want to talk to a human' },
     ];

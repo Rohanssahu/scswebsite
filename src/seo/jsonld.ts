@@ -133,7 +133,6 @@ export function organizationJsonLd(): JsonLd {
     // where the story a reader can actually verify is rendered.
     founder: { '@id': FOUNDER_ID },
     email: CONTACT.email,
-    telephone: CONTACT.phone,
     address: {
       '@type': 'PostalAddress',
       streetAddress: CONTACT.street,
@@ -147,7 +146,6 @@ export function organizationJsonLd(): JsonLd {
         '@type': 'ContactPoint',
         contactType: 'customer support',
         email: CONTACT.email,
-        telephone: CONTACT.phone,
         availableLanguage: ['en', 'ar', 'ur'],
       },
     ],
@@ -349,7 +347,6 @@ export function contactPageJsonLd(path: string): JsonLd {
       '@type': 'Organization',
       '@id': ORGANIZATION_ID,
       email: CONTACT.email,
-      telephone: CONTACT.phone,
     },
   };
 }

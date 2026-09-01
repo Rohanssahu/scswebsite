@@ -115,7 +115,7 @@ describe('buildConsultationRequest', () => {
       {
         name: 'Jane',
         email: 'jane@example.com',
-        phone: '+91 78286-90192',
+        phone: '+1 555-555-0123',
         company: 'Acme',
         projectMode: 'existing',
         service: 'cloud-solutions',
@@ -128,7 +128,7 @@ describe('buildConsultationRequest', () => {
       { route: '/consultation-form', language: 'ar' },
     );
     expect(req.action).toBe('consultation');
-    expect(req.lead.phone).toBe('+917828690192');
+    expect(req.lead.phone).toBe('+15555550123');
     expect(req.lead.project_mode).toBe('existing');
     expect(req.lead.preferred_contact_method).toBe('whatsapp');
     expect(req.lead.preferred_language).toBe('ar');
@@ -211,7 +211,7 @@ describe('buildAnswersPayload', () => {
 
 describe('buildRequirementRequest / buildHumanReviewRequest', () => {
   const input = {
-    contact: { name: 'Jane', email: 'jane@example.com', phone: '+917828690192' },
+    contact: { name: 'Jane', email: 'jane@example.com', phone: '+15555550123' },
     mode: 'new' as const,
     answers: { goal: 'marketplace' },
     result: sampleResult,

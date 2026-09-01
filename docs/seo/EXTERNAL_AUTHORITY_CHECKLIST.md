@@ -22,14 +22,13 @@ phone format reads as a different business.
 | Website | `https://scssoftwares.com` (apex, HTTPS, no `www`, no trailing path) |
 | Founded | `2022` |
 | Address | `9th Floor, Shekhar Central, Palasia Square, Indore, MP 452001, India` |
-| Phone | `+91 7828690192` |
 | Email | `info@scssoftwares.com` |
 | Founder | `Rohan Sahu`, `Founder & CEO` |
 | Short description | India-based mobile app, web application, custom software and AI development company specializing in AI/ML, AI voice agents, AI video consultation agents and business automation. |
 | Logo | `https://scssoftwares.com/images/logo.png` |
 
 **Never vary:** the company name spelling or capitalisation, the founding year,
-the address, or the phone format.
+or the address.
 
 ---
 

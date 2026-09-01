@@ -445,15 +445,14 @@ describe('structured data', () => {
     for (const route of ALL_ROUTES) walk(route.jsonLd, route.routePattern);
   });
 
-  it('uses only the verified contact details', () => {
+  it('uses only the public contact details', () => {
     const organization = ROUTE_SEO['/'].jsonLd[0] as {
       email: string;
-      telephone: string;
       foundingDate: string;
       address: { addressLocality: string; addressCountry: string };
     };
     expect(organization.email).toBe('info@scssoftwares.com');
-    expect(organization.telephone).toBe('+917828690192');
+    expect(organization).not.toHaveProperty('telephone');
     expect(organization.address.addressLocality).toBe('Indore');
     expect(organization.address.addressCountry).toBe('IN');
     expect(organization.foundingDate).toBe('2022');

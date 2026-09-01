@@ -256,14 +256,6 @@ const ScheduleCall = () => {
               >
                 {t('schedule.analyzeMeanwhile')}
               </Link>
-              <a
-                href="https://wa.me/917828690192"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-              >
-                {t('consultation.openWhatsApp')}
-              </a>
               <Link
                 to="/"
                 className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"

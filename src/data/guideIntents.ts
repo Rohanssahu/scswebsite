@@ -113,8 +113,7 @@ export const GUIDE_INTENTS: GuideIntent[] = [
     keywords: [['whatsapp']],
     responseKey: 'guide.intents.whatsapp',
     actions: [
-      { label: 'Open WhatsApp', kind: 'whatsapp' },
-      { label: 'Contact form instead', kind: 'navigate', to: '/contact' },
+      { label: 'Open contact form', kind: 'navigate', to: '/contact' },
     ],
   },
 ];

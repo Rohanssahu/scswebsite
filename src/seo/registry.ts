@@ -446,7 +446,7 @@ const ROUTE_SPECS: RouteSpec[] = [
     path: '/contact',
     title: 'Contact SCS Softwares | Talk to Our India-Based Development Team',
     description:
-      'Get in touch with SCS Softwares in Indore, India. Send us your project details by form, email info@scssoftwares.com, or call +91 7828690192.',
+      'Get in touch with SCS Softwares in Indore, India. Send us your project details through the contact form or email info@scssoftwares.com.',
     robots: 'index,follow',
     indexability: 'indexable',
     prerender: true,

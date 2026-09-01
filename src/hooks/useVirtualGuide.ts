@@ -4,7 +4,7 @@ import { useReducedMotion } from 'framer-motion';
 import { ASSISTANT_OPEN_EVENT } from '@/components/ai-assistant/assistantBus';
 import { getQuestions } from '@/data/analysisQuestions';
 import { ESTIMATE_DISCLAIMER_KEY, GUIDE_WEEKLY_CAPACITY_HOURS, resolveGuideEstimate } from '@/data/guideEstimate';
-import { getRouteQuickActions, GUIDE_WELCOME_KEY, WELCOME_ACTIONS, WHATSAPP_NUMBER } from '@/data/guideContent';
+import { getRouteQuickActions, GUIDE_WELCOME_KEY, WELCOME_ACTIONS } from '@/data/guideContent';
 import { emitBuddyReaction, looksLikeJoke } from '@/data/buddyReactions';
 import { clarifyReply, routeMessage } from '@/data/guideIntents';
 import { TOUR_STEPS } from '@/data/guideTour';
@@ -508,7 +508,6 @@ export function useVirtualGuide() {
               { label: 'View detailed breakdown', kind: 'open-results' },
               { label: 'Edit requirements', kind: 'flow-edit' },
               { label: 'Continue to Contact', kind: 'contact-handoff' },
-              { label: 'Open WhatsApp', kind: 'whatsapp' },
               { label: 'Schedule a Call', kind: 'schedule-handoff' },
               { label: 'Request Human Review', kind: 'contact-handoff' },
               // Closes the analysis: the visitor leaves with the branded,
@@ -522,24 +521,6 @@ export function useVirtualGuide() {
   }, [addTimer, enqueueGuide]);
 
   // ---------- lead conversion ----------
-  const buildSummaryText = useCallback(() => {
-    const e = estimateRef.current;
-    if (e) {
-      const summary = e.summaryItems.map((it) => i18n.t(it.key, it.params)).join('. ');
-      return i18n.t('guide.msg.whatsappSummary', {
-        summary,
-        hours: e.totalHours,
-        cost: formatUsd(e.totalCost, i18n.language),
-        weeks: e.estimatedWeeks,
-      });
-    }
-    return i18n.t('guide.msg.whatsappNoEstimate');
-  }, []);
-
-  const openWhatsApp = useCallback(() => {
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildSummaryText())}`, '_blank', 'noopener,noreferrer');
-  }, [buildSummaryText]);
-
   /**
    * Hand the visitor the estimate as a PDF. The document is built from the same
    * stored estimate the chat quoted, and every page of it carries the company
@@ -802,7 +783,7 @@ export function useVirtualGuide() {
           sendCanned(action);
           break;
         case 'whatsapp':
-          openWhatsApp();
+          navigate('/contact');
           break;
         case 'open-results':
           setResultsOpen(true);
@@ -830,7 +811,7 @@ export function useVirtualGuide() {
           break;
       }
     },
-    [addTimer, contactHandoff, downloadReport, navigate, openVoice, openWhatsApp, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
+    [addTimer, contactHandoff, downloadReport, navigate, openVoice, reduceMotion, runAnalysis, sendCanned, startFlow, startTour],
   );
 
   const restartConversation = useCallback(() => {

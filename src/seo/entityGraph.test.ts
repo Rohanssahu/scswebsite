@@ -174,9 +174,9 @@ describe('nothing in the graph contradicts the one company', () => {
     if (addresses.length) expect(addresses[0]).toContain(CONTACT.street);
   });
 
-  it('names exactly one telephone number', () => {
+  it('does not publish a telephone number', () => {
     const phones = JSON.stringify(ALL_NODES.map(({ node }) => node)).match(/"telephone":"[^"]*"/g) ?? [];
-    expect(new Set(phones)).toEqual(new Set([`"telephone":"${CONTACT.phone}"`]));
+    expect(phones).toHaveLength(0);
   });
 
   it('emits no rating, review, award or headcount anywhere in the graph', () => {

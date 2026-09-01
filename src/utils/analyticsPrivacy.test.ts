@@ -110,7 +110,7 @@ describe('no route reported to analytics can carry an identifier', () => {
       '/contact?email=rohan@example.com',
       '/ai-consultation/eyJhbGciOiJIUzI1NiJ9',
       '/admin/leads/00000000-0000-0000-0000-000000000000',
-      '/schedule-call?phone=+917828690192',
+      '/schedule-call?phone=+15555550123',
       '/x?sk-proj-abcdef',
     ];
     for (const path of hostile) {

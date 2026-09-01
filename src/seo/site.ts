@@ -91,12 +91,10 @@ export const FOUNDER = {
   sameAs: [] as readonly string[],
 } as const;
 
-/** Verified contact details, identical to the ones rendered in the footer. */
+/** Public contact details, identical to the ones rendered in the footer. */
 export const CONTACT = {
   email: 'info@scssoftwares.com',
   supportEmail: 'support@scssoftwares.com',
-  phone: '+917828690192',
-  phoneDisplay: '+91 7828690192',
   street: '9th Floor, Shekhar Central, Palasia Square',
   city: 'Indore',
   region: 'MP',

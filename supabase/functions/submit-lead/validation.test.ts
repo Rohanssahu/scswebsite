@@ -150,9 +150,9 @@ describe('validateSubmission — lead fields', () => {
   });
 
   it('normalizes phone numbers and rejects garbage phones', () => {
-    const ok = validateSubmission(base({ lead: { ...(base().lead as object), phone: '+91 78286-90192' } }));
+    const ok = validateSubmission(base({ lead: { ...(base().lead as object), phone: '+1 555-555-0123' } }));
     expect(ok.ok).toBe(true);
-    if (ok.ok) expect(ok.data.lead.phone).toBe('+917828690192');
+    if (ok.ok) expect(ok.data.lead.phone).toBe('+15555550123');
     expect(
       validateSubmission(base({ lead: { ...(base().lead as object), phone: 'call me maybe' } })).ok,
     ).toBe(false);
@@ -173,7 +173,7 @@ describe('validateSubmission — lead fields', () => {
     const lead = {
       name: 'Jane Doe',
       email: 'jane@example.com',
-      phone: '+917828690192',
+      phone: '+15555550123',
       service: 'web-development',
       project_mode: 'new',
       project_summary: 'A storefront with online payments.',
@@ -271,7 +271,7 @@ describe('validateSubmission — requirement & review', () => {
     const result = validateSubmission(
       base({
         action: 'human_review',
-        lead: { name: 'Jane Doe', email: 'jane@example.com', phone: '+917828690192' },
+        lead: { name: 'Jane Doe', email: 'jane@example.com', phone: '+15555550123' },
         requirement: validRequirement,
         review: {
           visitor_message: 'Please check the timeline.',
@@ -313,7 +313,7 @@ describe('validateSubmission — requirement & review', () => {
     const result = validateSubmission(
       base({
         action: 'human_review',
-        lead: { name: 'Jane Doe', email: 'jane@example.com', phone: '+917828690192' },
+        lead: { name: 'Jane Doe', email: 'jane@example.com', phone: '+15555550123' },
         requirement: validRequirement,
         review: { visitor_message: 'x'.repeat(2001) },
       }),

@@ -157,7 +157,6 @@ const RecommendationPanel = ({ guide }: RecommendationPanelProps) => {
                 { label: 'Download report (PDF)', kind: 'download-report' },
                 { label: 'Edit requirements', kind: 'flow-edit' },
                 { label: 'Continue to Contact', kind: 'contact-handoff' },
-                { label: 'Open WhatsApp', kind: 'whatsapp' },
                 { label: 'Schedule a Call', kind: 'schedule-handoff' },
                 { label: 'Request Human Review', kind: 'contact-handoff' },
               ]}
