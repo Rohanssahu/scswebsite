@@ -97,6 +97,19 @@ function welcomeMessage(): GuideChatMessage {
   };
 }
 
+/** Build the contact-form prefill without depending on a WhatsApp action. */
+export function buildContactSummaryText(estimate: GuideEstimate | null): string {
+  if (!estimate) return i18n.t('guide.msg.contactNoEstimate');
+
+  const summary = estimate.summaryItems.map((item) => i18n.t(item.key, item.params)).join('. ');
+  return i18n.t('guide.msg.contactSummary', {
+    summary,
+    hours: estimate.totalHours,
+    cost: formatUsd(estimate.totalCost, i18n.language),
+    weeks: estimate.estimatedWeeks,
+  });
+}
+
 function initialMessages(): GuideChatMessage[] {
   const stored = safeParse<GuideChatMessage[]>(sessionStorage.getItem(CONVERSATION_KEY));
   if (stored && Array.isArray(stored) && stored.length && stored.every((m) => m && typeof m.text === 'string')) {
@@ -560,9 +573,9 @@ export function useVirtualGuide() {
       : e.recommendedService.includes('Mobile') && !e.recommendedService.includes('Web')
         ? 'mobile-development'
         : 'web-development';
-    localStorage.setItem(CONTACT_PREFILL_KEY, JSON.stringify({ service: serviceSlug, message: buildSummaryText() }));
+    localStorage.setItem(CONTACT_PREFILL_KEY, JSON.stringify({ service: serviceSlug, message: buildContactSummaryText(e) }));
     navigate('/contact');
-  }, [buildSummaryText, navigate]);
+  }, [navigate]);
 
   // ---------- tour ----------
   const startTour = useCallback(() => {
