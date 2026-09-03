@@ -25,6 +25,59 @@ import { SITE_ORIGIN } from '@/seo/site';
 
 type GtagFn = (command: string, ...args: unknown[]) => void;
 
+export const GA_MEASUREMENT_ID = 'G-RMGB9J9TT5';
+const CONSENT_KEY = 'scs-analytics-consent-v1';
+export type AnalyticsConsent = 'granted' | 'denied' | null;
+
+function storage(): Storage | undefined {
+  try {
+    return typeof window === 'undefined' ? undefined : window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The visitor's saved choice. `null` means no analytics script is loaded. */
+export function getAnalyticsConsent(): AnalyticsConsent {
+  const value = storage()?.getItem(CONSENT_KEY);
+  return value === 'granted' || value === 'denied' ? value : null;
+}
+
+/**
+ * Loads GA4 only after affirmative consent. Page views remain owned by
+ * RouteAnalytics, so GA is explicitly prevented from creating a second hit.
+ */
+export function initializeAnalytics(): void {
+  if (getAnalyticsConsent() !== 'granted' || typeof document === 'undefined') return;
+  const w = window as unknown as { dataLayer?: unknown[]; gtag?: GtagFn };
+  if (typeof w.gtag !== 'function') {
+    w.dataLayer = w.dataLayer ?? [];
+    w.gtag = (...args: unknown[]) => w.dataLayer?.push(args);
+    w.gtag('js', new Date());
+    w.gtag('consent', 'default', { analytics_storage: 'granted' });
+    w.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
+  }
+  if (!document.getElementById('scs-ga4-tag')) {
+    const script = document.createElement('script');
+    script.id = 'scs-ga4-tag';
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+    document.head.appendChild(script);
+  }
+}
+
+/** Save a clear analytics choice. Declining keeps GA unloaded for new visits. */
+export function setAnalyticsConsent(granted: boolean): void {
+  storage()?.setItem(CONSENT_KEY, granted ? 'granted' : 'denied');
+  if (granted) {
+    initializeAnalytics();
+    // The initial route predates consent, so RouteAnalytics deliberately
+    // dropped it. Record it now that the visitor has made an affirmative choice.
+    if (typeof window !== 'undefined') logPageView(window.location.pathname);
+  }
+  else send('consent', 'update', { analytics_storage: 'denied' });
+}
+
 /** The tag installed by index.html, or undefined wherever it was not loaded. */
 function tag(): GtagFn | undefined {
   if (typeof window === 'undefined') return undefined;

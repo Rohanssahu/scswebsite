@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import emailjs from "emailjs-com";
 import { reportNetworkFailure } from "@/services/networkStatus";
+import TurnstileWidget, { TurnstileWidgetHandle } from '@/components/forms/TurnstileWidget';
+import HoneypotField from '@/components/forms/HoneypotField';
+import { buildContactRequest, submitLead } from '@/services/leadService';
+import { isLeadCaptureReady } from '@/services/supabaseClient';
 const ApplicationForm = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState('');
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -45,22 +52,46 @@ const handleSubmit = async (e) => {
       resume1Url = await uploadFile(formData.resume1);
     }
 
- console.log("Resume URL:", resume1Url);
-    await emailjs.send(
-      "service_fz97kyb",
-      "template_shbutfo",
-      {
-        name: formData.name,
-        email: formData.email,
-        position: formData.position,
-        contact: formData.contact,
-        gender: formData.gender,
-        cover_note: formData.cover_note,
-        resume1: resume1Url,
-       
-      },
-      "np--atCig3crdyD1t"
-    );
+    if (isLeadCaptureReady) {
+      if (!turnstileToken) throw new Error('Turnstile verification is required');
+      // A job application follows the trusted lead path so the same Resend
+      // alert reaches the owner. Gender is intentionally not included.
+      const message = [
+        'Job application',
+        `Position: ${formData.position || 'Not selected'}`,
+        ...(formData.contact ? [`Phone: ${formData.contact}`] : []),
+        ...(formData.cover_note ? ['', 'Cover note:', formData.cover_note] : []),
+        '',
+        `Resume: ${resume1Url}`,
+      ].join('\n').slice(0, 4_800);
+      await submitLead(buildContactRequest(
+        {
+          name: formData.name,
+          email: formData.email,
+          service: `Job application — ${formData.position || 'General'}`,
+          message,
+        },
+        turnstileToken,
+        { route: '/ApplicationForm', language: i18n.language },
+        honeypot,
+      ));
+    } else {
+      // Legacy fallback for environments that have not configured Supabase.
+      await emailjs.send(
+        "service_fz97kyb",
+        "template_shbutfo",
+        {
+          name: formData.name,
+          email: formData.email,
+          position: formData.position,
+          contact: formData.contact,
+          gender: formData.gender,
+          cover_note: formData.cover_note,
+          resume1: resume1Url,
+        },
+        "np--atCig3crdyD1t"
+      );
+    }
 
     setDialog({
       open: true,
@@ -91,6 +122,8 @@ const handleSubmit = async (e) => {
       message: t('application.failedMessage'),
     });
   } finally {
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
     setIsSubmitting(false);
   }
 };
@@ -125,6 +158,12 @@ const uploadFile = async (file) => {
           onSubmit={handleSubmit}
           encType="multipart/form-data"
         >
+          {isLeadCaptureReady && (
+            <>
+              <HoneypotField value={honeypot} onChange={setHoneypot} />
+              <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} className="mb-2" />
+            </>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block mb-1 font-medium">

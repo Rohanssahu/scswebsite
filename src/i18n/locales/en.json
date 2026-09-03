@@ -608,7 +608,7 @@
   "leadForm": {
     "consentLabel": "I agree that SCS Softwares stores this information to respond to my request.",
     "consentNote": "By submitting, you agree that SCS Softwares stores this information to respond to your request.",
-    "unavailable": "Online submissions are temporarily unavailable. Please reach us on WhatsApp or email info@scssoftwares.com.",
+    "unavailable": "Online submissions are temporarily unavailable. Please reach us on WhatsApp or email scssofwares@gmail.com.",
     "turnstileRequired": "Please complete the human verification check before submitting.",
     "turnstileError": "Human verification could not load. Please refresh the page and try again.",
     "genericError": "Something went wrong while submitting. Please try again.",
@@ -635,7 +635,7 @@
       "title": "Privacy Policy",
       "intro": "This Privacy Policy describes how we collect, use, and protect your personal information when you use our app or website.",
       "collectTitle": "Information We Collect",
-      "collectText": "We may collect personal details like your name, email, phone number, and usage data to improve user experience.",
+      "collectText": "We may collect personal details like your name, email and phone number when you submit a request. If you accept analytics, we also process aggregate country, city, device type and page-performance data. We do not use analytics to collect a unique device ID or exact location.",
       "useTitle": "How We Use Information",
       "useText": "We use the data to enhance services, provide customer support, and ensure security. Your data is never sold to third parties.",
       "securityTitle": "Data Security",

@@ -12,6 +12,7 @@ import { validateContactForm } from '@/lib/leadValidation';
 import { buildContactRequest, submitLead, LeadSubmissionError } from '@/services/leadService';
 import { trackConversion } from '@/utils/conversionAnalytics';
 import { isLeadCaptureReady } from '@/services/supabaseClient';
+import { CONTACT } from '@/seo/site';
 
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-400/40 transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400';
@@ -61,17 +62,6 @@ const Contact = () => {
 
   const emptyForm = { name: '', email: '', company: '', service: '', message: '' };
 
-  // Secondary email notification — fired only AFTER the lead is stored.
-  // Its failure never affects the stored lead or the success dialog.
-  const sendNotificationEmail = async (): Promise<boolean> => {
-    try {
-      await emailjs.send('service_fz97kyb', 'template_shbutfo', formData, 'np--atCig3crdyD1t');
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loading) return; // duplicate-click guard
@@ -107,16 +97,15 @@ const Contact = () => {
           honeypot,
         );
         const result = await submitLead(request);
-        // The submission is accepted at this point; the email notification below
-        // is a courtesy and its failure does not undo the conversion.
+        // The Edge Function stores the lead and sends the owner alert through
+        // Resend. Do not also send EmailJS here or the owner gets duplicates.
         trackConversion('contact_submitted');
-        const emailSent = await sendNotificationEmail();
         setDialog({
           open: true,
           type: 'success',
           message: t('contact.successMessage', { name }),
           reference: result.referenceCode,
-          note: emailSent ? '' : t('contact.emailNotifyFailed'),
+          note: '',
         });
         setFormData(emptyForm);
       } catch (error) {
@@ -332,7 +321,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{t('contact.emailLabel')}</h3>
-                      <p className="mt-1 text-sm text-gray-600">info@scssoftwares.com</p>
+                      <a className="mt-1 block text-sm text-gray-600 hover:text-pink-600" href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
                       <p className="mt-1 text-xs text-gray-500">{t('contact.emailNote')}</p>
                     </div>
                   </div>

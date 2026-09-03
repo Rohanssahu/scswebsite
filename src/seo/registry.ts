@@ -20,6 +20,7 @@
 import {
   DEFAULT_SHARE_IMAGE,
   DEFAULT_SHARE_IMAGE_ALT,
+  CONTACT,
   POSITIONING,
   SITE_NAME,
   TWITTER_HANDLE,
@@ -446,7 +447,7 @@ const ROUTE_SPECS: RouteSpec[] = [
     path: '/contact',
     title: 'Contact SCS Softwares | Talk to Our India-Based Development Team',
     description:
-      'Get in touch with SCS Softwares in Indore, India. Send us your project details through the contact form or email info@scssoftwares.com.',
+      `Get in touch with SCS Softwares in Indore, India. Send us your project details through the contact form or email ${CONTACT.email}.`,
     robots: 'index,follow',
     indexability: 'indexable',
     prerender: true,

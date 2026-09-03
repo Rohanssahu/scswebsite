@@ -19,6 +19,9 @@ import {
   isOriginAllowed,
   resolveAllowedOrigins,
   validateSubmission,
+  type ValidatedRequirement,
+  type ValidatedReview,
+  type ValidatedLead,
 } from './validation.ts';
 
 const MAX_BODY_BYTES = 100_000;
@@ -26,6 +29,80 @@ const RATE_LIMITS = [
   { windowMinutes: 10, maxSubmissions: 5 },
   { windowMinutes: 24 * 60, maxSubmissions: 20 },
 ];
+
+type ResendEmail = { from: string; to: [string]; subject: string; text: string };
+
+/** Keep visitor-provided values safe for an email body and bounded in logs. */
+const clean = (value: string | null | undefined): string => (value ?? '').replace(/[\r\n]+/g, ' ').trim();
+
+function leadLabel(lead: ValidatedLead): string {
+  if (lead.service?.startsWith('Job application')) return 'Job application';
+  return ({
+    contact: 'Contact form',
+    consultation: 'Schedule call',
+    project_requirement: 'Project estimate',
+    human_review: 'Human review request',
+  } as Record<string, string>)[lead.lead_type] ?? 'Website lead';
+}
+
+/** Recipient comes only from the private server secret, never the request. */
+function buildAdminLeadEmail(
+  lead: ValidatedLead,
+  requirement: ValidatedRequirement | null,
+  review: ValidatedReview | null,
+  referenceCode: string,
+): ResendEmail | null {
+  const recipient = Deno.env.get('LEAD_ADMIN_EMAIL')?.trim();
+  if (!recipient) return null;
+  const lines = [
+    `New ${leadLabel(lead)} — ${referenceCode}`,
+    '',
+    `Name: ${clean(lead.name)}`,
+    `Email: ${clean(lead.email)}`,
+    ...(lead.phone ? [`Phone / WhatsApp: ${clean(lead.phone)}`] : []),
+    ...(lead.company ? [`Company: ${clean(lead.company)}`] : []),
+    ...(lead.country ? [`Country: ${clean(lead.country)}`] : []),
+    ...(lead.service ? [`Service: ${clean(lead.service)}`] : []),
+    ...(lead.project_mode ? [`Project mode: ${clean(lead.project_mode)}`] : []),
+    ...(lead.budget_range ? [`Budget: ${clean(lead.budget_range)}`] : []),
+    ...(lead.timeline ? [`Timeline: ${clean(lead.timeline)}`] : []),
+    ...(lead.preferred_contact_method ? [`Preferred contact: ${clean(lead.preferred_contact_method)}`] : []),
+    ...(lead.source ? [`Submitted from: ${clean(lead.source)}`] : []),
+    '',
+    ...(lead.project_summary ? ['Message:', clean(lead.project_summary), ''] : []),
+    ...(requirement?.requirement_summary ? ['Requirement summary:', clean(requirement.requirement_summary), ''] : []),
+    ...(review?.visitor_message ? ['Review request:', clean(review.visitor_message), ''] : []),
+    'This lead is also stored securely in the SCS admin dashboard.',
+  ];
+  return {
+    from: Deno.env.get('EMAIL_FROM_ADDRESS') ?? 'SCS Softwares <onboarding@resend.dev>',
+    to: [recipient],
+    subject: `[SCS lead] ${leadLabel(lead)} — ${referenceCode}`,
+    text: lines.join('\n'),
+  };
+}
+
+/** Best effort only: a saved lead must never fail because email delivery does. */
+async function notifyAdminOfLead(
+  lead: ValidatedLead,
+  requirement: ValidatedRequirement | null,
+  review: ValidatedReview | null,
+  referenceCode: string,
+): Promise<void> {
+  const email = buildAdminLeadEmail(lead, requirement, review, referenceCode);
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!email || !apiKey) return;
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(email),
+    });
+    if (!response.ok) console.error('submit-lead: notification email rejected', response.status);
+  } catch {
+    console.error('submit-lead: notification email could not be sent');
+  }
+}
 
 const allowedOrigins = resolveAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS'));
 
@@ -188,6 +265,8 @@ Deno.serve(async (req) => {
     console.error('submit-lead: submit_lead_tx failed', rpcError?.message ?? 'no data');
     return clientError(500, 'storage_failed', 'We could not save your submission. Please try again.', origin);
   }
+
+  await notifyAdminOfLead(lead, requirement, review, data.reference_code as string);
 
   // Best-effort rate-limit event + housekeeping; a failure here never blocks
   // the visitor’s already-stored submission.

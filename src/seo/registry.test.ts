@@ -12,7 +12,7 @@ import {
   prerenderRoutes,
   type RouteSeo,
 } from './registry';
-import { FOUNDER, FOUNDING_YEAR, POSITIONING, SITE_ORIGIN } from './site';
+import { CONTACT, FOUNDER, FOUNDING_YEAR, POSITIONING, SITE_ORIGIN } from './site';
 import { FOUNDER_ID, ORGANIZATION_ID } from './jsonld';
 import { serviceBreadcrumb } from '@/content/services';
 import { SERVICE_CONTENT } from '@/content/services/all';
@@ -451,7 +451,7 @@ describe('structured data', () => {
       foundingDate: string;
       address: { addressLocality: string; addressCountry: string };
     };
-    expect(organization.email).toBe('info@scssoftwares.com');
+    expect(organization.email).toBe(CONTACT.email);
     expect(organization).not.toHaveProperty('telephone');
     expect(organization.address.addressLocality).toBe('Indore');
     expect(organization.address.addressCountry).toBe('IN');

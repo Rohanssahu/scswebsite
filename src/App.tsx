@@ -45,6 +45,7 @@ import ConnectionStatus from "./components/ConnectionStatus";
 import RouteErrorBoundary from "./routes/RouteErrorBoundary";
 import Seo from "./seo/Seo";
 import RouteAnalytics from "./components/RouteAnalytics";
+import AnalyticsConsent from "./components/AnalyticsConsent";
 import AdminBoundary from "./components/admin/AdminBoundary";
 import AdminGuard from "./components/admin/AdminGuard";
 import { isAdminPath } from "./components/admin/adminSeo";
@@ -111,6 +112,7 @@ const App = () => {
       <BrowserRouter>
         <ScrollToTop />
         <RouteAnalytics />
+        <AnalyticsConsent />
         <LanguageAnnouncer />
         {/* A page whose chunk cannot be downloaded (the usual way an offline
             visitor finds out) is caught here instead of blanking the site. */}

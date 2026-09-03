@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { icon } from '@/asset/images';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { CONTACT } from '@/seo/site';
 const TermsAndConditions = () => {
   const { t } = useTranslation();
   return (
@@ -43,7 +44,7 @@ const TermsAndConditions = () => {
 
         <h2 className="text-xl font-semibold">{t('legal.terms.contactTitle')}</h2>
         <p>
-          {t('legal.terms.contactText')} <a className="text-blue-600" href="mailto:support@scssoftwares.com">support@scssoftwares.com</a>.
+          {t('legal.terms.contactText')} <a className="text-blue-600" href={`mailto:${CONTACT.supportEmail}`}>{CONTACT.supportEmail}</a>.
         </p>
       </div>
     </div>

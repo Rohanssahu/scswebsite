@@ -10,6 +10,7 @@ import { ALL_SERVICE_NAV, SERVICES_HUB } from '@/data/serviceNav';
 // The markets that actually have a page. Nothing here is hand-maintained, so
 // the footer cannot advertise a country page that was never written.
 import { LOCATION_NAV, LOCATIONS_HUB } from '@/data/locationNav';
+import { CONTACT } from '@/seo/site';
 
 const quickLinks = [
   { key: 'nav.home', path: '/' },
@@ -117,10 +118,10 @@ const Footer = () => {
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-pink-500" aria-hidden="true" />
                 <a
-                  href="mailto:info@scssoftwares.com"
+                  href={`mailto:${CONTACT.email}`}
                   className="transition-colors hover:text-pink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded"
                 >
-                  info@scssoftwares.com
+                  {CONTACT.email}
                 </a>
               </div>
 

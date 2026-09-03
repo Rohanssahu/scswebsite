@@ -93,8 +93,8 @@ export const FOUNDER = {
 
 /** Public contact details, identical to the ones rendered in the footer. */
 export const CONTACT = {
-  email: 'info@scssoftwares.com',
-  supportEmail: 'support@scssoftwares.com',
+  email: 'scssofwares@gmail.com',
+  supportEmail: 'scssofwares@gmail.com',
   street: '9th Floor, Shekhar Central, Palasia Square',
   city: 'Indore',
   region: 'MP',
